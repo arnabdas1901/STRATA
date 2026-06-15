@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EQUITRACK - Institutional Equity Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <!-- Added 'defer' attribute to prevent render blocking -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <i class="fa-solid fa-chart-line logo-icon"></i>
+                <span class="logo-text">EQUI<span class="accent-text">TRACK</span></span>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-target="dashboard-equity">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>Equity Analysis</span>
+                </button>
+                <button class="nav-item" data-target="dashboard-calculators">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Financial Calculators</span>
+                </button>
+                <button class="nav-item" data-target="dashboard-portfolio">
+                    <i class="fa-solid fa-pie-chart"></i>
+                    <span>Mock Portfolio</span>
+                </button>
+                <button class="nav-item" data-target="dashboard-ai">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>AI Advisor</span>
+                </button>
+                <button class="nav-item" data-target="dashboard-crypto">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>Crypto Analysis</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="mobile-header">
+                <div class="mobile-logo">
+                    <i class="fa-solid fa-chart-line logo-icon"></i>
+                    <span>EQUITRACK</span>
+                </div>
+                <!-- Added aria-label for accessibility -->
+                <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </header>
+
+            <section id="dashboard-equity" class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <h1>US Equity Terminal</h1>
+                    <p class="subtitle">Real-time market analytics and financial statements infrastructure</p>
+                </div>
+
+                <div class="search-wrapper">
+                    <div class="search-bar-container">
+                        <i class="fa-solid fa-search search-icon"></i>
+                        <!-- Added aria-label for accessibility -->
+                        <input type="text" id="equity-search-input" aria-label="Search US Ticker Symbol" placeholder="Enter US ticker symbol (e.g., AAPL, MSFT, NVDA)..." autocomplete="off">
+                        <button id="equity-search-btn" class="primary-btn">Analyze Asset</button>
+                    </div>
+
+                    <div class="index-summary-strip" aria-live="polite">
+                        <div class="index-value-card" id="sp500-value-card">
+                            <span class="index-label">S&P 500</span>
+                            <span id="sp500-live-value" class="index-price">--</span>
+                            <span id="sp500-source" class="index-source">Loading…</span>
+                            <span id="sp500-change" class="index-change">--</span>
+                        </div>
+                        <div class="index-value-card" id="nasdaq-value-card">
+                            <span class="index-label">NASDAQ Composite</span>
+                            <span id="nasdaq-live-value" class="index-price">--</span>
+                            <span id="nasdaq-source" class="index-source">Loading…</span>
+                            <span id="nasdaq-change" class="index-change">--</span>
+                        </div>
+                    </div>
+
+                    <div class="commodities-widget" aria-label="Commodity ETF watchlist">
+                        <div class="commodities-header">
+                            <div>
+                                <h3>Commodity Watchlist</h3>
+                                <p>ETF proxies for flagship commodity exposure with 4-hour caching.</p>
+                            </div>
+                        </div>
+                        <div class="commodities-body">
+                            <div id="commodity-selector-grid" class="commodity-selector-grid" role="list"></div>
+                            <div class="commodity-detail-card" id="commodity-detail-card">
+                                <div class="commodity-detail-header">
+                                    <span id="commodity-detail-icon" class="commodity-detail-icon">🪙</span>
+                                    <div>
+                                        <div id="commodity-detail-name" class="commodity-detail-name">Gold</div>
+                                        <div id="commodity-detail-symbol" class="commodity-detail-symbol">GLD</div>
+                                    </div>
+                                </div>
+                                <div class="commodity-detail-price" id="commodity-detail-price">$0.00</div>
+                                <div class="commodity-detail-change" id="commodity-detail-change">--</div>
+                                <div class="commodity-sparkline" id="commodity-sparkline" aria-label="Commodity mini trend chart"></div>
+                                <div class="commodity-note" id="commodity-detail-note">Select a commodity to view price and mini trend.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="equity-loader" class="loader-container hidden-element">
+                    <div class="spinner"></div>
+                    <p>Parsing SEC EDGAR data feeds & streaming ticks...</p>
+                </div>
+
+                <div id="equity-results-container" class="hidden-element">
+                    <div class="equity-results-header">
+                        <button id="equity-back-btn" class="secondary-btn">← Back to Watchlist</button>
+                    </div>
+                    <div class="ticker-hero-card">
+                        <div class="hero-meta">
+                            <h2 id="company-name-display">Apple Inc.</h2>
+                            <div class="ticker-badges">
+                                <span id="company-ticker-badge" class="badge">AAPL</span>
+                                <span id="company-exchange-badge" class="badge secondary">NASDAQ</span>
+                            </div>
+                        </div>
+                        <div class="hero-pricing">
+                            <div id="live-price-display" class="price-value">$0.00</div>
+                            <div id="live-change-display" class="price-change-percent">0.00 (0.00%)</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-summary-grid">
+                        <div class="metric-card">
+                            <span class="metric-title">52-Week High</span>
+                            <span id="metric-52w-high" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">52-Week Low</span>
+                            <span id="metric-52w-low" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Market Capitalization</span>
+                            <span id="metric-mkt-cap" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Beta Volatility</span>
+                            <span id="metric-beta" class="metric-value">--</span>
+                        </div>
+                    </div>
+
+                    <div class="chart-container-card">
+                        <div class="chart-header">
+                            <h3>Historical Price Trajectory</h3>
+                            <div class="chart-timeframe-selectors">
+                                <button class="tf-btn active" data-tf="1Y">1Y</button>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box">
+                            <canvas id="equityHistoricalChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="ratios-container-card">
+                        <h3>Key Valuation & Financial Ratios (TTM)</h3>
+                        <div id="ratios-grid-target" class="ratios-data-grid">
+                        </div>
+                    </div>
+
+                    <div class="tabs-container-card">
+                        <div class="tab-selectors-strip">
+                            <button class="panel-tab-btn active" data-tab="tab-desc">Corporate Profile</button>
+                            <button class="panel-tab-btn" data-tab="tab-balance">Balance Sheet Summary</button>
+                            <button class="panel-tab-btn" data-tab="tab-cashflow">Cash Flow Summary</button>
+                        </div>
+                        <div class="tab-panels-viewport">
+                            <div id="tab-desc" class="tab-panel active-panel">
+                                <p id="corporate-description-text" class="narrative-p">Perform a financial ticker query to construct internal narrative summaries.</p>
+                            </div>
+                            <div id="tab-balance" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Summary Metric</th><th>Reported Value</th></tr>
+                                        </thead>
+                                        <tbody id="balance-sheet-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="tab-cashflow" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Summary Metric</th><th>Reported Value</th></tr>
+                                        </thead>
+                                        <tbody id="cashflow-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dashboard-calculators" class="dashboard-viewport">
+                <div class="dashboard-header-block">
+                    <h1>Actuarial Engineering & Wealth Calculators</h1>
+                    <p class="subtitle">High-precision mathematical projection models for wealth compounding and structures</p>
+                </div>
+
+                <div class="calculator-layout-grid">
+                    <div class="calculator-control-card">
+                        <div class="calc-type-selector">
+                            <button class="calc-toggle active" data-calc="sip">SIP Projections</button>
+                            <button class="calc-toggle" data-calc="emi">Amortized EMI</button>
+                            <button class="calc-toggle" data-calc="swp">Systematic Withdrawal (SWP)</button>
+                        </div>
+
+                        <div id="calc-inputs-wrapper" class="calc-inputs-form">
+                        </div>
+                    </div>
+
+                    <div class="calculator-visualization-card">
+                        <h3>Capital Breakdown Matrix</h3>
+                        <div class="pie-chart-wrapper">
+                            <canvas id="calculatorPieChart"></canvas>
+                        </div>
+                        <div id="calc-numerical-summary" class="calc-summary-metrics">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dashboard-portfolio" class="dashboard-viewport">
+                <div class="dashboard-header-block">
+                    <h1>Risk-Engine Portfolio Architect</h1>
+                    <p class="subtitle">Discretionary capital allocation engines tailored around mathematical horizon modeling</p>
+                </div>
+
+                <div class="portfolio-grid-layout">
+                    <div class="portfolio-inputs-card">
+                        <h3>Biometric & Volatility Parameters</h3>
+                        <div class="input-field-group">
+                            <label for="portfolio-age-input">Target Investor Current Age (Years)</label>
+                            <input type="number" id="portfolio-age-input" min="1" max="120" value="30" placeholder="e.g., 30">
+                        </div>
+                        <div class="input-field-group">
+                            <label for="portfolio-risk-input">Discretionary Volatility Tolerance</label>
+                            <select id="portfolio-risk-input">
+                                <option value="conservative">Conservative (Capital Preservation Focus)</option>
+                                <option value="moderate" selected>Moderate (Balanced Systematic Growth)</option>
+                                <option value="aggressive">Aggressive (High Alpha Volatility Maximization)</option>
+                            </select>
+                        </div>
+                        <button id="generate-portfolio-btn" class="primary-btn fluid-btn">Construct Tactical Framework</button>
+                    </div>
+
+                    <div class="portfolio-output-card">
+                        <h3>Strategic Asset Allocation Structure</h3>
+                        <div class="portfolio-content-box">
+                            <div class="portfolio-pie-box">
+                                <canvas id="portfolioPieChart"></canvas>
+                            </div>
+                            <div id="portfolio-legend-target" class="portfolio-metrics-breakdown">
+                                <p class="empty-notice">Adjust system parameters to evaluate structural weights.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dashboard-ai" class="dashboard-viewport">
+                <div class="dashboard-header-block">
+                    <h1>Algorithmic Quant & AI Advisor Terminal</h1>
+                    <p class="subtitle">Advanced quantitative logic processing structural models, safety parameters, and intrinsic equations</p>
+                </div>
+
+                <div class="ai-control-panel-card">
+                    <div class="ai-input-strip">
+                        <div class="input-container-inline">
+                            <label for="ai-ticker-input">Target Equity Ticker</label>
+                            <input type="text" id="ai-ticker-input" placeholder="e.g., NVDA" autocomplete="off">
+                        </div>
+                        <div class="input-container-inline">
+                            <label for="ai-model-select">Analytical Quant Frame</label>
+                            <select id="ai-model-select">
+                                <option value="dupont">3-Stage DuPont Decomposition</option>
+                                <option value="redflags">Automated Financial Red Flags Scan</option>
+                                <option value="dcf">Discounted Cash Flow (DCF) Intrinsic Value</option>
+                                <option value="benchmarking">Peer-Group Sector Benchmarking</option>
+                            </select>
+                        </div>
+                        <button id="execute-ai-btn" class="primary-btn execution-btn"><i class="fa-solid fa-microchip"></i> Execute Deep Scan</button>
+                    </div>
+                </div>
+
+                <div class="ai-terminal-card">
+                    <div class="terminal-header">
+                        <div class="window-buttons"><span></span><span></span><span></span></div>
+                        <div class="terminal-title">quant-engine-v4.0.1 // core_analysis_stream</div>
+                    </div>
+                    <div id="ai-terminal-output" class="terminal-screen-body">
+                        <span class="terminal-prompt">&gt; Groq AI advisor online. Enter a ticker and select an analysis frame.</span>
+                    </div>
+                    <div class="gemini-integration-notice">
+                        <i class="fa-solid fa-robot gemini-icon"></i>
+                        <span>Powered by Groq free tier (Llama 3.3 70B). ~1,000 AI scans/day, 30/min — your 2–3/day usage is well within limits. Educational only—not investment advice.</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dashboard-crypto" class="dashboard-viewport">
+                <div class="dashboard-header-block">
+                    <h1>Cryptocurrency Market Terminal</h1>
+                    <p class="subtitle">Real-time crypto price tracking with advanced market analytics and historical trends</p>
+                </div>
+
+                <div class="search-wrapper">
+                    <div class="search-bar-container">
+                        <i class="fa-solid fa-search search-icon"></i>
+                        <input type="text" id="crypto-search-input" aria-label="Search cryptocurrency" placeholder="Search crypto by symbol or name (e.g., BTC, ETH, Solana)..." autocomplete="off">
+                        <button id="crypto-search-btn" class="primary-btn">Search Crypto</button>
+                    </div>
+                </div>
+
+                <p class="crypto-landing-note">Tap a card below or search by symbol/name to load market profile, price action and chart details.</p>
+
+                <div class="crypto-brackets-container">
+                    <h3>Top 6 Cryptocurrencies</h3>
+                    <div id="crypto-brackets-grid" class="crypto-brackets-grid" role="list">
+                    </div>
+                </div>
+
+                <div id="crypto-loader" class="loader-container hidden-element">
+                    <div class="spinner"></div>
+                    <p>Fetching real-time crypto market data...</p>
+                </div>
+
+                <div id="crypto-results-container" class="hidden-element">
+                    <div class="ticker-hero-card">
+                        <div class="hero-meta">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span id="crypto-icon-display" style="font-size: 32px;">💰</span>
+                                <div>
+                                    <h2 id="crypto-name-display">Bitcoin</h2>
+                                    <div class="ticker-badges">
+                                        <span id="crypto-ticker-badge" class="badge">BTC</span>
+                                        <span id="crypto-rank-badge" class="badge secondary">#1</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hero-pricing">
+                            <div id="crypto-live-price-display" class="price-value">$0.00</div>
+                            <div id="crypto-live-change-display" class="price-change-percent">0.00% (24h)</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-summary-grid">
+                        <div class="metric-card">
+                            <span class="metric-title">24h High</span>
+                            <span id="crypto-metric-24h-high" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">24h Low</span>
+                            <span id="crypto-metric-24h-low" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Market Cap</span>
+                            <span id="crypto-metric-market-cap" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">24h Volume</span>
+                            <span id="crypto-metric-volume" class="metric-value">--</span>
+                        </div>
+                    </div>
+
+                    <div class="metric-summary-grid">
+                        <div class="metric-card">
+                            <span class="metric-title">Circulating Supply</span>
+                            <span id="crypto-metric-supply" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Total Supply</span>
+                            <span id="crypto-metric-total-supply" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">All-Time High</span>
+                            <span id="crypto-metric-ath" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">ATH Date</span>
+                            <span id="crypto-metric-ath-date" class="metric-value">--</span>
+                        </div>
+                    </div>
+
+                    <div class="chart-container-card">
+                        <div class="chart-header">
+                            <h3>1-Year Price History</h3>
+                            <div class="chart-timeframe-selectors">
+                                <button class="tf-btn active" data-tf="365d">1Y</button>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box">
+                            <canvas id="cryptoHistoricalChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="tabs-container-card">
+                        <div class="tab-selectors-strip">
+                            <button class="panel-tab-btn active" data-tab="tab-crypto-overview">Market Overview</button>
+                            <button class="panel-tab-btn" data-tab="tab-crypto-stats">Advanced Statistics</button>
+                        </div>
+                        <div class="tab-panels-viewport">
+                            <div id="tab-crypto-overview" class="tab-panel active-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Metric</th><th>Value</th></tr>
+                                        </thead>
+                                        <tbody id="crypto-overview-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">Select a cryptocurrency to view details.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="tab-crypto-stats" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Statistic</th><th>Value</th></tr>
+                                        </thead>
+                                        <tbody id="crypto-stats-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">Select a cryptocurrency to view statistics.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Removed the stray text node here -->
+        </main>
+    </div>
+
+    <div id="global-toast-notification" class="toast-system hidden-toast"></div>
+
+    <script src="index.js"></script>
+</body>
+</html>
