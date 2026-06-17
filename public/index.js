@@ -68,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     const viewports = document.querySelectorAll('.dashboard-viewport');
+    const sidebar = document.querySelector('.sidebar');
+    const toggleBtn = document.getElementById('mobile-menu-toggle');
 
     navItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -78,18 +80,35 @@ function setupNavigation() {
             const targetId = item.getAttribute('data-target');
             document.getElementById(targetId).classList.add('active');
 
-            document.querySelector('.sidebar').classList.remove('mobile-open');
+            sidebar?.classList.remove('mobile-open');
+            document.body.classList.remove('mobile-nav-open');
+            toggleBtn?.setAttribute('aria-expanded', 'false');
         });
     });
 }
 
 function setupMobileMenu() {
     const toggleBtn = document.getElementById('mobile-menu-toggle');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.toggle('mobile-open');
-        });
-    }
+    const sidebar = document.querySelector('.sidebar');
+    if (!toggleBtn || !sidebar) return;
+
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    toggleBtn.addEventListener('click', () => {
+        const isOpen = sidebar.classList.toggle('mobile-open');
+        document.body.classList.toggle('mobile-nav-open', isOpen);
+        toggleBtn.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!sidebar.classList.contains('mobile-open')) return;
+        const clickedInsideSidebar = sidebar.contains(event.target);
+        const clickedToggle = toggleBtn.contains(event.target);
+        if (!clickedInsideSidebar && !clickedToggle) {
+            sidebar.classList.remove('mobile-open');
+            document.body.classList.remove('mobile-nav-open');
+            toggleBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
 }
 
 function setupStatementTabs() {
@@ -109,7 +128,7 @@ function setupStatementTabs() {
 }
 
 function setupTimeframeSelectors() {
-    const tfBtns = document.querySelectorAll('.tf-btn');
+    const tfBtns = document.querySelectorAll('#dashboard-equity .tf-btn');
     tfBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
             tfBtns.forEach(b => b.classList.remove('active'));
@@ -484,8 +503,8 @@ async function executeEquityAnalysis() {
         try {
             await new Promise(resolve => setTimeout(resolve, 1000)); // Another throttle delay
             await loadEquityTimeSeries(ticker, '1Y');
-            document.querySelectorAll('.tf-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector('.tf-btn[data-tf="1Y"]').classList.add('active');
+            document.querySelectorAll('#dashboard-equity .tf-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('#dashboard-equity .tf-btn[data-tf="1Y"]').classList.add('active');
         } catch (e) {
             console.warn("Chart data fetch failed/timed out:", e);
         }

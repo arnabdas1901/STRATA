@@ -24,12 +24,26 @@
     -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     background-color: var(--bg-deep-black);
     color: var(--text-primary-white);
     font-family: var(--font-sans);
     min-height: 100vh;
     overflow-x: hidden;
+}
+
+body.mobile-nav-open {
+    overflow: hidden;
+}
+
+button,
+input,
+select {
+    font: inherit;
 }
 
 /* Base Master Layout Container System */
@@ -187,6 +201,7 @@ body {
     font-size: 0.95rem;
     cursor: pointer;
     transition: all var(--transition-speed) ease;
+    min-height: 44px;
 }
 
 .primary-btn:hover {
@@ -203,6 +218,7 @@ body {
     font-size: 0.85rem;
     cursor: pointer;
     transition: all var(--transition-speed) ease;
+    min-height: 44px;
 }
 
 .secondary-btn:hover {
@@ -231,6 +247,7 @@ body {
     padding: 6px 8px 6px 18px;
     align-items: center;
     gap: 12px;
+    min-width: 0;
 }
 
 .index-summary-strip {
@@ -451,6 +468,8 @@ body {
     flex-grow: 1;
     font-size: 1rem;
     outline: none;
+    min-width: 0;
+    min-height: 44px;
 }
 
 /* Hero Data Display Panels */
@@ -465,8 +484,9 @@ body {
     margin-bottom: 24px;
 }
 
-.hero-meta h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 8px; }
-.ticker-badges { display: flex; gap: 8px; }
+.hero-meta { min-width: 0; }
+.hero-meta h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 8px; overflow-wrap: anywhere; }
+.ticker-badges { display: flex; gap: 8px; flex-wrap: wrap; }
 .badge { background-color: var(--bg-input-slate); padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; border: 1px solid var(--border-cyan-glow); }
 .badge.secondary { border-color: transparent; background-color: #1e293b; }
 
@@ -493,7 +513,7 @@ body {
 }
 
 .metric-title { font-size: 0.8rem; color: var(--text-secondary-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
-.metric-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 600; }
+.metric-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 600; overflow-wrap: anywhere; }
 
 /* Chart Containers and Canvas Wrappers */
 .chart-container-card {
@@ -607,7 +627,7 @@ body {
 .narrative-p { color: var(--text-secondary-muted); line-height: 1.6; font-size: 0.95rem; }
 
 /* Data Presentation Tables Layout Sheet */
-.financial-table-wrapper { overflow-x: auto; }
+.financial-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 .financial-data-table {
     width: 100%;
@@ -711,6 +731,8 @@ body {
     outline: none;
     font-size: 0.95rem;
     transition: border-color var(--transition-speed) ease;
+    min-height: 46px;
+    width: 100%;
 }
 
 .input-field-group input:focus, .input-field-group select:focus {
@@ -803,6 +825,28 @@ body {
     line-height: 1.65;
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+.crypto-hero-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+#crypto-icon-display {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    font-size: 32px;
+}
+
+#crypto-icon-display img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
 }
 
 .execution-btn:disabled {
@@ -1004,4 +1048,402 @@ body {
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-primary-white);
+}
+
+/* Final mobile-first overrides for phone and tablet use */
+@media (max-width: 768px) {
+    .app-container {
+        display: block;
+    }
+
+    .sidebar {
+        width: min(84vw, 320px);
+        z-index: 130;
+    }
+
+    .logo-container {
+        padding: 20px;
+    }
+
+    .nav-menu {
+        padding: 14px 10px;
+        overflow-y: auto;
+    }
+
+    .nav-item {
+        min-height: 48px;
+        padding: 12px 14px;
+    }
+
+    .main-content {
+        padding: 16px;
+        padding-top: calc(72px + env(safe-area-inset-top));
+    }
+
+    .mobile-header {
+        height: calc(64px + env(safe-area-inset-top));
+        padding: env(safe-area-inset-top) 16px 0;
+        z-index: 120;
+    }
+
+    .mobile-toggle-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .dashboard-header-block {
+        margin-bottom: 20px;
+    }
+
+    .dashboard-header-block h1 {
+        font-size: 1.45rem;
+        line-height: 1.2;
+        margin-bottom: 8px;
+        letter-spacing: 0;
+    }
+
+    .subtitle {
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+
+    .search-wrapper {
+        margin-bottom: 20px;
+    }
+
+    .search-bar-container {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px 10px;
+        padding: 10px;
+    }
+
+    .search-bar-container .primary-btn {
+        grid-column: 1 / -1;
+        width: 100%;
+        padding: 11px 14px;
+    }
+
+    .search-bar-container input {
+        font-size: 0.95rem;
+    }
+
+    .index-summary-strip {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .index-value-card {
+        min-width: 0;
+        padding: 12px;
+    }
+
+    .index-price {
+        font-size: 1.1rem;
+    }
+
+    .index-source,
+    .index-change {
+        overflow-wrap: anywhere;
+    }
+
+    .commodities-widget,
+    .ticker-hero-card,
+    .chart-container-card,
+    .ratios-container-card,
+    .tabs-container-card,
+    .calculator-control-card,
+    .calculator-visualization-card,
+    .portfolio-inputs-card,
+    .portfolio-output-card,
+    .ai-control-panel-card,
+    .ai-terminal-card {
+        border-radius: 10px;
+        padding: 16px;
+    }
+
+    .commodities-widget {
+        margin-top: 18px;
+    }
+
+    .commodities-header {
+        margin-bottom: 14px;
+    }
+
+    .commodities-header p {
+        font-size: 0.85rem;
+        line-height: 1.45;
+    }
+
+    .commodity-card,
+    .commodity-detail-card {
+        border-radius: 10px;
+        padding: 14px;
+    }
+
+    .commodity-detail-price {
+        font-size: 1.55rem;
+    }
+
+    .metric-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .metric-card {
+        min-width: 0;
+        padding: 13px;
+    }
+
+    .metric-title {
+        font-size: 0.7rem;
+        line-height: 1.25;
+    }
+
+    .metric-value {
+        font-size: 0.98rem;
+    }
+
+    .ticker-hero-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .hero-pricing {
+        text-align: left;
+    }
+
+    .hero-meta h2 {
+        font-size: 1.35rem;
+        line-height: 1.25;
+    }
+
+    .price-value {
+        font-size: 1.55rem;
+    }
+
+    .chart-header {
+        align-items: flex-start;
+        gap: 12px;
+        flex-direction: column;
+        margin-bottom: 14px;
+    }
+
+    .chart-wrapper-box {
+        height: 300px;
+    }
+
+    .ratios-data-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ratio-node,
+    .legend-node {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .summary-row {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .tab-selectors-strip {
+        overflow-x: auto;
+        white-space: nowrap;
+        gap: 4px;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .panel-tab-btn {
+        flex: 0 0 auto;
+        min-height: 44px;
+        padding: 10px 12px;
+        font-size: 0.86rem;
+    }
+
+    .financial-data-table th,
+    .financial-data-table td {
+        padding: 10px 12px;
+        font-size: 0.82rem;
+    }
+
+    .calc-type-selector {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .calc-toggle {
+        flex: 0 0 min(56vw, 210px);
+        min-height: 44px;
+        white-space: normal;
+        line-height: 1.25;
+    }
+
+    .pie-chart-wrapper,
+    .portfolio-pie-box {
+        height: 220px;
+    }
+
+    .ai-input-strip {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .execution-btn {
+        width: 100%;
+    }
+
+    .terminal-header {
+        gap: 10px;
+    }
+
+    .terminal-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .terminal-screen-body {
+        padding: 14px;
+        font-size: 0.8rem;
+        min-height: 220px;
+        max-height: 55vh;
+    }
+
+    .gemini-integration-notice {
+        align-items: flex-start;
+        line-height: 1.45;
+    }
+
+    .crypto-brackets-grid {
+        grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+        gap: 12px;
+    }
+
+    .crypto-bracket-card {
+        border-radius: 10px;
+        padding: 18px 12px;
+    }
+
+    .crypto-landing-note {
+        margin-top: 10px;
+        font-size: 0.88rem;
+    }
+
+    .toast-system {
+        left: 14px;
+        right: 14px;
+        bottom: calc(14px + env(safe-area-inset-bottom));
+        padding: 13px 16px;
+        border-radius: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .dashboard-header-block h1 {
+        font-size: 1.28rem;
+    }
+
+    .index-summary-strip,
+    .metric-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .search-bar-container input::placeholder {
+        font-size: 0.86rem;
+    }
+
+    .commodity-selector-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .commodity-card {
+        padding: 12px;
+    }
+
+    .commodity-card-title {
+        align-items: flex-start;
+    }
+
+    .commodity-card-name,
+    .commodity-card-price {
+        font-size: 0.9rem;
+    }
+
+    .commodity-card-change,
+    .commodity-card-symbol {
+        font-size: 0.76rem;
+    }
+
+    .chart-wrapper-box {
+        height: 260px;
+    }
+
+    .calc-type-selector {
+        flex-direction: column;
+        overflow: visible;
+    }
+
+    .calc-toggle {
+        flex-basis: auto;
+        width: 100%;
+    }
+
+    .crypto-brackets-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .crypto-bracket-card {
+        padding: 16px 10px;
+    }
+
+    .bracket-name,
+    .bracket-price {
+        font-size: 0.86rem;
+    }
+
+    .bracket-symbol,
+    .bracket-change {
+        font-size: 0.75rem;
+    }
+
+    .tabs-container-card,
+    .chart-container-card,
+    .ratios-container-card {
+        margin-bottom: 18px;
+    }
+
+    .financial-data-table {
+        min-width: 420px;
+    }
+}
+
+@media (max-width: 360px) {
+    .index-summary-strip,
+    .metric-summary-grid,
+    .commodity-selector-grid,
+    .crypto-brackets-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .price-value,
+    .commodity-detail-price {
+        font-size: 1.35rem;
+    }
 }
