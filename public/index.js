@@ -1121,6 +1121,7 @@ async function executeAiAnalysis() {
 function setupCryptoTracker() {
     const searchBtn = document.getElementById('crypto-search-btn');
     const searchInput = document.getElementById('crypto-search-input');
+    const backBtn = document.getElementById('crypto-back-btn');
     
     if (searchBtn) {
         searchBtn.addEventListener('click', executeCryptoSearch);
@@ -1130,9 +1131,22 @@ function setupCryptoTracker() {
             if (e.key === 'Enter') executeCryptoSearch();
         });
     }
+    if (backBtn) {
+        backBtn.addEventListener('click', clearCryptoResults);
+    }
 
     setupCryptoTabs();
     loadTopCryptos();
+}
+
+function clearCryptoResults() {
+    const results = document.getElementById('crypto-results-container');
+    const landing = document.getElementById('crypto-landing-view');
+    const searchInput = document.getElementById('crypto-search-input');
+    
+    if (results) results.classList.add('hidden-element');
+    if (landing) landing.classList.remove('hidden-element');
+    if (searchInput) searchInput.value = '';
 }
 
 async function loadTopCryptos() {
@@ -1220,9 +1234,11 @@ async function executeCryptoSearch() {
 async function displayCryptoDetails(cryptoId) {
     const loader = document.getElementById('crypto-loader');
     const resultsContainer = document.getElementById('crypto-results-container');
+    const landing = document.getElementById('crypto-landing-view');
 
     if (loader) loader.classList.remove('hidden-element');
     if (resultsContainer) resultsContainer.classList.add('hidden-element');
+    if (landing) landing.classList.add('hidden-element');
 
     try {
         const [detailsResponse, historyResponse] = await Promise.all([
@@ -1244,6 +1260,7 @@ async function displayCryptoDetails(cryptoId) {
     } catch (error) {
         console.error('Error displaying crypto:', error);
         if (loader) loader.classList.add('hidden-element');
+        if (landing) landing.classList.remove('hidden-element');
         showToast('Failed to load cryptocurrency details.');
     }
 }
