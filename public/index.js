@@ -56,6 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Bind Portfolio Generator
     document.getElementById('generate-portfolio-btn').addEventListener('click', generatePortfolio);
+    
+    const riskInput = document.getElementById('portfolio-risk-input');
+    if (riskInput) {
+        riskInput.addEventListener('change', generatePortfolio);
+    }
 
     setupAiAdvisor();
 
@@ -1344,39 +1349,43 @@ function renderCryptoChart(history) {
     const canvas = document.getElementById('cryptoHistoricalChart');
     if (!canvas) return;
 
-    if (cryptoChartInstance) cryptoChartInstance.destroy();
-
-    cryptoChartInstance = new Chart(canvas.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: '1-Year Price',
-                data: data,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.3,
-                fill: true,
-                pointRadius: 0,
-                borderWidth: 2,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { top: 8, right: 10, left: 6, bottom: 8 } },
-            plugins: {
-                legend: { display: true },
-                title: { display: false }
+    if (cryptoChartInstance) {
+        cryptoChartInstance.data.labels = labels;
+        cryptoChartInstance.data.datasets[0].data = data;
+        cryptoChartInstance.update();
+    } else {
+        cryptoChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '1-Year Price',
+                    data: data,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    ticks: { callback: (val) => '$' + val.toLocaleString('en-US', { maximumFractionDigits: 0 }) }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 8, right: 10, left: 6, bottom: 8 } },
+                plugins: {
+                    legend: { display: true },
+                    title: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: { callback: (val) => '$' + val.toLocaleString('en-US', { maximumFractionDigits: 0 }) }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 }
 
 function setupCryptoTabs() {
