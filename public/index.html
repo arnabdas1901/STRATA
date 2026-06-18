@@ -455,7 +455,70 @@
                     </div>
                 </div>
             </section>
-            <!-- Removed the stray text node here -->
+
+            <section id="dashboard-inflation" class="dashboard-viewport">
+                <div class="dashboard-header-block">
+                    <h1>Global Macro & Inflation Tracker</h1>
+                    <p class="subtitle">Monitor CPI, core inflation, and interest rate trends across global economies (Powered by World Bank Data)</p>
+                </div>
+
+                <div class="search-wrapper">
+                    <div class="search-bar-container">
+                        <i class="fa-solid fa-search search-icon"></i>
+                        <input type="text" id="inflation-search-input" aria-label="Search Country" placeholder="Search country (e.g., United States, India, Germany)..." autocomplete="off">
+                        <button id="inflation-search-btn" class="primary-btn">Search Country</button>
+                    </div>
+                </div>
+
+                <p class="crypto-landing-note">Select a major economy below or search by country name to view detailed macroeconomic indicators.</p>
+
+                <div class="crypto-brackets-container" id="macro-landing-view">
+                    <h3>Major Economies (Latest CPI)</h3>
+                    <div id="macro-brackets-grid" class="crypto-brackets-grid" role="list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div id="inflation-loader" class="loader-container hidden-element">
+                    <div class="spinner"></div>
+                    <p>Retrieving macroeconomic indicators from the World Bank...</p>
+                </div>
+
+                <div id="inflation-results-container" class="hidden-element">
+                    <div class="ticker-hero-card">
+                        <div class="hero-meta">
+                            <div class="macro-hero-identity">
+                                <span id="country-flag-display" style="font-size: 32px; margin-right: 12px;">🌍</span>
+                                <div>
+                                    <h2 id="country-name-display">Country Name</h2>
+                                    <div class="ticker-badges">
+                                        <span id="central-bank-badge" class="badge">Central Bank</span>
+                                        <span id="currency-badge" class="badge secondary">Macro</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hero-pricing">
+                            <div id="inflation-live-display" class="price-value">0.0%</div>
+                            <div id="inflation-change-display" class="price-change-percent">Current CPI (YoY)</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-summary-grid">
+                        <div class="metric-card"><span class="metric-title">Headline Inflation (CPI)</span><span id="metric-core-inflation" class="metric-value">--</span></div>
+                        <div class="metric-card"><span class="metric-title">Target Rate Proxy</span><span id="metric-target-inflation" class="metric-value">2.00%</span></div>
+                        <div class="metric-card"><span class="metric-title">Lending Interest Rate</span><span id="metric-interest-rate" class="metric-value">--</span></div>
+                        <div class="metric-card"><span class="metric-title">Last Updated</span><span id="metric-inflation-date" class="metric-value">--</span></div>
+                    </div>
+
+                    <div class="chart-container-card">
+                        <div class="chart-header">
+                            <h3>Historical Inflation Trajectory</h3>
+                        </div>
+                        <div class="chart-wrapper-box"><canvas id="inflationHistoricalChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
