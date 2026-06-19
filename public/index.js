@@ -39,7 +39,7 @@ const COMMODITY_PROXY_DEFINITIONS = [
 document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
     setupMobileMenu();
-    setupStatementTabs();
+    setupTabs('#dashboard-equity');
     setupTimeframeSelectors();
     setupCalculators();
     fetchLiveIndexValues();
@@ -118,18 +118,21 @@ function setupMobileMenu() {
     });
 }
 
-function setupStatementTabs() {
-    const tabBtns = document.querySelectorAll('#dashboard-equity .panel-tab-btn');
-    const tabPanels = document.querySelectorAll('#dashboard-equity .tab-panel');
+function setupTabs(containerSelector) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+
+    const tabBtns = container.querySelectorAll('.panel-tab-btn');
+    const tabPanels = container.querySelectorAll('.tab-panel');
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             tabBtns.forEach(b => b.classList.remove('active'));
             tabPanels.forEach(p => p.classList.remove('active-panel'));
-            
+
             btn.classList.add('active');
             const targetId = btn.getAttribute('data-tab');
-            document.getElementById(targetId).classList.add('active-panel');
+            container.querySelector(`#${targetId}`)?.classList.add('active-panel');
         });
     });
 }
@@ -1135,7 +1138,7 @@ function setupCryptoTracker() {
         backBtn.addEventListener('click', clearCryptoResults);
     }
 
-    setupCryptoTabs();
+    setupTabs('#dashboard-crypto');
     loadTopCryptos();
 }
 
@@ -1406,22 +1409,6 @@ function renderCryptoChart(history) {
             }
         });
     }
-}
-
-function setupCryptoTabs() {
-    const tabBtns = document.querySelectorAll('#dashboard-crypto .panel-tab-btn');
-    const tabPanels = document.querySelectorAll('#dashboard-crypto .tab-panel');
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabPanels.forEach(p => p.classList.remove('active-panel'));
-            
-            btn.classList.add('active');
-            const targetId = btn.getAttribute('data-tab');
-            document.getElementById(targetId)?.classList.add('active-panel');
-        });
-    });
 }
 
 // ==========================================
