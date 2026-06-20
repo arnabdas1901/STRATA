@@ -538,6 +538,24 @@
 
     <div id="global-toast-notification" class="toast-system hidden-toast"></div>
 
+    <script>
+        // Synchronous execution before first paint to prevent FOUC (flicker)
+        (function() {
+            const saved = localStorage.getItem('equitrack_active_dashboard');
+            if (saved && saved !== 'dashboard-equity') {
+                const eqNav = document.querySelector('[data-target="dashboard-equity"]');
+                const eqView = document.getElementById('dashboard-equity');
+                const targetNav = document.querySelector('[data-target="' + saved + '"]');
+                const targetView = document.getElementById(saved);
+                if (eqNav && eqView && targetNav && targetView) {
+                    eqNav.classList.remove('active');
+                    eqView.classList.remove('active');
+                    targetNav.classList.add('active');
+                    targetView.classList.add('active');
+                }
+            }
+        })();
+    </script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
