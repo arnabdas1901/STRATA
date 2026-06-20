@@ -1,4 +1,4 @@
-import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, setupTabs } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast } from '../utils.js';
 
 let macroChartInstance = null;
 let globalCountryMap = [];
@@ -57,7 +57,7 @@ async function loadMajorEconomies() {
     
     const economies = [
         { code: 'US', name: 'United States', flag: '🇺🇸', bank: 'Federal Reserve' },
-        { code: 'EU', name: 'Euro Area', flag: '🇪🇺', bank: 'ECB' },
+        { code: 'DE', name: 'Germany', flag: '🇩🇪', bank: 'Bundesbank / ECB' },
         { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', bank: 'Bank of England' },
         { code: 'JP', name: 'Japan', flag: '🇯🇵', bank: 'Bank of Japan' },
         { code: 'IN', name: 'India', flag: '🇮🇳', bank: 'Reserve Bank of India' },

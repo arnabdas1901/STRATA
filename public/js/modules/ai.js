@@ -2,6 +2,26 @@ import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, escapeHtml } f
 
 let isAiRunning = false;
 
+function formatAiOutput(text) {
+    if (!text) return '';
+    // Escape HTML first for safety
+    let safe = String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    // Convert **bold** to <strong>
+    safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Convert bullet points (lines starting with - or •)
+    safe = safe.replace(/^[\-•]\s+(.+)$/gm, '<span class="terminal-bullet">• $1</span>');
+    // Convert ### headings
+    safe = safe.replace(/^###?\s+(.+)$/gm, '<strong class="terminal-heading">$1</strong>');
+    // Convert double newlines to paragraph breaks, single to <br>
+    safe = safe.replace(/\n\n/g, '</p><p>');
+    safe = safe.replace(/\n/g, '<br>');
+    return '<p>' + safe + '</p>';
+}
+
 export function setupAiAdvisor() {
     const btn = document.getElementById('execute-ai-btn');
     const input = document.getElementById('ai-ticker-input');
@@ -59,7 +79,7 @@ async function executeAiAnalysis() {
                 : '';
             output.innerHTML = `
                 <span class="terminal-prompt terminal-success">&gt; Scan complete: ${escapeHtml(ticker)} — ${escapeHtml(frameLabel)}${providerNote}</span>
-                <div class="ai-analysis-text">${escapeHtml(data.analysis)}</div>
+                <div class="ai-analysis-text">${formatAiOutput(data.analysis)}</div>
                 <span class="terminal-prompt terminal-warn">&gt; Educational use only. Not financial advice.</span>
             `;
         }
