@@ -12,10 +12,10 @@ function formatAiOutput(text) {
         .replace(/"/g, '&quot;');
     // Convert **bold** to <strong>
     safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    // Convert bullet points (lines starting with - or •)
-    safe = safe.replace(/^[\-•]\s+(.+)$/gm, '<span class="terminal-bullet">• $1</span>');
-    // Convert ### headings
-    safe = safe.replace(/^###?\s+(.+)$/gm, '<strong class="terminal-heading">$1</strong>');
+    // Convert bullet points (lines starting with -, •, or *)
+    safe = safe.replace(/^[\-•*]\s+(.+)$/gm, '<span class="terminal-bullet">• $1</span>');
+    // Convert headings (#, ##, ###, etc.)
+    safe = safe.replace(/^#{1,4}\s+(.+)$/gm, '<strong class="terminal-heading">$1</strong>');
     // Convert double newlines to paragraph breaks, single to <br>
     safe = safe.replace(/\n\n/g, '</p><p>');
     safe = safe.replace(/\n/g, '<br>');

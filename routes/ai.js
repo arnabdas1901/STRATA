@@ -31,7 +31,31 @@ router.post('/analyze', async (req, res) => {
             return res.status(404).json({ error: 'Ticker not found or market data unavailable.' });
         }
 
-        const prompt = buildAiPrompt(symbol, frameKey, profile, quote, metricsPayload);
+        // Fetch extra technical signals for momentum frame
+        let technicalData = {};
+        if (frameKey === 'momentum') {
+            try {
+                const recRes = await fetch(
+                    `https://finnhub.io/api/v1/stock/recommendation?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`
+                );
+                const recData = await recRes.json();
+                if (Array.isArray(recData) && recData.length > 0) {
+                    const latest = recData[0];
+                    technicalData.analystConsensus = {
+                        period: latest.period,
+                        strongBuy: latest.strongBuy,
+                        buy: latest.buy,
+                        hold: latest.hold,
+                        sell: latest.sell,
+                        strongSell: latest.strongSell,
+                    };
+                }
+            } catch (e) {
+                console.warn('Could not fetch recommendation trends:', e.message);
+            }
+        }
+
+        const prompt = buildAiPrompt(symbol, frameKey, profile, quote, metricsPayload, technicalData);
         const { analysis, provider } = await generateAiAnalysis(prompt);
 
         res.json({
