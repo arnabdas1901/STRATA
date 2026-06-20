@@ -13,6 +13,9 @@ export function setupCalculators() {
             renderCalcInputs(activeCalcType);
         });
     });
+
+    // Initial render for default active tab (SIP)
+    renderCalcInputs(activeCalcType);
 }
 
 function renderCalcInputs(type) {
