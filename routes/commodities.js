@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { fetchAlphaVantageCommodity, fetchTwelveDataQuote } = require('../utils/equityProviders');
+const { fetchAlphaVantageCommodity, fetchTwelveDataQuote, fetchYahooChart } = require('../utils/equityProviders');
 const { getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
 
 // Alpha Vantage Limit: 25 requests/day. We fetch 5 items.
@@ -131,6 +131,65 @@ router.get('/description', async (req, res) => {
     } catch (error) {
         console.error(`AI Description error for ${symbol}:`, error.message);
         res.status(500).json({ error: 'Failed to generate description' });
+    }
+});
+
+router.get('/search', async (req, res) => {
+    const { query } = req.query;
+    if (!query) return res.status(400).json({ error: 'Search query required' });
+
+    try {
+        const aiProvider = getAiProvider();
+        let ticker = '';
+        let resolvedName = query;
+
+        // Step 1: Resolve Ticker via AI
+        if (aiProvider) {
+            const prompt = `You are a financial data assistant. The user is searching for a commodity: '${query}'. Identify the primary Yahoo Finance ticker symbol for this commodity (e.g., GC=F for Gold, CL=F for Crude Oil, ZC=F for Corn, KC=F for Coffee, SB=F for Sugar). Reply ONLY with the exact ticker symbol, nothing else. If it's not a commodity, try your best to find a related commodity futures ticker.`;
+            const { analysis } = await generateAiAnalysis(prompt);
+            ticker = analysis.trim();
+            // Clean up any extra characters the AI might add
+            ticker = ticker.replace(/["'.]/g, '').replace(/\s+/g, '').trim();
+            
+            // Hardcode some safety just in case
+            if (ticker.toUpperCase() === 'GOLD') ticker = 'GC=F';
+            if (ticker.toUpperCase() === 'SILVER') ticker = 'SI=F';
+        } else {
+            // Fallback simplistic mapping if no AI
+            ticker = query.toUpperCase() + '=F';
+        }
+
+        // Step 2: Fetch Data from Yahoo
+        const chartDataResponse = await fetchYahooChart(ticker, '1y', '1d');
+        if (chartDataResponse.error) {
+             return res.status(404).json({ error: `Could not fetch data for resolved ticker: ${ticker}. ${chartDataResponse.error}` });
+        }
+
+        resolvedName = chartDataResponse.raw.shortName || query;
+
+        // Step 3: Generate Description
+        let description = '';
+        if (aiProvider) {
+            const descPrompt = `Write a professional, 3-4 sentence macroeconomic profile and description for the commodity "${resolvedName}" (Symbol: ${ticker}). Describe what it is used for globally, its key producers/regions, and what macroeconomic factors typically drive its price. Do not include any current live prices or timestamps. Make it sound like a premium Bloomberg terminal summary.`;
+            const { analysis } = await generateAiAnalysis(descPrompt);
+            description = analysis;
+        } else {
+            description = `${resolvedName} is a globally traded macroeconomic asset. Its price is influenced by supply chains, geopolitical events, and global inflation trends.`;
+        }
+
+        res.json({
+            name: resolvedName,
+            symbol: ticker,
+            price: chartDataResponse.price,
+            change: chartDataResponse.change,
+            changePercent: chartDataResponse.changePercent,
+            chartData: chartDataResponse.chartData,
+            description: description
+        });
+
+    } catch (error) {
+        console.error(`Error in commodity search for ${req.query.query}:`, error.message);
+        res.status(500).json({ error: 'Failed to perform commodity search' });
     }
 });
 

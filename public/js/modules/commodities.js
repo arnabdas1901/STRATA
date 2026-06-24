@@ -1,6 +1,7 @@
 import { BACKEND_URL, fetchWithTimeout, safeJsonParse, formatLargeCurrency } from '../utils.js';
 
 let commoditiesData = [];
+let commodityChartInstance = null;
 
 export function initCommoditiesDashboard() {
     setupUIListeners();
@@ -16,19 +17,13 @@ function setupUIListeners() {
         });
     }
 
-    // Optional: Search logic (mocked to just return to grid for now, or trigger selection if found)
     const searchBtn = document.getElementById('commodity-search-btn');
     const searchInput = document.getElementById('commodity-search-input');
     if (searchBtn && searchInput) {
         searchBtn.addEventListener('click', () => {
-            const query = searchInput.value.trim().toUpperCase();
+            const query = searchInput.value.trim();
             if (!query) return;
-            const match = commoditiesData.find(c => c.symbol.toUpperCase().includes(query) || c.name.toUpperCase().includes(query));
-            if (match) {
-                selectCommodity(match.id);
-            } else {
-                alert('Commodity not found in top 6 macro tracker. Detailed search coming soon.');
-            }
+            performCommoditySearch(query);
         });
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') searchBtn.click();
@@ -111,45 +106,155 @@ function renderCommodityGrid(items) {
     });
 }
 
-async function selectCommodity(id) {
+function selectCommodity(id) {
     const item = commoditiesData.find(c => c.id === id);
     if (!item) return;
+    // For grid items, we can use their symbol or name to search and get the graph
+    performCommoditySearch(item.name || item.symbol);
+}
 
-    // Show results container, hide grid
+async function performCommoditySearch(query) {
     document.getElementById('commodity-landing-view').classList.add('hidden-element');
     document.getElementById('commodity-results-container').classList.remove('hidden-element');
 
-    // Populate hero card
-    document.getElementById('commodity-icon-display').innerText = item.emoji;
-    document.getElementById('commodity-name-display').innerText = item.name;
-    document.getElementById('commodity-ticker-badge').innerText = item.symbol;
+    // Set loading states
+    document.getElementById('commodity-icon-display').innerText = '⏳';
+    document.getElementById('commodity-name-display').innerText = 'Searching...';
+    document.getElementById('commodity-ticker-badge').innerText = '...';
+    document.getElementById('commodity-live-price-display').innerText = 'N/A';
+    document.getElementById('commodity-live-change-display').innerText = '--%';
+    document.getElementById('commodity-live-change-display').className = 'price-change-percent';
     
-    const priceText = item.price != null ? formatLargeCurrency(item.price) : 'N/A';
-    document.getElementById('commodity-live-price-display').innerText = priceText;
-    
-    const changeVal = item.changePercent != null ? parseFloat(item.changePercent) : 0;
-    const changeText = item.changePercent != null ? `${changeVal >= 0 ? '+' : ''}${changeVal.toFixed(2)}%` : '--%';
-    const changeClass = changeVal >= 0 ? 'price-change-percent pos-change' : 'price-change-percent neg-change';
-    
-    const changeDisplay = document.getElementById('commodity-live-change-display');
-    changeDisplay.innerText = changeText;
-    changeDisplay.className = changeClass;
-
-    // Fetch dynamic description
     const descEl = document.getElementById('commodity-description-display');
-    descEl.innerHTML = '<span class="pulse-text" style="color: var(--neon-cyan-vibrant);">Analyzing global macro data and writing market profile...</span>';
+    descEl.innerHTML = '<span class="pulse-text" style="color: var(--neon-cyan-vibrant);">Analyzing global macro data, fetching historical charts, and writing market profile...</span>';
+
+    if (commodityChartInstance) {
+        commodityChartInstance.destroy();
+        commodityChartInstance = null;
+    }
 
     try {
-        const response = await fetchWithTimeout(`${BACKEND_URL}/api/commodities/description?symbol=${encodeURIComponent(item.symbol)}&name=${encodeURIComponent(item.name)}`);
+        const response = await fetchWithTimeout(`${BACKEND_URL}/api/commodities/search?query=${encodeURIComponent(query)}`);
         const payload = await safeJsonParse(response);
-        
-        if (payload?.description) {
-            descEl.innerText = payload.description;
-        } else {
-            descEl.innerText = 'Market profile unavailable at this time.';
+
+        if (payload?.error) {
+            descEl.innerHTML = `<span style="color: var(--error-red);">${payload.error}</span>`;
+            document.getElementById('commodity-name-display').innerText = 'Search Failed';
+            return;
+        }
+
+        if (payload) {
+            // Populate Hero
+            document.getElementById('commodity-icon-display').innerText = '🌐'; // Generic icon for searched commodity
+            document.getElementById('commodity-name-display').innerText = payload.name;
+            document.getElementById('commodity-ticker-badge').innerText = payload.symbol;
+            
+            const priceText = payload.price != null ? formatLargeCurrency(payload.price) : 'N/A';
+            document.getElementById('commodity-live-price-display').innerText = priceText;
+            
+            const changeVal = payload.changePercent != null ? parseFloat(payload.changePercent) : 0;
+            const changeText = payload.changePercent != null ? `${changeVal >= 0 ? '+' : ''}${changeVal.toFixed(2)}%` : '--%';
+            const changeClass = changeVal >= 0 ? 'price-change-percent pos-change' : 'price-change-percent neg-change';
+            
+            const changeDisplay = document.getElementById('commodity-live-change-display');
+            changeDisplay.innerText = changeText;
+            changeDisplay.className = changeClass;
+
+            // Populate Description
+            descEl.innerText = payload.description || 'Description unavailable.';
+
+            // Render Chart
+            if (payload.chartData && payload.chartData.length > 0) {
+                renderCommodityChart(payload.chartData, payload.name, changeVal >= 0);
+            }
         }
     } catch (error) {
-        console.error('Failed to fetch commodity description:', error);
-        descEl.innerText = 'Failed to load market profile due to a network error.';
+        console.error('Failed to perform commodity search:', error);
+        descEl.innerHTML = '<span style="color: var(--error-red);">Failed to load commodity data due to a network error.</span>';
+        document.getElementById('commodity-name-display').innerText = 'Error';
     }
+}
+
+function renderCommodityChart(chartData, name, isPositive) {
+    const ctx = document.getElementById('commodity-chart');
+    if (!ctx) return;
+
+    if (commodityChartInstance) {
+        commodityChartInstance.destroy();
+    }
+
+    const labels = chartData.map(d => {
+        const date = new Date(d.time * 1000);
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+    });
+    const dataPoints = chartData.map(d => d.close);
+
+    const lineColor = isPositive ? '#00e6b8' : '#ff4d4d'; // neon cyan or neon red
+    const gradientColorStart = isPositive ? 'rgba(0, 230, 184, 0.2)' : 'rgba(255, 77, 77, 0.2)';
+    const gradientColorEnd = isPositive ? 'rgba(0, 230, 184, 0)' : 'rgba(255, 77, 77, 0)';
+
+    const chartCtx = ctx.getContext('2d');
+    const gradient = chartCtx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, gradientColorStart);
+    gradient.addColorStop(1, gradientColorEnd);
+
+    commodityChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: `${name} Price`,
+                data: dataPoints,
+                borderColor: lineColor,
+                backgroundColor: gradient,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1a1f2e',
+                    titleColor: '#8f9bb3',
+                    bodyColor: '#ffffff',
+                    borderColor: '#2e3852',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return formatLargeCurrency(context.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: false,
+                },
+                y: {
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        drawBorder: false,
+                    },
+                    ticks: {
+                        color: '#8f9bb3',
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }

@@ -132,6 +132,58 @@ async function fetchYahooIndexQuote(symbol) {
     };
 }
 
+async function fetchYahooChart(symbol, range = '1y', interval = '1d') {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
+    const response = await fetch(url, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json',
+        },
+    });
+    const data = await response.json();
+    const result = data?.chart?.result?.[0];
+    const meta = result?.meta || {};
+    
+    const timestamps = result?.timestamp || [];
+    const closes = result?.indicators?.quote?.[0]?.close || [];
+    
+    // Filter out nulls
+    const chartData = [];
+    for (let i = 0; i < timestamps.length; i++) {
+        if (closes[i] != null) {
+            chartData.push({
+                time: timestamps[i],
+                close: closes[i]
+            });
+        }
+    }
+
+    const lastClose = [...closes].reverse().find((value) => Number.isFinite(value));
+    const price = parseMarketNumber(meta.regularMarketPrice ?? lastClose);
+    const previousClose = parseMarketNumber(meta.previousClose ?? meta.chartPreviousClose);
+
+    if (!response.ok || price == null) {
+        return { error: data?.chart?.error?.description || 'Yahoo chart unavailable', raw: data };
+    }
+
+    const change = previousClose != null ? price - previousClose : 0;
+    const changePercent = previousClose ? (change / previousClose) * 100 : 0;
+
+    return {
+        price,
+        change,
+        changePercent,
+        chartData,
+        raw: {
+            symbol,
+            provider: 'Yahoo Finance',
+            exchangeName: meta.exchangeName,
+            shortName: meta.shortName || meta.symbol
+        },
+    };
+}
+
+
 async function fetchFmpMetrics(symbol) {
     const fmpKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY;
     if (!fmpKey) {
@@ -199,6 +251,7 @@ module.exports = {
     fetchTwelveDataQuote,
     fetchFmpQuote,
     fetchYahooIndexQuote,
+    fetchYahooChart,
     fetchFmpMetrics,
     fetchAlphaVantageCommodity
 };
