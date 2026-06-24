@@ -137,9 +137,12 @@ async function displayMacroDetails(code, name, flag, bank) {
     document.getElementById('central-bank-badge').innerText = bank || 'Central Bank';
 
     try {
-        const [cpiData, rateData] = await Promise.all([
+        const [cpiData, rateData, gdpData, unemployData, currentAcctData] = await Promise.all([
             fetchWorldBankIndicator(code, 'FP.CPI.TOTL.ZG'),
-            fetchWorldBankIndicator(code, 'FR.INR.LEND')
+            fetchWorldBankIndicator(code, 'FR.INR.LEND'),
+            fetchWorldBankIndicator(code, 'NY.GDP.MKTP.KD.ZG'),
+            fetchWorldBankIndicator(code, 'SL.UEM.TOTL.ZS'),
+            fetchWorldBankIndicator(code, 'BN.CAB.XOKA.GD.ZS')
         ]);
 
         if (!cpiData || cpiData.length === 0) {
@@ -148,8 +151,17 @@ async function displayMacroDetails(code, name, flag, bank) {
 
         const validCpi = cpiData.filter(d => d.value !== null).sort((a,b) => parseInt(a.date) - parseInt(b.date));
         const latestCpi = validCpi.length > 0 ? validCpi[validCpi.length - 1] : null;
-        const validRates = rateData ? rateData.filter(d => d.value !== null) : [];
-        const latestRate = validRates.length > 0 ? validRates[0] : null;
+        
+        const extractLatest = (arr) => {
+            if (!arr) return null;
+            const valid = arr.filter(d => d.value !== null).sort((a,b) => parseInt(b.date) - parseInt(a.date));
+            return valid.length > 0 ? valid[0] : null;
+        };
+
+        const latestRate = extractLatest(rateData);
+        const latestGdp = extractLatest(gdpData);
+        const latestUnemploy = extractLatest(unemployData);
+        const latestCurrentAcct = extractLatest(currentAcctData);
 
         if (latestCpi) {
             document.getElementById('inflation-live-display').innerText = `${latestCpi.value.toFixed(2)}%`;
@@ -159,16 +171,45 @@ async function displayMacroDetails(code, name, flag, bank) {
         }
 
         document.getElementById('metric-interest-rate').innerText = latestRate ? `${latestRate.value.toFixed(2)}%` : 'N/A';
+        document.getElementById('metric-gdp-growth').innerText = latestGdp ? `${latestGdp.value.toFixed(2)}%` : 'N/A';
+        document.getElementById('metric-unemployment').innerText = latestUnemploy ? `${latestUnemploy.value.toFixed(2)}%` : 'N/A';
+        document.getElementById('metric-current-account').innerText = latestCurrentAcct ? `${latestCurrentAcct.value.toFixed(2)}%` : 'N/A';
         
         const countryObj = globalCountryMap.find(c => c.id === code || c.iso2Code === code);
         document.getElementById('currency-badge').innerText = countryObj && countryObj.capitalCity ? `Capital: ${countryObj.capitalCity}` : 'Sovereign Macro';
 
+        // Prepare chart data (Align to CPI dates)
         const labels = validCpi.map(d => d.date);
-        const values = validCpi.map(d => d.value);
-        renderMacroChart(labels, values);
+        const cpiValues = validCpi.map(d => d.value);
+        
+        const rateMap = {};
+        if (rateData) {
+            rateData.forEach(d => { if (d.value !== null) rateMap[d.date] = d.value; });
+        }
+        const rateValues = labels.map(date => rateMap[date] !== undefined ? rateMap[date] : null);
+
+        renderMacroChart(labels, cpiValues, rateValues);
 
         if(loader) loader.classList.add('hidden-element');
         if(results) results.classList.remove('hidden-element');
+
+        // Fetch AI Analysis asynchronously
+        const analysisDisplay = document.getElementById('macro-analysis-display');
+        analysisDisplay.innerHTML = '<span class="pulse-text" style="color: var(--neon-cyan-vibrant);">Generating macroeconomic insights...</span>';
+        
+        fetch(`${BACKEND_URL}/api/macro/analysis?country=${encodeURIComponent(name)}&cpi=${latestCpi?.value?.toFixed(2) || ''}&rate=${latestRate?.value?.toFixed(2) || ''}&gdp=${latestGdp?.value?.toFixed(2) || ''}&unemployment=${latestUnemploy?.value?.toFixed(2) || ''}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.analysis) {
+                    analysisDisplay.innerText = data.analysis;
+                } else {
+                    analysisDisplay.innerText = 'Analysis unavailable.';
+                }
+            })
+            .catch(err => {
+                analysisDisplay.innerText = 'Failed to load macro analysis due to a network error.';
+            });
+
     } catch (err) {
         console.error("Macro Fetch Error:", err);
         showToast(err.message || "Failed to load macro data.");
@@ -177,55 +218,98 @@ async function displayMacroDetails(code, name, flag, bank) {
     }
 }
 
-function renderMacroChart(labels, data) {
+function renderMacroChart(labels, cpiData, rateData) {
     const canvas = document.getElementById('inflationHistoricalChart');
     if (!canvas) return;
 
-    const latestValue = data.length > 0 ? data[data.length - 1] : 0;
+    const latestValue = cpiData.length > 0 ? cpiData[cpiData.length - 1] : 0;
     const isRunningHot = latestValue > 2.5;
-    const lineColor = isRunningHot ? '#ef4444' : '#10b981';
-    const fillColor = isRunningHot ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+    const cpiLineColor = isRunningHot ? '#ef4444' : '#10b981'; // Red or Green
+    const cpiFillColor = isRunningHot ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+
+    const rateLineColor = '#3b82f6'; // Blue for Interest Rate
+    const rateFillColor = 'rgba(59, 130, 246, 0.1)';
 
     if (macroChartInstance) {
-        macroChartInstance.data.labels = labels;
-        macroChartInstance.data.datasets[0].data = data;
-        macroChartInstance.data.datasets[0].borderColor = lineColor;
-        macroChartInstance.data.datasets[0].backgroundColor = fillColor;
-        macroChartInstance.update();
-    } else {
-        macroChartInstance = new Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Annual Inflation Rate (%)',
-                    data: data,
-                    borderColor: lineColor,
-                    backgroundColor: fillColor,
+        macroChartInstance.destroy();
+    }
+
+    macroChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Inflation Rate (CPI %)',
+                    data: cpiData,
+                    borderColor: cpiLineColor,
+                    backgroundColor: cpiFillColor,
+                    yAxisID: 'y',
                     tension: 0.3,
                     fill: true,
                     pointRadius: 4,
                     borderWidth: 2,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: { padding: { top: 8, right: 10, left: 6, bottom: 8 } },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ` ${ctx.parsed.y.toFixed(2)}%`
-                        }
-                    }
                 },
-                scales: {
-                    y: {
-                        ticks: { callback: (val) => val + '%' }
+                {
+                    label: 'Lending Interest Rate (%)',
+                    data: rateData,
+                    borderColor: rateLineColor,
+                    backgroundColor: 'transparent',
+                    yAxisID: 'y1',
+                    tension: 0.3,
+                    fill: false,
+                    borderDash: [5, 5],
+                    pointRadius: 3,
+                    borderWidth: 2,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 8, right: 10, left: 6, bottom: 8 } },
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { 
+                    display: true,
+                    labels: { color: '#8f9bb3' }
+                },
+                tooltip: {
+                    backgroundColor: '#1a1f2e',
+                    titleColor: '#8f9bb3',
+                    bodyColor: '#ffffff',
+                    borderColor: '#2e3852',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`
                     }
                 }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#8f9bb3' }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: 'Inflation (%)', color: '#8f9bb3' },
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#8f9bb3', callback: (val) => val + '%' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: { display: true, text: 'Interest Rate (%)', color: '#8f9bb3' },
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: '#8f9bb3', callback: (val) => val + '%' }
+                }
             }
-        });
-    }
+        }
+    });
 }

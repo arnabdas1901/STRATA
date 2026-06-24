@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { requireTicker } = require('../utils/api');
 const { fetchYahooIndexQuote, fetchFmpQuote, fetchTwelveDataQuote, fetchFinnhubQuote } = require('../utils/equityProviders');
+const { getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
 
 const INDEX_QUOTE_CACHE = {
     lastFetched: 0,
@@ -124,6 +125,39 @@ router.get('/indices', async (req, res) => {
     }
 });
 
+const MACRO_ANALYSIS_CACHE = {};
 
+router.get('/analysis', async (req, res) => {
+    const { country, cpi, rate, gdp, unemployment } = req.query;
+    if (!country) return res.status(400).json({ error: 'Country required' });
+
+    const cacheKey = `${country}_${cpi}_${rate}`;
+    if (MACRO_ANALYSIS_CACHE[cacheKey]) {
+        return res.json({ analysis: MACRO_ANALYSIS_CACHE[cacheKey] });
+    }
+
+    try {
+        const aiProvider = getAiProvider();
+        if (!aiProvider) {
+             return res.json({ analysis: 'AI Provider not configured. Add an API key to enable premium macroeconomic insights.' });
+        }
+
+        const prompt = `You are a Chief Economist at a top-tier investment bank. Write a professional, concise (3-4 sentences) macroeconomic monetary policy analysis for ${country}.
+Current Data Context: 
+- Headline CPI Inflation: ${cpi}% 
+- Central Bank Interest Rate: ${rate}%
+- GDP Growth: ${gdp || 'N/A'}%
+- Unemployment: ${unemployment || 'N/A'}%
+
+Assess their central bank's current stance (Hawkish, Dovish, or Neutral) and the general economic health based on this data. Do not include disclaimers or conversational filler. Make it sound like a premium Bloomberg terminal insight.`;
+
+        const { analysis } = await generateAiAnalysis(prompt);
+        MACRO_ANALYSIS_CACHE[cacheKey] = analysis;
+        res.json({ analysis });
+    } catch (error) {
+        console.error('AI Macro Analysis Error:', error.message);
+        res.status(500).json({ error: 'Failed to generate macro analysis.' });
+    }
+});
 
 module.exports = router;
