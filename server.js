@@ -50,7 +50,7 @@ if (process.env.NODE_ENV !== 'test') {
         const { getAiProvider } = require('./utils/aiProviders');
         const aiProvider = getAiProvider();
         console.log(`==================================================`);
-        console.log(`🚀 EQUITRACK Secure Backend Engine Active!`);
+        console.log(`🚀 STRATA Secure Backend Engine Active!`);
         console.log(`🔗 Open the app: http://localhost:${PORT}`);
         if (aiProvider === 'groq') {
             console.log(`🤖 AI Advisor: Groq (${process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'})`);

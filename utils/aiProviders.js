@@ -121,7 +121,7 @@ const buildAiPrompt = (symbol, frameKey, profile, quote, metricsPayload, technic
         context.technicalSignals = technicalData;
     }
 
-    return `You are EQUITRACK, an educational equity research assistant.
+    return `You are STRATA, an educational equity research assistant.
 
 RULES:
 - Not financial advice; include a one-sentence disclaimer at the end.

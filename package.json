@@ -1,5 +1,5 @@
 {
-  "name": "equitrack",
+  "name": "strata",
   "private": true,
   "scripts": {
     "start": "node --use-system-ca server.js"

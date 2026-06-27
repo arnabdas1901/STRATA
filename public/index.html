@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQUITRACK - Institutional Equity Intelligence</title>
+    <title>STRATA - Institutional Equity Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -67,7 +67,7 @@
             <header class="mobile-header">
                 <div class="mobile-logo">
                     <i class="fa-solid fa-chart-line logo-icon"></i>
-                    <span>EQUITRACK</span>
+                    <span>STRATA</span>
                 </div>
                 <!-- Added aria-label for accessibility -->
                 <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
@@ -965,7 +965,7 @@
     <script>
         // Synchronous execution before first paint to prevent FOUC (flicker)
         (function() {
-            const saved = sessionStorage.getItem('equitrack_active_dashboard');
+            const saved = sessionStorage.getItem('strata_active_dashboard');
             if (saved && saved !== 'dashboard-equity') {
                 const eqNav = document.querySelector('[data-target="dashboard-equity"]');
                 const eqView = document.getElementById('dashboard-equity');
