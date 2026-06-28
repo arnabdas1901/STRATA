@@ -76,10 +76,25 @@ select {
     border-bottom: 1px solid var(--border-cyan-glow);
 }
 
-.brand-logo-img {
-    max-width: 180px;
-    height: auto;
+.logo-icon-img {
+    height: 42px;
+    width: auto;
     object-fit: contain;
+}
+
+.logo-text-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.logo-subtext {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--neon-cyan-vibrant);
+    text-transform: uppercase;
+    margin-top: -2px;
 }
 
 .logo-icon {
@@ -1432,7 +1447,7 @@ select {
     }
     
     .mobile-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
-    .brand-logo-img-mobile { max-height: 36px; max-width: 150px; object-fit: contain; }
+    .logo-icon-img-mobile { max-height: 30px; width: auto; object-fit: contain; }
     .mobile-toggle-btn { background: none; border: none; color: var(--text-primary-white); font-size: 1.25rem; cursor: pointer; padding: 6px; }
     
     .ai-input-strip { flex-direction: column; align-items: stretch; gap: 14px; }
