@@ -69,11 +69,27 @@ select {
 }
 
 .logo-container {
-    padding: 24px;
+    padding: 20px 24px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     border-bottom: 1px solid var(--border-cyan-glow);
+}
+
+.brand-logo-sticker {
+    height: 52px;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+    display: block;
+}
+
+.brand-logo-sticker-mobile {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+    display: block;
 }
 
 .logo-icon-img {
@@ -1447,7 +1463,7 @@ select {
     }
     
     .mobile-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
-    .logo-icon-img-mobile { max-height: 30px; width: auto; object-fit: contain; }
+    .brand-logo-sticker-mobile { max-height: 34px; width: auto; object-fit: contain; }
     .mobile-toggle-btn { background: none; border: none; color: var(--text-primary-white); font-size: 1.25rem; cursor: pointer; padding: 6px; }
     
     .ai-input-strip { flex-direction: column; align-items: stretch; gap: 14px; }
