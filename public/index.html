@@ -300,30 +300,7 @@
                 </div>
 
                 <div class="portfolio-advanced-grid">
-                    <div class="portfolio-suballocation-card">
-                        <h3>Tactical ETF Implementation</h3>
-                        <p class="section-desc">Recommended instruments for the macro allocation.</p>
-                        <div class="financial-table-wrapper">
-                            <table class="financial-data-table" id="portfolio-etf-table">
-                                <thead>
-                                    <tr>
-                                        <th>Asset Class</th>
-                                        <th>Ticker</th>
-                                        <th>Target %</th>
-                                        <th>Allocation ($)</th>
-                                        <th>Yield</th>
-                                        <th>Fees (ER)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="portfolio-etf-body">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="portfolio-summary-bar" class="portfolio-summary-bar">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
+
 
                     <div class="portfolio-projection-card">
                         <h3>10-Year Wealth Projection</h3>
@@ -725,6 +702,9 @@
                     <div id="macro-brackets-grid" class="crypto-brackets-grid" role="list">
                         <!-- Populated by JavaScript -->
                     </div>
+                    <p class="projection-disclaimer" style="margin-top: 24px; text-align: center;">
+                        <i class="fa-solid fa-circle-info"></i> <strong>Data Notice:</strong> Macroeconomic indicators are sourced from the <strong>World Bank API</strong>, which provides official finalized <em>annual</em> data. Because global macroeconomic data requires extensive auditing across countries, the most recent finalized data often lags by 1-2 years (e.g., 2024 data being the latest available in 2026).
+                    </p>
                 </div>
 
                 <div id="inflation-loader" class="loader-container hidden-element">

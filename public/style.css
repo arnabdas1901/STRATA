@@ -1131,7 +1131,7 @@ select {
 /* Advanced Portfolio Sub-Allocation & Projections */
 .portfolio-advanced-grid {
     display: grid;
-    grid-template-columns: 0.9fr 1.1fr;
+    grid-template-columns: 1fr;
     gap: 24px;
     margin-top: 24px;
 }

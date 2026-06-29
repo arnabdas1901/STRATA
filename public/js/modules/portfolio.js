@@ -85,9 +85,8 @@ function generatePortfolio() {
 
     renderPortfolioPieChart([equity, fixedIncome, metals]);
 
-    // Micro Allocation (Tier 2)
+    // Micro Allocation for Projection (Tier 2/3)
     const subAllocations = calculateSubAllocations(equity, fixedIncome, metals, risk);
-    renderETFTable(subAllocations, initialCapital);
     
     // Projection (Tier 3)
     calculateAndRenderProjection(subAllocations, initialCapital);
@@ -123,58 +122,6 @@ function calculateSubAllocations(equity, fixedIncome, metals, risk) {
     return allocations;
 }
 
-function renderETFTable(allocations, initialCapital) {
-    const tbody = document.getElementById('portfolio-etf-body');
-    const summaryBar = document.getElementById('portfolio-summary-bar');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-    let totalER = 0;
-    let totalYield = 0;
-    
-    allocations.forEach(alloc => {
-        if (alloc.weight < 0.5) return; // Skip tiny weights
-        
-        const allocDollar = initialCapital * (alloc.weight / 100);
-        const weightDec = alloc.weight / 100;
-        
-        totalER += alloc.er * weightDec;
-        totalYield += alloc.yield * weightDec;
-        
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>
-                <div class="etf-asset-name">
-                    <div class="etf-color-indicator" style="background-color: ${alloc.color}"></div>
-                    <div class="etf-name-group">
-                        <span>${alloc.name}</span>
-                        <span class="etf-subtitle">${alloc.etf}</span>
-                    </div>
-                </div>
-            </td>
-            <td><span class="ticker-chip">${alloc.ticker}</span></td>
-            <td>${alloc.weight.toFixed(1)}%</td>
-            <td style="color: var(--neon-cyan-vibrant); font-weight: 600;">$${allocDollar.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
-            <td>${(alloc.yield * 100).toFixed(2)}%</td>
-            <td class="fees-col">${(alloc.er * 100).toFixed(2)}%</td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    if (summaryBar) {
-        const estIncome = initialCapital * totalYield;
-        summaryBar.innerHTML = `
-            <div class="summary-metric">
-                <span class="summary-label">Weighted Expense Ratio</span>
-                <span class="summary-value fees-col">${(totalER * 100).toFixed(2)}%</span>
-            </div>
-            <div class="summary-metric">
-                <span class="summary-label">Est. Year 1 Income</span>
-                <span class="summary-value" style="color: #10b981;">$${estIncome.toLocaleString('en-US', {maximumFractionDigits: 0})}</span>
-            </div>
-        `;
-    }
-}
 
 function calculateAndRenderProjection(allocations, initialCapital) {
     let weightedReturn = 0;
