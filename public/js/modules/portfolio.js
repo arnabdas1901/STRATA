@@ -17,9 +17,6 @@ export function setupPortfolioBuilder() {
     const capitalInput = document.getElementById('portfolio-capital-input');
 
     if (generateBtn) generateBtn.addEventListener('click', generatePortfolio);
-    if (riskInput) riskInput.addEventListener('change', generatePortfolio);
-    if (ageInput) ageInput.addEventListener('change', generatePortfolio);
-    if (capitalInput) capitalInput.addEventListener('change', generatePortfolio);
 
     // Generate initial
     generatePortfolio();

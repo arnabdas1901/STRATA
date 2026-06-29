@@ -13,22 +13,29 @@ export function loadDashboard() {
 }
 
 function setupSearch() {
-    const searchBtn = document.getElementById('equity-search-btn');
-    const searchInput = document.getElementById('equity-search-input');
-    const backBtn = document.getElementById('equity-back-btn');
+    const searchBtn = document.querySelector('#equity-search-btn');
+    const searchInput = document.querySelector('#equity-search-input');
+    const backBtn = document.querySelector('#equity-back-btn');
+
+    const handleSearch = () => {
+        if (!searchInput) return;
+        const ticker = searchInput.value.trim().toUpperCase();
+        if (ticker) {
+            executeEquityAnalysis(ticker);
+        } else {
+            showToast("Please enter a valid US ticker symbol");
+        }
+    };
 
     if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
-            const ticker = searchInput?.value.trim().toUpperCase();
-            if (ticker) executeEquityAnalysis(ticker);
-        });
+        searchBtn.addEventListener('click', handleSearch);
     }
 
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                const ticker = searchInput.value.trim().toUpperCase();
-                if (ticker) executeEquityAnalysis(ticker);
+                e.preventDefault();
+                handleSearch();
             }
         });
     }
@@ -107,7 +114,6 @@ async function executeEquityAnalysis(ticker) {
     } catch (error) {
         console.error("Market Data Fetch Error:", error);
         showToast(error.message || "Failed to load market data");
-        clearEquityResults();
     } finally {
         if (loader) loader.classList.add('hidden-element');
     }
