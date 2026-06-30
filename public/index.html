@@ -260,59 +260,144 @@
 
             <section id="dashboard-portfolio" class="dashboard-viewport">
                 <div class="dashboard-header-block">
-                    <h1>Risk-Engine Portfolio Architect</h1>
-                    <p class="subtitle">Discretionary capital allocation engines tailored around mathematical horizon modeling</p>
+                    <h1><i class="fa-solid fa-diagram-project portfolio-header-icon"></i> Risk-Engine Portfolio Architect</h1>
+                    <p class="subtitle">Institutional-grade capital allocation framework with quantitative risk analytics and horizon modeling</p>
                 </div>
 
                 <div class="portfolio-grid-layout">
                     <div class="portfolio-inputs-card">
-                        <h3>Biometric & Volatility Parameters</h3>
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-sliders"></i>
+                            <h3>Investor Profile & Parameters</h3>
+                        </div>
                         <div class="input-field-group">
                             <label for="portfolio-capital-input">Initial Capital ($)</label>
                             <input type="number" id="portfolio-capital-input" min="1000" value="100000" step="1000" placeholder="e.g., 100000">
                         </div>
                         <div class="input-field-group">
-                            <label for="portfolio-age-input">Target Investor Current Age (Years)</label>
+                            <label for="portfolio-age-input">Investor Age (Years)</label>
                             <input type="number" id="portfolio-age-input" min="1" max="120" value="30" placeholder="e.g., 30">
                         </div>
                         <div class="input-field-group">
-                            <label for="portfolio-risk-input">Discretionary Volatility Tolerance</label>
+                            <label for="portfolio-risk-input">Risk Tolerance Profile</label>
                             <select id="portfolio-risk-input">
-                                <option value="conservative">Conservative (Capital Preservation Focus)</option>
-                                <option value="moderate" selected>Moderate (Balanced Systematic Growth)</option>
-                                <option value="aggressive">Aggressive (High Alpha Volatility Maximization)</option>
+                                <option value="conservative">Conservative — Capital Preservation</option>
+                                <option value="moderate" selected>Moderate — Balanced Growth</option>
+                                <option value="aggressive">Aggressive — Maximum Alpha</option>
                             </select>
                         </div>
-                        <button id="generate-portfolio-btn" class="primary-btn fluid-btn">Construct Tactical Framework</button>
+                        <button id="generate-portfolio-btn" class="primary-btn fluid-btn portfolio-generate-btn">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Construct Portfolio
+                        </button>
+                        <div class="portfolio-methodology-note">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <span>Uses age-based glide path (110 − age) with risk-adjusted overlays and institutional ETF mapping.</span>
+                        </div>
                     </div>
 
                     <div class="portfolio-output-card">
-                        <h3>Macro Asset Allocation Structure</h3>
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <h3>Strategic Asset Allocation</h3>
+                        </div>
                         <div class="portfolio-content-box">
-                            <div class="portfolio-pie-box">
-                                <canvas id="portfolioPieChart"></canvas>
+                            <div class="portfolio-doughnut-wrapper">
+                                <div class="portfolio-pie-box">
+                                    <canvas id="portfolioPieChart"></canvas>
+                                </div>
+                                <div id="doughnut-center-text" class="doughnut-center-overlay"></div>
                             </div>
                             <div id="portfolio-legend-target" class="portfolio-metrics-breakdown">
-                                <p class="empty-notice">Adjust system parameters to evaluate structural weights.</p>
+                                <p class="empty-notice">Adjust parameters to generate allocation.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="portfolio-advanced-grid">
-
-
-                    <div class="portfolio-projection-card">
-                        <h3>10-Year Wealth Projection</h3>
-                        <p class="section-desc" id="portfolio-projection-desc">Estimating future growth based on weighted historical CAGR.</p>
-                        <div class="chart-wrapper-box" style="height: 300px;">
-                            <canvas id="portfolioProjectionChart"></canvas>
+                <!-- KPI Summary Bar -->
+                <div class="portfolio-kpi-container portfolio-reveal-card">
+                    <div class="kpi-bar-header">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <span>Portfolio Analytics Summary</span>
+                    </div>
+                    <div id="portfolio-kpi-bar" class="portfolio-kpi-bar">
+                        <div class="portfolio-kpi-tile">
+                            <div class="kpi-accent" style="background: var(--neon-green-positive)"></div>
+                            <div class="kpi-body">
+                                <span class="kpi-value" style="color: var(--text-secondary-muted)">—</span>
+                                <span class="kpi-label">Expected Return</span>
+                            </div>
                         </div>
-                        <p class="projection-disclaimer"><i class="fa-solid fa-circle-info"></i> <strong>Disclaimer:</strong> Projections use trailing 10-year historical Compound Annual Growth Rates (CAGR). Historical performance is not a guarantee of future returns. Actual returns will vary due to market volatility.</p>
                     </div>
                 </div>
 
-                <div class="portfolio-stress-link-card">
+                <!-- ETF Holdings Table -->
+                <div class="portfolio-holdings-card portfolio-reveal-card">
+                    <div class="holdings-header">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <h3>ETF-Level Holdings Breakdown</h3>
+                        </div>
+                        <span class="holdings-subtitle">Granular allocation with underlying instrument detail</span>
+                    </div>
+                    <div class="portfolio-holdings-table-wrap">
+                        <table class="portfolio-holdings-table" id="portfolio-etf-table">
+                            <thead>
+                                <tr>
+                                    <th>Asset Class</th>
+                                    <th>Ticker</th>
+                                    <th class="num-col">Weight</th>
+                                    <th class="num-col">Allocation</th>
+                                    <th class="num-col">Exp. Return</th>
+                                    <th class="num-col">Volatility</th>
+                                    <th class="num-col">Yield</th>
+                                    <th class="num-col">Exp. Ratio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="portfolio-etf-tbody">
+                                <tr><td colspan="8" class="table-empty-state">Generate a portfolio to view holdings.</td></tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="etf-totals-row">
+                                    <td colspan="2"><strong>Portfolio Total</strong></td>
+                                    <td class="num-col"><strong id="etf-total-weight">—</strong></td>
+                                    <td class="num-col"><strong id="etf-total-allocation">—</strong></td>
+                                    <td colspan="4"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Projection Chart -->
+                <div class="portfolio-advanced-grid">
+                    <div class="portfolio-projection-card portfolio-reveal-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <h3>10-Year Wealth Projection</h3>
+                        </div>
+                        <p class="section-desc" id="portfolio-projection-desc">Estimating future growth based on weighted historical CAGR with scenario bands.</p>
+                        <div class="chart-wrapper-box" style="height: 340px;">
+                            <canvas id="portfolioProjectionChart"></canvas>
+                        </div>
+                        <p class="projection-disclaimer"><i class="fa-solid fa-circle-info"></i> <strong>Disclaimer:</strong> Projections use trailing 10-year historical Compound Annual Growth Rates (CAGR). The optimistic and pessimistic bands represent ±2 percentage points around the base case. Historical performance is not a guarantee of future returns.</p>
+                    </div>
+                </div>
+
+                <!-- Risk-Return Scatter -->
+                <div class="portfolio-scatter-card portfolio-reveal-card">
+                    <div class="card-section-header">
+                        <i class="fa-solid fa-crosshairs"></i>
+                        <h3>Risk-Return Profile</h3>
+                    </div>
+                    <p class="section-desc">Each bubble represents an asset class. Position shows risk/return tradeoff; size indicates portfolio weight.</p>
+                    <div class="chart-wrapper-box" style="height: 360px;">
+                        <canvas id="portfolioScatterChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Stress Test CTA -->
+                <div class="portfolio-stress-link-card portfolio-reveal-card">
                     <div class="stress-link-content">
                         <div>
                             <h3><i class="fa-solid fa-bolt"></i> Ready to Stress Test?</h3>
