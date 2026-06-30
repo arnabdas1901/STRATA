@@ -3380,3 +3380,43 @@ select {
         display: none; /* Hide currency full name on mobile */
     }
 }
+/* ==========================================================================
+   TERMINAL PARSED TABLES STYLING
+   ========================================================================== */
+.terminal-table-wrapper {
+    overflow-x: auto;
+    margin: 16px 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(10, 14, 23, 0.5);
+}
+
+.terminal-parsed-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.85rem;
+    color: var(--text-primary, #ffffff);
+}
+
+.terminal-parsed-table th {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 12px;
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--neon-cyan-vibrant, #00f0ff);
+}
+
+.terminal-parsed-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.terminal-parsed-table tr:last-child td {
+    border-bottom: none;
+}
+
+.terminal-parsed-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}

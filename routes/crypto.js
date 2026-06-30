@@ -112,7 +112,8 @@ router.get('/history', async (req, res) => {
                 
                 if (tdData.status === 'ok' && Array.isArray(tdData.values)) {
                     const prices = tdData.values.map(v => [new Date(v.datetime).getTime(), parseFloat(v.close)]).reverse();
-                    return res.json({ prices });
+                    const total_volumes = tdData.values.map(v => [new Date(v.datetime).getTime(), parseFloat(v.volume || 0)]).reverse();
+                    return res.json({ prices, total_volumes });
                 }
             } catch (tdError) {
                 console.error('TwelveData Crypto History Fallback Error:', tdError);

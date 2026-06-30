@@ -101,7 +101,7 @@ Based on the above evidence, classify the moat source:
 Conclude with a **Moat Rating**: Wide, Narrow, or None.`,
 };
 
-const buildAiPrompt = (symbol, frameKey, profile, quote, metricsPayload, technicalData) => {
+const buildAiPrompt = (symbol, frameKey, profile, quote, metricsPayload, technicalData, financials) => {
     const context = {
         symbol,
         company: profile.name,
@@ -119,6 +119,11 @@ const buildAiPrompt = (symbol, frameKey, profile, quote, metricsPayload, technic
     // Attach technical/recommendation data when available
     if (technicalData && Object.keys(technicalData).length > 0) {
         context.technicalSignals = technicalData;
+    }
+
+    // Attach historical financial statements when available
+    if (financials && Object.keys(financials).length > 0) {
+        context.historicalFinancials = financials;
     }
 
     return `You are STRATA, an educational equity research assistant.

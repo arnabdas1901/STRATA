@@ -244,43 +244,132 @@ function renderEquityChart(data) {
     const canvas = document.getElementById('equityHistoricalChart');
     if (!canvas || !data || data.length === 0) return;
 
-    const labels = data.map(v => v.datetime);
+    const labels = data.map(v => {
+        const date = new Date(v.datetime);
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+    });
     const prices = data.map(v => parseFloat(v.close));
+    const volumes = data.map(v => parseFloat(v.volume || 0));
 
     const isPositive = prices[prices.length - 1] >= prices[0];
     const color = isPositive ? '#10b981' : '#ef4444';
-    const bgColor = isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+    
+    const ctx = canvas.getContext('2d');
+    const priceGradient = ctx.createLinearGradient(0, 0, 0, 300);
+    if (isPositive) {
+        priceGradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
+        priceGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+    } else {
+        priceGradient.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+        priceGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+    }
+
+    // Color volume bars: green for days closing higher than previous close, red for lower
+    const volumeColors = data.map((v, i) => {
+        if (i === 0) return 'rgba(16, 185, 129, 0.2)';
+        const prevClose = parseFloat(data[i - 1].close);
+        const currClose = parseFloat(v.close);
+        return currClose >= prevClose ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+    });
 
     if (equityChartInstance) {
         equityChartInstance.destroy();
     }
 
-    equityChartInstance = new Chart(canvas.getContext('2d'), {
+    equityChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels,
-            datasets: [{
-                label: 'Close Price',
-                data: prices,
-                borderColor: color,
-                backgroundColor: bgColor,
-                borderWidth: 2,
-                pointRadius: 0,
-                fill: true,
-                tension: 0.1
-            }]
+            datasets: [
+                {
+                    label: 'Close Price',
+                    data: prices,
+                    borderColor: color,
+                    backgroundColor: priceGradient,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.15,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Volume',
+                    data: volumes,
+                    type: 'bar',
+                    backgroundColor: volumeColors,
+                    hoverBackgroundColor: volumeColors.map(c => c.replace('0.3', '0.6').replace('0.2', '0.5')),
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.8,
+                    yAxisID: 'yVolume'
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { display: false },
-                y: { position: 'right', border: { display: false } }
-            },
             interaction: {
                 intersect: false,
                 mode: 'index',
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(10, 14, 23, 0.95)',
+                    titleColor: 'rgba(255, 255, 255, 0.7)',
+                    bodyColor: '#ffffff',
+                    bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const val = context.parsed.y;
+                            if (context.dataset.label === 'Close Price') {
+                                return `Price: $${val.toFixed(2)}`;
+                            } else if (context.dataset.label === 'Volume') {
+                                return `Volume: ${val.toLocaleString()}`;
+                            }
+                            return `${context.dataset.label}: ${val}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.4)',
+                        maxTicksLimit: 8
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        font: { family: "'JetBrains Mono', monospace" },
+                        callback: (val) => `$${val.toFixed(2)}`
+                    }
+                },
+                yVolume: {
+                    type: 'linear',
+                    display: false,
+                    position: 'left',
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    min: 0,
+                    max: Math.max(...volumes) * 4
+                }
             }
         }
     });

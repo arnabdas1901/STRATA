@@ -55,7 +55,18 @@ router.post('/analyze', async (req, res) => {
             }
         }
 
-        const prompt = buildAiPrompt(symbol, frameKey, profile, quote, metricsPayload, technicalData);
+        // Fetch historical statements for DuPont, DCF, Moat, and Altman frames
+        let financials = {};
+        const statementFrames = new Set(['dupont', 'dcf', 'altman', 'moat']);
+        if (statementFrames.has(frameKey)) {
+            try {
+                financials = await fetchHistoricalStatements(symbol);
+            } catch (e) {
+                console.warn('Could not fetch historical statements for AI context:', e.message);
+            }
+        }
+
+        const prompt = buildAiPrompt(symbol, frameKey, profile, quote, metricsPayload, technicalData, financials);
         const { analysis, provider } = await generateAiAnalysis(prompt);
 
         res.json({
@@ -75,5 +86,82 @@ router.post('/analyze', async (req, res) => {
         res.status(status).json({ error: message });
     }
 });
+
+async function fetchHistoricalStatements(symbol) {
+    const financials = { balanceSheet: null, cashFlow: null };
+    if (!process.env.TWELVEDATA_API_KEY) {
+        await fetchFmpStatements(symbol, financials);
+        return financials;
+    }
+
+    try {
+        const [bsRes, cfRes] = await Promise.all([
+            fetch(`https://api.twelvedata.com/balance_sheet?symbol=${encodeURIComponent(symbol)}&apikey=${process.env.TWELVEDATA_API_KEY}`),
+            fetch(`https://api.twelvedata.com/cash_flow?symbol=${encodeURIComponent(symbol)}&apikey=${process.env.TWELVEDATA_API_KEY}`)
+        ]);
+
+        const bsData = await bsRes.json();
+        const cfData = await cfRes.json();
+
+        if (bsData?.status === 'ok' && Array.isArray(bsData.balance_sheet)) {
+            financials.balanceSheet = bsData.balance_sheet.slice(0, 3).map(item => ({
+                fiscalDate: item.datetime,
+                totalAssets: item.total_assets || item.totalAssets,
+                totalLiabilities: item.total_liabilities || item.totalLiabilities,
+                totalEquity: item.total_shareholders_equity || item.totalEquity
+            }));
+        }
+        if (cfData?.status === 'ok' && Array.isArray(cfData.cash_flow)) {
+            financials.cashFlow = cfData.cash_flow.slice(0, 3).map(item => ({
+                fiscalDate: item.datetime,
+                operatingCashFlow: item.operating_cash_flow || item.operatingCashFlow,
+                capitalExpenditures: item.capital_expenditures || item.capitalExpenditures || item.netCashUsedForInvestingActivites,
+                netChangeInCash: item.net_change_in_cash || item.netChangeInCash
+            }));
+        }
+    } catch (error) {
+        console.warn('TwelveData fetch failed for AI statements, trying FMP fallback:', error.message);
+    }
+
+    if (!financials.balanceSheet || !financials.cashFlow) {
+        await fetchFmpStatements(symbol, financials);
+    }
+
+    return financials;
+}
+
+async function fetchFmpStatements(symbol, financials) {
+    const fmpKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY;
+    if (!fmpKey) return;
+
+    try {
+        if (!financials.balanceSheet) {
+            const bsRes = await fetch(`https://financialmodelingprep.com/api/v3/balance-sheet-statement/${encodeURIComponent(symbol)}?limit=3&apikey=${fmpKey}`);
+            const bsData = await bsRes.json();
+            if (Array.isArray(bsData)) {
+                financials.balanceSheet = bsData.map(item => ({
+                    fiscalDate: item.date,
+                    totalAssets: item.totalAssets,
+                    totalLiabilities: item.totalLiabilities,
+                    totalEquity: item.totalStockholdersEquity || item.totalEquity
+                }));
+            }
+        }
+        if (!financials.cashFlow) {
+            const cfRes = await fetch(`https://financialmodelingprep.com/api/v3/cash-flow-statement/${encodeURIComponent(symbol)}?limit=3&apikey=${fmpKey}`);
+            const cfData = await cfRes.json();
+            if (Array.isArray(cfData)) {
+                financials.cashFlow = cfData.map(item => ({
+                    fiscalDate: item.date,
+                    operatingCashFlow: item.operatingCashFlow,
+                    capitalExpenditures: item.capitalExpenditures || item.netCashUsedForInvestingActivites || item.netCashUsedForInvestingActivities,
+                    netChangeInCash: item.netChangeInCash
+                }));
+            }
+        }
+    } catch (error) {
+        console.warn('FMP statements fallback failed:', error.message);
+    }
+}
 
 module.exports = router;

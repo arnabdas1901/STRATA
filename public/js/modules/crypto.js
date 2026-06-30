@@ -1,6 +1,7 @@
 import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, escapeHtml, formatLargeCurrency, setupTabs } from '../utils.js';
 
 let cryptoChartInstance = null;
+let activeCryptoId = null;
 
 export function setupCryptoTracker() {
     const searchBtn = document.getElementById('crypto-search-btn');
@@ -21,6 +22,7 @@ export function setupCryptoTracker() {
 
     setupTabs('#dashboard-crypto');
     loadTopCryptos();
+    setupCryptoTimeframeSelectors();
 }
 
 function clearCryptoResults() {
@@ -31,6 +33,7 @@ function clearCryptoResults() {
     if (results) results.classList.add('hidden-element');
     if (landing) landing.classList.remove('hidden-element');
     if (searchInput) searchInput.value = '';
+    activeCryptoId = null;
 }
 
 async function loadTopCryptos() {
@@ -125,6 +128,15 @@ async function displayCryptoDetails(cryptoId) {
     if (landing) landing.classList.add('hidden-element');
 
     try {
+        activeCryptoId = cryptoId;
+        
+        // Reset timeframe selectors to default (365)
+        const tfBtns = document.querySelectorAll('#dashboard-crypto .tf-btn');
+        tfBtns.forEach(btn => {
+            if (btn.getAttribute('data-tf') === '365') btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+
         const [detailsResponse, historyResponse] = await Promise.all([
             fetchWithTimeout(`${BACKEND_URL}/api/crypto/details?id=${encodeURIComponent(cryptoId)}`, { timeout: 10000 }),
             fetchWithTimeout(`${BACKEND_URL}/api/crypto/history?id=${encodeURIComponent(cryptoId)}&days=365`, { timeout: 10000 }).catch(() => null),
@@ -238,52 +250,162 @@ function populateCryptoDetails(crypto) {
 
 function renderCryptoChart(history) {
     const prices = history?.prices || [];
+    const volumes = history?.total_volumes || [];
     
     const labels = prices.map(([timestamp]) => {
         const date = new Date(timestamp);
-        return (date.getMonth() + 1) + '/' + date.getDate();
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     });
 
-    const data = prices.map(([, price]) => price);
+    const dataPoints = prices.map(([, price]) => price);
+    const volumePoints = volumes.map(([, volume]) => volume || 0);
 
     const canvas = document.getElementById('cryptoHistoricalChart');
     if (!canvas) return;
 
-    if (cryptoChartInstance) {
-        cryptoChartInstance.data.labels = labels;
-        cryptoChartInstance.data.datasets[0].data = data;
-        cryptoChartInstance.update();
+    const isPositive = dataPoints[dataPoints.length - 1] >= dataPoints[0];
+    const color = isPositive ? '#10b981' : '#ef4444';
+    
+    const ctx = canvas.getContext('2d');
+    const priceGradient = ctx.createLinearGradient(0, 0, 0, 300);
+    if (isPositive) {
+        priceGradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
+        priceGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
     } else {
-        cryptoChartInstance = new Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '1-Year Price',
-                    data: data,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    tension: 0.3,
-                    fill: true,
-                    pointRadius: 0,
+        priceGradient.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+        priceGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+    }
+
+    const volumeColors = prices.map((p, i) => {
+        if (i === 0) return 'rgba(16, 185, 129, 0.2)';
+        const prevClose = prices[i - 1][1];
+        const currClose = p[1];
+        return currClose >= prevClose ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+    });
+
+    if (cryptoChartInstance) {
+        cryptoChartInstance.destroy();
+    }
+
+    cryptoChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Close Price',
+                    data: dataPoints,
+                    borderColor: color,
+                    backgroundColor: priceGradient,
                     borderWidth: 2,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: { padding: { top: 8, right: 10, left: 6, bottom: 8 } },
-                plugins: {
-                    legend: { display: true },
-                    title: { display: false }
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.15,
+                    yAxisID: 'y'
                 },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        ticks: { callback: (val) => '$' + val.toLocaleString('en-US', { maximumFractionDigits: 0 }) }
+                {
+                    label: 'Volume',
+                    data: volumePoints,
+                    type: 'bar',
+                    backgroundColor: volumeColors,
+                    hoverBackgroundColor: volumeColors.map(c => c.replace('0.3', '0.6').replace('0.2', '0.5')),
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.8,
+                    yAxisID: 'yVolume'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(10, 14, 23, 0.95)',
+                    titleColor: 'rgba(255, 255, 255, 0.7)',
+                    bodyColor: '#ffffff',
+                    bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const val = context.parsed.y;
+                            if (context.dataset.label === 'Close Price') {
+                                return `Price: $${val.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+                            } else if (context.dataset.label === 'Volume') {
+                                return `Volume: $${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+                            }
+                            return `${context.dataset.label}: ${val}`;
+                        }
                     }
                 }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.4)',
+                        maxTicksLimit: 8
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        font: { family: "'JetBrains Mono', monospace" },
+                        callback: (val) => '$' + val.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                    }
+                },
+                yVolume: {
+                    type: 'linear',
+                    display: false,
+                    position: 'left',
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    min: 0,
+                    max: volumePoints.length > 0 ? Math.max(...volumePoints) * 4 : 100
+                }
+            }
+        }
+    });
+}
+
+function setupCryptoTimeframeSelectors() {
+    const tfBtns = document.querySelectorAll('#dashboard-crypto .tf-btn');
+    tfBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            tfBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (activeCryptoId) {
+                const days = btn.getAttribute('data-tf');
+                await loadCryptoHistoryOnly(activeCryptoId, days);
             }
         });
+    });
+}
+
+async function loadCryptoHistoryOnly(cryptoId, days = 365) {
+    try {
+        const response = await fetchWithTimeout(`${BACKEND_URL}/api/crypto/history?id=${encodeURIComponent(cryptoId)}&days=${days}`, { timeout: 10000 });
+        const history = await safeJsonParse(response);
+        renderCryptoChart(history);
+    } catch (error) {
+        console.warn('Failed to load crypto history:', error);
     }
 }
