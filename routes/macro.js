@@ -60,7 +60,7 @@ router.get('/indices', async (req, res) => {
     }
 
     try {
-        const [sp500, nasdaq] = await Promise.all([
+        const [sp500, nasdaq, dowjones] = await Promise.all([
             fetchRealIndexQuote({
                 displayName: 'S&P 500',
                 yahooSymbol: '^GSPC',
@@ -79,10 +79,19 @@ router.get('/indices', async (req, res) => {
                 min: 5000,
                 max: 75000,
             }),
+            fetchRealIndexQuote({
+                displayName: 'Dow Jones',
+                yahooSymbol: '^DJI',
+                fmpSymbol: '^DJI',
+                twelveDataSymbols: ['DJI', '^DJI'],
+                finnhubSymbol: '^DJI',
+                min: 10000,
+                max: 100000,
+            }),
         ]);
 
-        if (!sp500 || sp500.error || !nasdaq || nasdaq.error) {
-            console.error('Index fetch failed', { sp500, nasdaq });
+        if (!sp500 || sp500.error || !nasdaq || nasdaq.error || !dowjones || dowjones.error) {
+            console.error('Index fetch failed', { sp500, nasdaq, dowjones });
             if (INDEX_QUOTE_CACHE.data) {
                 return res.json(INDEX_QUOTE_CACHE.data);
             }
@@ -109,6 +118,16 @@ router.get('/indices', async (req, res) => {
                 source: nasdaq.source,
                 requestedSymbol: nasdaq.requestedSymbol,
                 marketState: nasdaq.raw?.marketState,
+            },
+            dowjones: {
+                symbol: '^DJI',
+                displayName: 'Dow Jones',
+                price: dowjones.price,
+                change: dowjones.change,
+                changePercent: dowjones.changePercent,
+                source: dowjones.source,
+                requestedSymbol: dowjones.requestedSymbol,
+                marketState: dowjones.raw?.marketState,
             },
             fetchedAt: new Date().toISOString(),
         };

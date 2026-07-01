@@ -3,13 +3,16 @@ import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, formatLargeCur
 let equityChartInstance = null;
 let rawHistoricalData = [];
 let activeEquityTicker = null;
+let rawNewsArticles = []; // Global store for loaded news articles
 
 export function loadDashboard() {
     setupTabs('#dashboard-equity');
     setupSearch();
+    setupWatchlist();
     setupTimeframeSelectors();
     fetchLiveIndexValues();
     setupMarketNews();
+    setupNewsFilters();
 }
 
 function setupSearch() {
@@ -383,6 +386,9 @@ async function fetchLiveIndexValues() {
     const nasValue = document.getElementById('nasdaq-live-value');
     const nasSource = document.getElementById('nasdaq-source');
     const nasChange = document.getElementById('nasdaq-change');
+    const dowValue = document.getElementById('dow-live-value');
+    const dowSource = document.getElementById('dow-source');
+    const dowChange = document.getElementById('dow-change');
 
     try {
         const response = await fetchWithTimeout(`${BACKEND_URL}/api/indices`);
@@ -412,6 +418,15 @@ async function fetchLiveIndexValues() {
                 nasChange.className = 'index-change ' + (payload.nasdaq.change >= 0 ? 'pos-change' : 'neg-change');
             }
         }
+
+        if (payload?.dowjones) {
+            dowValue && (dowValue.innerText = formatIndexValue(payload.dowjones.price));
+            dowSource && (dowSource.innerText = formatSource(payload.dowjones, 'DOW'));
+            if (dowChange) {
+                dowChange.innerText = formatChange(payload.dowjones.change, payload.dowjones.changePercent);
+                dowChange.className = 'index-change ' + (payload.dowjones.change >= 0 ? 'pos-change' : 'neg-change');
+            }
+        }
     } catch (error) {
         console.warn('Failed to load live index values:', error);
     }
@@ -427,7 +442,10 @@ async function setupMarketNews() {
         const newsData = await safeJsonParse(response);
         
         if (Array.isArray(newsData) && newsData.length > 0) {
-            renderNewsGrid(newsData.slice(0, 6)); // Display top 6 news items
+            rawNewsArticles = newsData; // Store globally
+            const activeFilterBtn = document.querySelector('#dashboard-equity .news-filter-btn.active');
+            const activeFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'all';
+            filterAndRenderNews(activeFilter);
         } else {
             grid.innerHTML = '<div class="news-note">No recent market news available.</div>';
         }
@@ -460,3 +478,58 @@ function renderNewsGrid(newsItems) {
         `;
     }).join('');
 }
+
+function setupWatchlist() {
+    const items = document.querySelectorAll('#dashboard-equity .watchlist-item');
+    items.forEach(item => {
+        item.addEventListener('click', () => {
+            const symbol = item.getAttribute('data-symbol');
+            const searchInput = document.getElementById('equity-search-input');
+            if (searchInput) {
+                searchInput.value = symbol;
+                executeEquityAnalysis(symbol);
+            }
+        });
+    });
+}
+
+function setupNewsFilters() {
+    const filterBtns = document.querySelectorAll('#dashboard-equity .news-filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const filterType = btn.getAttribute('data-filter');
+            filterAndRenderNews(filterType);
+        });
+    });
+}
+
+function filterAndRenderNews(filterType) {
+    if (!rawNewsArticles || rawNewsArticles.length === 0) return;
+    
+    let filtered = [...rawNewsArticles];
+    if (filterType === 'tech') {
+        const keywords = ['tech', 'software', 'chip', 'semiconductor', 'apple', 'microsoft', 'google', 'nvidia', 'meta', 'crypto', 'bitcoin', 'ai', 'cyber', 'phone', 'device'];
+        filtered = rawNewsArticles.filter(item => {
+            const text = `${item.headline} ${item.summary || ''}`.toLowerCase();
+            return keywords.some(k => text.includes(k));
+        });
+    } else if (filterType === 'finance') {
+        const keywords = ['bank', 'fed', 'inflation', 'rate', 'earnings', 'profit', 'stock', 'ipo', 'finance', 'debt', 'market', 'acquisition', 'merge', 'yield', 'treasury', 'economic'];
+        filtered = rawNewsArticles.filter(item => {
+            const text = `${item.headline} ${item.summary || ''}`.toLowerCase();
+            return keywords.some(k => text.includes(k));
+        });
+    } else if (filterType === 'energy') {
+        const keywords = ['oil', 'gas', 'energy', 'petroleum', 'gold', 'wheat', 'commodity', 'climate', 'solar', 'crude', 'mine', 'fuel', 'barrel'];
+        filtered = rawNewsArticles.filter(item => {
+            const text = `${item.headline} ${item.summary || ''}`.toLowerCase();
+            return keywords.some(k => text.includes(k));
+        });
+    }
+    
+    renderNewsGrid(filtered.slice(0, 6));
+}
+

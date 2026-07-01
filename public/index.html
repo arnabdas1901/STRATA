@@ -106,13 +106,76 @@
                             <span id="nasdaq-source" class="index-source">Loading…</span>
                             <span id="nasdaq-change" class="index-change">--</span>
                         </div>
+                        <div class="index-value-card" id="dow-value-card">
+                            <span class="index-label">Dow Jones Industrial</span>
+                            <span id="dow-live-value" class="index-price">--</span>
+                            <span id="dow-source" class="index-source">Loading…</span>
+                            <span id="dow-change" class="index-change">--</span>
+                        </div>
+                    </div>
+
+                    <div class="trending-tickers-strip">
+                        <div class="strip-header">
+                            <i class="fa-solid fa-fire" style="color: #ff6b6b; font-size: 1.15rem;"></i>
+                            <h3>Hot Watchlist Shortcuts</h3>
+                        </div>
+                        <div class="watchlist-grid">
+                            <button class="watchlist-item" data-symbol="AAPL">
+                                <div class="wl-top">
+                                    <span class="wl-ticker">AAPL</span>
+                                    <span class="wl-icon"><i class="fa-brands fa-apple"></i></span>
+                                </div>
+                                <span class="wl-name">Apple Inc.</span>
+                            </button>
+                            <button class="watchlist-item" data-symbol="MSFT">
+                                <div class="wl-top">
+                                    <span class="wl-ticker">MSFT</span>
+                                    <span class="wl-icon"><i class="fa-brands fa-microsoft"></i></span>
+                                </div>
+                                <span class="wl-name">Microsoft Corp.</span>
+                            </button>
+                            <button class="watchlist-item" data-symbol="NVDA">
+                                <div class="wl-top">
+                                    <span class="wl-ticker">NVDA</span>
+                                    <span class="wl-icon"><i class="fa-solid fa-microchip"></i></span>
+                                </div>
+                                <span class="wl-name">NVIDIA Corp.</span>
+                            </button>
+                            <button class="watchlist-item" data-symbol="TSLA">
+                                <div class="wl-top">
+                                    <span class="wl-ticker">TSLA</span>
+                                    <span class="wl-icon"><i class="fa-solid fa-car-side"></i></span>
+                                </div>
+                                <span class="wl-name">Tesla Inc.</span>
+                            </button>
+                            <button class="watchlist-item" data-symbol="AMZN">
+                                <div class="wl-top">
+                                    <span class="wl-ticker">AMZN</span>
+                                    <span class="wl-icon"><i class="fa-brands fa-amazon"></i></span>
+                                </div>
+                                <span class="wl-name">Amazon.com Inc.</span>
+                            </button>
+                            <button class="watchlist-item" data-symbol="GOOGL">
+                                <div class="wl-top">
+                                    <span class="wl-ticker">GOOGL</span>
+                                    <span class="wl-icon"><i class="fa-brands fa-google"></i></span>
+                                </div>
+                                <span class="wl-name">Alphabet Inc.</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="news-widget" aria-label="Market News">
-                        <div class="news-header">
+                        <div class="news-header" style="flex-wrap: wrap; gap: 16px;">
                             <div>
                                 <h3>Market News</h3>
                                 <p>Live updates on US equities and general market trends.</p>
+                            </div>
+                            <div class="news-filter-strip">
+                                <button class="news-filter-btn active" data-filter="all">All News</button>
+                                <button class="news-filter-btn" data-filter="tech">Technology</button>
+                                <button class="news-filter-btn" data-filter="finance">Finance & Policy</button>
+                                <button class="news-filter-btn" data-filter="energy">Energy & Commodities</button>
                             </div>
                         </div>
                         <div class="news-body">

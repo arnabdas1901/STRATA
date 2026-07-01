@@ -249,11 +249,12 @@ async function exportAiPdf() {
 
     // Programmatic white-background branded memo container
     const element = document.createElement('div');
-    element.style.position = 'absolute';
-    element.style.left = '-9999px';
-    element.style.top = '-9999px';
-    element.style.width = '700px';
+    element.style.position = 'fixed';
+    element.style.left = '0';
+    element.style.top = '0';
+    element.style.width = '750px';
     element.style.background = '#ffffff';
+    element.style.zIndex = '-9999';
 
     element.innerHTML = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; padding: 40px; line-height: 1.6;">
