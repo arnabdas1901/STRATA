@@ -104,13 +104,16 @@ async function executeEquityAnalysis(ticker) {
     if (resultsContainer) resultsContainer.classList.add('hidden-element');
 
     try {
-        const [profileRes, quoteRes, metricsRes, chartRes, bsRes, cfRes] = await Promise.all([
+        const [profileRes, quoteRes, metricsRes, chartRes, bsRes, cfRes, incomeRes, recoRes, peersRes] = await Promise.all([
             fetchWithTimeout(`${BACKEND_URL}/api/finnhub/profile?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
             fetchWithTimeout(`${BACKEND_URL}/api/finnhub/quote?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
             fetchWithTimeout(`${BACKEND_URL}/api/finnhub/metrics?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
             fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/time_series?symbol=${encodeURIComponent(ticker)}&timeframe=1Y`).catch(() => null),
             fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=balance_sheet`).catch(() => null),
-            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=cash_flow`).catch(() => null)
+            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=cash_flow`).catch(() => null),
+            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=income_statement`).catch(() => null),
+            fetchWithTimeout(`${BACKEND_URL}/api/finnhub/recommendations?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
+            fetchWithTimeout(`${BACKEND_URL}/api/finnhub/peers-detailed?symbol=${encodeURIComponent(ticker)}`).catch(() => null)
         ]);
 
         const profile = await safeJsonParse(profileRes);
@@ -119,12 +122,15 @@ async function executeEquityAnalysis(ticker) {
         const chartData = await safeJsonParse(chartRes);
         const balanceSheet = await safeJsonParse(bsRes);
         const cashFlow = await safeJsonParse(cfRes);
+        const incomeStatement = await safeJsonParse(incomeRes);
+        const recommendations = await safeJsonParse(recoRes);
+        const peersDetailed = await safeJsonParse(peersRes);
 
         if (profile?.error || quote?.error || !profile?.name) {
             throw new Error(profile?.error || quote?.error || 'Invalid ticker symbol or data unavailable');
         }
 
-        updateUI(profile, quote, metrics, balanceSheet, cashFlow);
+        updateUI(profile, quote, metrics, balanceSheet, cashFlow, incomeStatement, recommendations, peersDetailed);
         
         if (chartData && !chartData.error && chartData.values) {
             rawHistoricalData = [...chartData.values].reverse();
@@ -133,7 +139,10 @@ async function executeEquityAnalysis(ticker) {
             console.warn('Chart data unavailable:', chartData);
         }
 
-        if (resultsContainer) resultsContainer.classList.remove('hidden-element');
+        if (resultsContainer) {
+            resultsContainer.classList.remove('hidden-element');
+            animateCardReveals();
+        }
         
     } catch (error) {
         console.error("Market Data Fetch Error:", error);
@@ -167,7 +176,38 @@ async function loadEquityTimeSeries(symbol, timeframe = '1Y') {
     }
 }
 
-function updateUI(profile, quote, metrics, bs, cf) {
+const getRatioColorClass = (type, valStr) => {
+    const val = parseFloat(valStr);
+    if (isNaN(val)) return '';
+    if (type === 'pe') {
+        if (val < 15) return 'ratio-good';
+        if (val <= 25) return 'ratio-warning';
+        return 'ratio-alert';
+    }
+    if (type === 'pb' || type === 'ps') {
+        if (val < 2.0) return 'ratio-good';
+        if (val <= 5.0) return 'ratio-warning';
+        return 'ratio-alert';
+    }
+    if (type === 'percentage_high') {
+        if (val > 15) return 'ratio-good';
+        if (val >= 5) return 'ratio-warning';
+        return 'ratio-alert';
+    }
+    if (type === 'current_ratio') {
+        if (val >= 1.5) return 'ratio-good';
+        if (val >= 1.0) return 'ratio-warning';
+        return 'ratio-alert';
+    }
+    if (type === 'debt_equity') {
+        if (val < 0.5) return 'ratio-good';
+        if (val <= 1.5) return 'ratio-warning';
+        return 'ratio-alert';
+    }
+    return '';
+};
+
+function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peersDetailed) {
     const formatValue = (val, isCurrency = false) => {
         if (val == null) return '--';
         return isCurrency ? formatLargeCurrency(val * 1e6) : parseFloat(val).toFixed(2);
@@ -175,24 +215,182 @@ function updateUI(profile, quote, metrics, bs, cf) {
 
     const metricData = metrics?.metric || {};
 
+    // 1. Company Logo
+    const logoImg = document.getElementById('company-logo-img');
+    const logoFallback = document.getElementById('company-logo-fallback');
+    if (logoImg && logoFallback) {
+        if (profile?.logo) {
+            logoImg.src = profile.logo;
+            logoImg.style.display = 'block';
+            logoFallback.style.display = 'none';
+        } else {
+            logoImg.src = '';
+            logoImg.style.display = 'none';
+            logoFallback.style.display = 'block';
+        }
+    }
+
+    // 2. Industry Badge
+    const industryText = document.getElementById('industry-badge-text');
+    const industryBadge = document.getElementById('company-industry-badge');
+    if (industryBadge && industryText) {
+        if (profile?.finnhubIndustry) {
+            industryText.textContent = profile.finnhubIndustry;
+            industryBadge.style.display = 'inline-flex';
+        } else {
+            industryBadge.style.display = 'none';
+        }
+    }
+
+    // 3. Price and daily change
+    const changeArrow = document.getElementById('change-arrow-icon');
+    const changeText = document.getElementById('change-text');
+    const changeDisplay = document.getElementById('live-change-display');
+    if (changeText) {
+        const diff = quote?.d || 0;
+        const pct = quote?.dp || 0;
+        changeText.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(2)} (${pct.toFixed(2)}%)`;
+        if (changeArrow) {
+            changeArrow.className = diff >= 0 ? 'fa-solid fa-caret-up' : 'fa-solid fa-caret-down';
+        }
+        if (changeDisplay) {
+            changeDisplay.style.color = diff >= 0 ? '#10b981' : '#ef4444';
+        }
+    }
+
     const elements = {
         'company-name-display': profile?.name || 'Unknown',
         'company-ticker-badge': profile?.ticker || '--',
         'live-price-display': quote?.c ? `$${quote.c.toFixed(2)}` : '--',
-        'live-change-display': quote?.d ? `${quote.d > 0 ? '+' : ''}${quote.d.toFixed(2)} (${quote.dp?.toFixed(2)}%)` : '--',
-        'metric-52w-high': quote?.h ? `$${quote.h.toFixed(2)}` : '--',
-        'metric-52w-low': quote?.l ? `$${quote.l.toFixed(2)}` : '--',
+        'metric-open': quote?.o ? `$${quote.o.toFixed(2)}` : '--',
+        'metric-day-high': quote?.h ? `$${quote.h.toFixed(2)}` : '--',
+        'metric-day-low': quote?.l ? `$${quote.l.toFixed(2)}` : '--',
+        'metric-prev-close': quote?.pc ? `$${quote.pc.toFixed(2)}` : '--',
         'metric-mkt-cap': formatValue(profile?.marketCapitalization, true),
-        'metric-beta': formatValue(metricData.beta)
+        'metric-beta': formatValue(metricData.beta),
+        'metric-52w-high': metricData['52WeekHigh'] ? `$${parseFloat(metricData['52WeekHigh']).toFixed(2)}` : '--',
+        'metric-52w-low': metricData['52WeekLow'] ? `$${parseFloat(metricData['52WeekLow']).toFixed(2)}` : '--'
     };
 
     for (const [id, value] of Object.entries(elements)) {
         const el = document.getElementById(id);
         if (el) {
             el.textContent = value;
-            if (id === 'live-change-display' && quote?.d) {
-                el.style.color = quote.d >= 0 ? '#10b981' : '#ef4444';
+        }
+    }
+
+    // 52-Week Range Bar
+    const rangeLabel = document.getElementById('equity-range-label');
+    const rangeLow = document.getElementById('equity-range-low');
+    const rangeHigh = document.getElementById('equity-range-high');
+    const rangeMarker = document.getElementById('equity-range-marker');
+    if (rangeMarker && quote?.c) {
+        const currentPrice = quote.c;
+        const low = metricData['52WeekLow'] || quote.l || currentPrice;
+        const high = metricData['52WeekHigh'] || quote.h || currentPrice;
+        const range = high - low;
+        const pct = range > 0 ? Math.min(100, Math.max(0, ((currentPrice - low) / range) * 100)) : 50;
+        
+        rangeMarker.style.left = `${pct}%`;
+        if (rangeLow) rangeLow.textContent = `$${parseFloat(low).toFixed(2)}`;
+        if (rangeHigh) rangeHigh.textContent = `$${parseFloat(high).toFixed(2)}`;
+        if (rangeLabel) rangeLabel.textContent = `Current: $${currentPrice.toFixed(2)} (${pct.toFixed(0)}% of range)`;
+    }
+
+    // Analyst Consensus Bar
+    const recoContent = document.getElementById('analyst-reco-content');
+    if (recoContent) {
+        if (Array.isArray(recommendations) && recommendations.length > 0) {
+            const r = recommendations[0];
+            const strongBuy = r.strongBuy || 0;
+            const buy = r.buy || 0;
+            const hold = r.hold || 0;
+            const sell = r.sell || 0;
+            const strongSell = r.strongSell || 0;
+            const total = strongBuy + buy + hold + sell + strongSell;
+
+            if (total > 0) {
+                let consensus = 'Hold';
+                if (strongBuy + buy > total * 0.6) consensus = 'Strong Buy';
+                else if (strongBuy + buy > total * 0.4) consensus = 'Buy';
+                else if (sell + strongSell > total * 0.4) consensus = 'Sell';
+
+                const buyPct = ((strongBuy + buy) / total) * 100;
+                const holdPct = (hold / total) * 100;
+                const sellPct = ((sell + strongSell) / total) * 100;
+
+                recoContent.innerHTML = `
+                    <div class="analyst-reco-layout">
+                        <div class="analyst-reco-summary">
+                            <span class="reco-consensus-badge">${consensus}</span>
+                            <span class="reco-count-label">Based on ${total} analysts (${r.period})</span>
+                        </div>
+                        <div class="reco-stacked-bar">
+                            <div class="reco-bar-segment buy" style="width: ${buyPct}%" title="Buy / Strong Buy: ${strongBuy + buy}"></div>
+                            <div class="reco-bar-segment hold" style="width: ${holdPct}%" title="Hold: ${hold}"></div>
+                            <div class="reco-bar-segment sell" style="width: ${sellPct}%" title="Sell / Strong Sell: ${sell + strongSell}"></div>
+                        </div>
+                        <div class="reco-legend">
+                            <span><span class="legend-color-dot buy"></span> Buy (${strongBuy + buy})</span>
+                            <span><span class="legend-color-dot hold"></span> Hold (${hold})</span>
+                            <span><span class="legend-color-dot sell"></span> Sell (${sell + strongSell})</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                recoContent.innerHTML = `<p class="empty-notice">No recommendation data available.</p>`;
             }
+        } else {
+            recoContent.innerHTML = `<p class="empty-notice">No recommendation data available.</p>`;
+        }
+    }
+
+    // Populate Key Statistics KPI Summary Bar
+    const kpiEps = document.getElementById('kpi-eps');
+    const kpiDivYield = document.getElementById('kpi-div-yield');
+    const kpiPe = document.getElementById('kpi-pe');
+    const kpiMktCap = document.getElementById('kpi-mkt-cap');
+    if (kpiEps) kpiEps.textContent = metricData.epsBasicExclExtraItemsTTM != null ? metricData.epsBasicExclExtraItemsTTM.toFixed(2) : '--';
+    if (kpiDivYield) kpiDivYield.textContent = metricData.dividendYieldIndicatedAnnual != null ? metricData.dividendYieldIndicatedAnnual.toFixed(2) + '%' : '0.00%';
+    if (kpiPe) kpiPe.textContent = metricData.peTTM != null ? metricData.peTTM.toFixed(2) : '--';
+    if (kpiMktCap) kpiMktCap.textContent = formatValue(profile?.marketCapitalization, true);
+
+    // Populate Sector Peer Comparison Table
+    const peersTbody = document.getElementById('equity-peers-tbody');
+    if (peersTbody) {
+        if (Array.isArray(peersDetailed) && peersDetailed.length > 0) {
+            peersTbody.innerHTML = peersDetailed.map(p => {
+                const price = parseFloat(p.price).toFixed(2);
+                const chg = parseFloat(p.changePercent).toFixed(2);
+                const mkt = formatLargeCurrency(p.marketCap * 1e6);
+                const peVal = p.pe ? parseFloat(p.pe).toFixed(2) : '--';
+                const colorClass = p.changePercent >= 0 ? 'pos-change' : 'neg-change';
+                const sign = p.changePercent >= 0 ? '+' : '';
+                return `
+                    <tr style="cursor: pointer;" class="peer-row-clickable">
+                        <td class="font-mono"><strong>${p.symbol}</strong><br><span style="font-size: 0.75rem; color: var(--text-secondary-muted);">${p.name}</span></td>
+                        <td class="num-col font-mono">$${price}</td>
+                        <td class="num-col font-mono ${colorClass}">${sign}${chg}%</td>
+                        <td class="num-col font-mono">${mkt}</td>
+                        <td class="num-col font-mono">${peVal}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Add click listeners to peer rows
+            const rows = peersTbody.querySelectorAll('.peer-row-clickable');
+            rows.forEach((row, idx) => {
+                row.addEventListener('click', () => {
+                    const peerSymbol = peersDetailed[idx].symbol;
+                    const searchInput = document.getElementById('equity-search-input');
+                    if (searchInput) {
+                        searchInput.value = peerSymbol;
+                        executeEquityAnalysis(peerSymbol);
+                    }
+                });
+            });
+        } else {
+            peersTbody.innerHTML = `<tr><td colspan="5" class="table-empty-state">No peer comparison data available.</td></tr>`;
         }
     }
 
@@ -200,25 +398,28 @@ function updateUI(profile, quote, metrics, bs, cf) {
     const ratiosGrid = document.getElementById('ratios-grid-target');
     if (ratiosGrid) {
         const ratios = [
-            { label: 'P/E Ratio', value: formatValue(metricData.peTTM) },
-            { label: 'P/B Ratio', value: formatValue(metricData.pbAnnual) },
-            { label: 'P/S Ratio', value: formatValue(metricData.psTTM) },
-            { label: 'ROE', value: formatValue(metricData.roeTTM) + '%' },
-            { label: 'ROA', value: formatValue(metricData.roaTTM) + '%' },
-            { label: 'Net Margin', value: formatValue(metricData.netProfitMarginTTM) + '%' },
-            { label: 'Current Ratio', value: formatValue(metricData.currentRatioAnnual) },
-            { label: 'Debt/Equity', value: formatValue(metricData.debtToEquityAnnual) },
-            { label: 'Revenue Growth 5Y', value: formatValue(metricData.revenueGrowth5Y) + '%' },
-            { label: 'EPS Growth 5Y', value: formatValue(metricData.epsGrowth5Y) + '%' },
-            { label: 'Dividend Yield', value: formatValue(metricData.dividendYieldIndicatedAnnual) + '%' }
+            { label: 'P/E Ratio', value: formatValue(metricData.peTTM), type: 'pe' },
+            { label: 'P/B Ratio', value: formatValue(metricData.pbAnnual), type: 'pb' },
+            { label: 'P/S Ratio', value: formatValue(metricData.psTTM), type: 'ps' },
+            { label: 'ROE', value: formatValue(metricData.roeTTM) + '%', type: 'percentage_high' },
+            { label: 'ROA', value: formatValue(metricData.roaTTM) + '%', type: 'percentage_high' },
+            { label: 'Net Margin', value: formatValue(metricData.netProfitMarginTTM) + '%', type: 'percentage_high' },
+            { label: 'Current Ratio', value: formatValue(metricData.currentRatioAnnual), type: 'current_ratio' },
+            { label: 'Debt/Equity', value: formatValue(metricData.debtToEquityAnnual), type: 'debt_equity' },
+            { label: 'Revenue Growth 5Y', value: formatValue(metricData.revenueGrowth5Y) + '%', type: 'percentage_high' },
+            { label: 'EPS Growth 5Y', value: formatValue(metricData.epsGrowth5Y) + '%', type: 'percentage_high' },
+            { label: 'Dividend Yield', value: formatValue(metricData.dividendYieldIndicatedAnnual) + '%', type: 'dividend' }
         ];
 
-        ratiosGrid.innerHTML = ratios.map(r => `
-            <div class="ratio-item">
-                <span class="ratio-label">${r.label}</span>
-                <span class="ratio-value">${r.value}</span>
-            </div>
-        `).join('');
+        ratiosGrid.innerHTML = ratios.map(r => {
+            const colorClass = getRatioColorClass(r.type, r.value);
+            return `
+                <div class="ratio-item ${colorClass}">
+                    <span class="ratio-label">${r.label}</span>
+                    <span class="ratio-value">${r.value}</span>
+                </div>
+            `;
+        }).join('');
     }
 
     const descEl = document.getElementById('corporate-description-text');
@@ -226,26 +427,100 @@ function updateUI(profile, quote, metrics, bs, cf) {
         descEl.textContent = profile?.name ? `${profile.name} is a company in the ${profile.finnhubIndustry || 'General'} sector, traded on ${profile.exchange || 'the public markets'}.` : 'Company description unavailable.';
     }
 
+    // AI Profile Generation
+    const aiGenBtn = document.getElementById('generate-ai-profile-btn');
+    const aiOutput = document.getElementById('ai-profile-output');
+    if (aiGenBtn && aiOutput) {
+        aiOutput.innerHTML = `<span class="empty-notice">Click "Generate" to create an AI-powered executive summary for this company.</span>`;
+        aiGenBtn.disabled = false;
+        
+        const newAiGenBtn = aiGenBtn.cloneNode(true);
+        aiGenBtn.parentNode.replaceChild(newAiGenBtn, aiGenBtn);
+        
+        newAiGenBtn.addEventListener('click', async () => {
+            newAiGenBtn.disabled = true;
+            const originalBtnHtml = newAiGenBtn.innerHTML;
+            newAiGenBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating...`;
+            aiOutput.innerHTML = `<div style="display: flex; align-items: center; gap: 8px; color: var(--neon-cyan-vibrant);"><i class="fa-solid fa-robot fa-bounce"></i> Generating executive summary via AI...</div>`;
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/company-profile-ai?symbol=${encodeURIComponent(activeEquityTicker)}`, {
+                    method: 'POST'
+                });
+                const payload = await response.json();
+                if (payload.summary) {
+                    aiOutput.innerHTML = `<div class="ai-profile-summary-text">${payload.summary}</div>`;
+                } else {
+                    throw new Error(payload.error || 'Failed to generate summary');
+                }
+            } catch (err) {
+                console.error(err);
+                aiOutput.innerHTML = `<span class="error-text" style="color: var(--neon-red-vibrant);"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message || 'Error generating AI summary.'}</span>`;
+            } finally {
+                newAiGenBtn.disabled = false;
+                newAiGenBtn.innerHTML = originalBtnHtml;
+            }
+        });
+    }
+
+    // Income Statement Tab Table
+    const incomeTable = document.getElementById('income-statement-table-body');
+    if (incomeTable) {
+        const incData = income?.income_statement?.[0] || {};
+        incomeTable.innerHTML = `
+            <tr><td>Total Revenue</td><td class="num-col font-mono">${formatLargeCurrency(incData.total_revenue || incData.totalRevenue || 0)}</td></tr>
+            <tr><td>Cost of Revenue</td><td class="num-col font-mono">${formatLargeCurrency(incData.cost_of_revenue || incData.costOfRevenue || 0)}</td></tr>
+            <tr><td>Gross Profit</td><td class="num-col font-mono">${formatLargeCurrency(incData.gross_profit || incData.grossProfit || 0)}</td></tr>
+            <tr><td>Operating Income</td><td class="num-col font-mono">${formatLargeCurrency(incData.operating_income || incData.operatingIncome || 0)}</td></tr>
+            <tr><td>EBITDA</td><td class="num-col font-mono">${formatLargeCurrency(incData.ebitda || 0)}</td></tr>
+            <tr><td>Net Income</td><td class="num-col font-mono">${formatLargeCurrency(incData.net_income || incData.netIncome || 0)}</td></tr>
+            <tr><td>EPS (Diluted)</td><td class="num-col font-mono">${incData.eps_diluted ? '$' + parseFloat(incData.eps_diluted).toFixed(2) : '--'}</td></tr>
+        `;
+    }
+
+    // Balance Sheet Tab Table
     const bsTable = document.getElementById('balance-sheet-table-body');
     if (bsTable) {
         const bsData = bs?.balance_sheet?.[0] || {};
         bsTable.innerHTML = `
-            <tr><td>Total Assets</td><td>${formatLargeCurrency(bsData.total_assets || bsData.totalAssets)}</td></tr>
-            <tr><td>Total Liabilities</td><td>${formatLargeCurrency(bsData.total_liabilities || bsData.totalLiabilities)}</td></tr>
-            <tr><td>Total Equity</td><td>${formatLargeCurrency(bsData.total_shareholders_equity || bsData.totalEquity)}</td></tr>
+            <tr><td>Cash & Equivalents</td><td class="num-col font-mono">${formatLargeCurrency(bsData.cash_and_equivalents || bsData.cashAndEquivalents || 0)}</td></tr>
+            <tr><td>Total Current Assets</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_current_assets || bsData.totalCurrentAssets || 0)}</td></tr>
+            <tr><td>Total Assets</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_assets || bsData.totalAssets || 0)}</td></tr>
+            <tr><td>Short-term Debt</td><td class="num-col font-mono">${formatLargeCurrency(bsData.short_term_debt || bsData.shortTermDebt || 0)}</td></tr>
+            <tr><td>Long-term Debt</td><td class="num-col font-mono">${formatLargeCurrency(bsData.long_term_debt || bsData.longTermDebt || 0)}</td></tr>
+            <tr><td>Total Liabilities</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_liabilities || bsData.totalLiabilities || 0)}</td></tr>
+            <tr><td>Total Shareholders' Equity</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_shareholders_equity || bsData.totalEquity || bsData.totalShareholdersEquity || 0)}</td></tr>
         `;
     }
 
+    // Cash Flow Tab Table
     const cfTable = document.getElementById('cashflow-table-body');
     if (cfTable) {
         const cfData = cf?.cash_flow?.[0] || {};
+        const ocf = cfData.operating_cash_flow || cfData.operatingCashFlow || 0;
+        const capex = cfData.capital_expenditures || cfData.capitalExpenditures || cfData.capitalExpenditure || 0;
+        const fcf = ocf - capex;
         cfTable.innerHTML = `
-            <tr><td>Operating Cash Flow</td><td>${formatLargeCurrency(cfData.operating_cash_flow || cfData.operatingCashFlow)}</td></tr>
-            <tr><td>Investing Cash Flow</td><td>${formatLargeCurrency(cfData.investing_cash_flow || cfData.netCashUsedForInvestingActivites)}</td></tr>
-            <tr><td>Financing Cash Flow</td><td>${formatLargeCurrency(cfData.financing_cash_flow || cfData.netCashUsedProvidedByFinancingActivities)}</td></tr>
-            <tr><td>Net Change in Cash</td><td>${formatLargeCurrency(cfData.net_change_in_cash || cfData.netChangeInCash)}</td></tr>
+            <tr><td>Operating Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(ocf)}</td></tr>
+            <tr><td>Capital Expenditures</td><td class="num-col font-mono">${formatLargeCurrency(capex)}</td></tr>
+            <tr><td>Free Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(fcf)}</td></tr>
+            <tr><td>Investing Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(cfData.investing_cash_flow || cfData.investingCashFlow || 0)}</td></tr>
+            <tr><td>Financing Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(cfData.financing_cash_flow || cfData.financingCashFlow || 0)}</td></tr>
+            <tr><td>Net Change in Cash</td><td class="num-col font-mono">${formatLargeCurrency(cfData.net_change_in_cash || cfData.netChangeInCash || 0)}</td></tr>
         `;
     }
+}
+
+function animateCardReveals() {
+    const cards = document.querySelectorAll('#dashboard-equity .equity-reveal-card');
+    cards.forEach((card, i) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(16px)';
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 150 + i * 100);
+    });
 }
 
 function renderEquityChart(data) {

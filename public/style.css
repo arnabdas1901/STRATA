@@ -3603,3 +3603,234 @@ select {
     }
 }
 
+/* --- Redesigned Equity Dashboard CSS --- */
+.hero-identity-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.ticker-logo-box {
+    width: 48px;
+    height: 48px;
+    background: var(--bg-input-slate);
+    border: 1px solid var(--border-cyan-glow);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.ticker-logo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #ffffff; /* White background for logos to pop */
+    padding: 2px;
+}
+
+.ticker-logo-box i {
+    font-size: 1.5rem;
+    color: var(--neon-cyan-vibrant);
+}
+
+.badge.industry-badge {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* 52-Week Range Bar Styling */
+.equity-range-bar-card {
+    background: var(--bg-card-midnight);
+    border: 1px solid var(--border-cyan-glow);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+/* Analyst Consensus Reco Styling */
+.equity-analyst-card {
+    background: var(--bg-card-midnight);
+    border: 1px solid var(--border-cyan-glow);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.analyst-reco-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 14px;
+}
+
+.analyst-reco-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.reco-consensus-badge {
+    background-color: var(--neon-cyan-vibrant);
+    color: var(--bg-main-dark);
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+}
+
+.reco-count-label {
+    color: var(--text-secondary-muted);
+    font-size: 0.85rem;
+}
+
+.reco-stacked-bar {
+    display: flex;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg-input-slate);
+}
+
+.reco-bar-segment {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.reco-bar-segment.buy { background-color: #10b981; }
+.reco-bar-segment.hold { background-color: #9ca3af; }
+.reco-bar-segment.sell { background-color: #ef4444; }
+
+.reco-legend {
+    display: flex;
+    gap: 16px;
+    font-size: 0.85rem;
+}
+
+.reco-legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary-muted);
+}
+
+.legend-color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.legend-color-dot.buy { background-color: #10b981; }
+.legend-color-dot.hold { background-color: #9ca3af; }
+.legend-color-dot.sell { background-color: #ef4444; }
+
+/* Ratio Items Color Coding */
+.ratio-item.ratio-good {
+    border-left: 3px solid #10b981;
+}
+.ratio-item.ratio-good .ratio-value {
+    color: #10b981;
+}
+
+.ratio-item.ratio-warning {
+    border-left: 3px solid #f59e0b;
+}
+.ratio-item.ratio-warning .ratio-value {
+    color: #f59e0b;
+}
+
+.ratio-item.ratio-alert {
+    border-left: 3px solid #ef4444;
+}
+.ratio-item.ratio-alert .ratio-value {
+    color: #ef4444;
+}
+
+/* AI Profile summary styles */
+.ai-profile-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ai-profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.ai-profile-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary-white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-profile-output {
+    background-color: var(--bg-input-slate);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 16px;
+    min-height: 100px;
+}
+
+.ai-profile-summary-text {
+    line-height: 1.6;
+    color: var(--text-secondary-muted);
+    font-size: 0.92rem;
+}
+.ai-profile-summary-text p {
+    margin-bottom: 14px;
+}
+.ai-profile-summary-text p:last-child {
+    margin-bottom: 0;
+}
+
+/* Key Statistics KPI Bar grid override */
+#equity-kpi-bar {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.equity-kpi-container {
+    background: var(--bg-card-midnight);
+    border: 1px solid var(--border-cyan-glow);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+/* Reveal transition classes */
+.equity-reveal-card {
+    opacity: 0;
+    transform: translateY(16px);
+}
+
+/* Peer row styling */
+.peer-row-clickable {
+    transition: background-color 0.2s ease;
+}
+.peer-row-clickable:hover {
+    background-color: rgba(6, 182, 212, 0.08) !important;
+}
+
+@media (max-width: 1200px) {
+    #equity-kpi-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 576px) {
+    #equity-kpi-bar {
+        grid-template-columns: 1fr;
+    }
+}

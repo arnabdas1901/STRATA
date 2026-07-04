@@ -193,34 +193,58 @@
                     <div class="spinner"></div>
                     <p>Parsing SEC EDGAR data feeds & streaming ticks...</p>
                 </div>
-
                 <div id="equity-results-container" class="hidden-element">
                     <div class="equity-results-header">
                         <button id="equity-back-btn" class="secondary-btn">← Back to Watchlist</button>
                     </div>
-                    <div class="ticker-hero-card">
+
+                    <!-- Enhanced Hero Card with Logo -->
+                    <div class="ticker-hero-card equity-reveal-card">
                         <div class="hero-meta">
-                            <h2 id="company-name-display">Apple Inc.</h2>
-                            <div class="ticker-badges">
-                                <span id="company-ticker-badge" class="badge">AAPL</span>
-                                <span id="company-exchange-badge" class="badge secondary">NASDAQ</span>
+                            <div class="hero-identity-row">
+                                <div class="ticker-logo-box" id="company-logo-box">
+                                    <img id="company-logo-img" src="" alt="" style="display:none;">
+                                    <i class="fa-solid fa-building" id="company-logo-fallback"></i>
+                                </div>
+                                <div>
+                                    <h2 id="company-name-display">Apple Inc.</h2>
+                                    <div class="ticker-badges">
+                                        <span id="company-ticker-badge" class="badge">AAPL</span>
+                                        <span id="company-exchange-badge" class="badge secondary">NASDAQ</span>
+                                        <span id="company-industry-badge" class="badge industry-badge"><i class="fa-solid fa-industry"></i> <span id="industry-badge-text">Technology</span></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="hero-pricing">
                             <div id="live-price-display" class="price-value">$0.00</div>
-                            <div id="live-change-display" class="price-change-percent">0.00 (0.00%)</div>
+                            <div id="live-change-display" class="price-change-percent">
+                                <i id="change-arrow-icon" class="fa-solid fa-caret-up"></i>
+                                <span id="change-text">0.00 (0.00%)</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="metric-summary-grid">
+                    <!-- Expanded Metric Cards: 8 cards in two rows -->
+                    <div class="metric-summary-grid equity-reveal-card">
                         <div class="metric-card">
-                            <span class="metric-title">52-Week High</span>
-                            <span id="metric-52w-high" class="metric-value">--</span>
+                            <span class="metric-title">Today's Open</span>
+                            <span id="metric-open" class="metric-value">--</span>
                         </div>
                         <div class="metric-card">
-                            <span class="metric-title">52-Week Low</span>
-                            <span id="metric-52w-low" class="metric-value">--</span>
+                            <span class="metric-title">Day High</span>
+                            <span id="metric-day-high" class="metric-value">--</span>
                         </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Day Low</span>
+                            <span id="metric-day-low" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Prev. Close</span>
+                            <span id="metric-prev-close" class="metric-value">--</span>
+                        </div>
+                    </div>
+                    <div class="metric-summary-grid equity-reveal-card" style="margin-top: 16px;">
                         <div class="metric-card">
                             <span class="metric-title">Market Capitalization</span>
                             <span id="metric-mkt-cap" class="metric-value">--</span>
@@ -229,9 +253,71 @@
                             <span class="metric-title">Beta Volatility</span>
                             <span id="metric-beta" class="metric-value">--</span>
                         </div>
+                        <div class="metric-card">
+                            <span class="metric-title">52-Week High</span>
+                            <span id="metric-52w-high" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">52-Week Low</span>
+                            <span id="metric-52w-low" class="metric-value">--</span>
+                        </div>
                     </div>
 
-                    <div class="chart-container-card">
+                    <!-- 52-Week Range Bar -->
+                    <div class="equity-range-bar-card equity-reveal-card">
+                        <div class="commodities-range-bar-wrap">
+                            <div class="commodities-range-bar-header">
+                                <span>52-Week Range</span>
+                                <span id="equity-range-label">—</span>
+                            </div>
+                            <div class="commodities-range-track">
+                                <div id="equity-range-marker" class="commodities-range-marker"></div>
+                            </div>
+                            <div class="commodities-range-labels">
+                                <span id="equity-range-low">—</span>
+                                <span id="equity-range-high">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analyst Recommendations -->
+                    <div class="equity-analyst-card equity-reveal-card" id="equity-analyst-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-users-between-lines"></i>
+                            <h3>Analyst Consensus</h3>
+                        </div>
+                        <div id="analyst-reco-content" class="analyst-reco-content">
+                            <p class="empty-notice">Loading analyst recommendations...</p>
+                        </div>
+                    </div>
+
+                    <!-- Peer Comparison Card -->
+                    <div class="equity-peers-card equity-reveal-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-network-wired"></i>
+                            <h3>Sector Peer Comparison</h3>
+                        </div>
+                        <p class="section-desc">Comparison of key metrics against sector competitors.</p>
+                        <div class="financial-table-wrapper" style="margin-top: 14px;">
+                            <table class="financial-data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Company</th>
+                                        <th class="num-col">Last Price</th>
+                                        <th class="num-col">24h Chg</th>
+                                        <th class="num-col">Market Cap</th>
+                                        <th class="num-col">P/E Ratio</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="equity-peers-tbody">
+                                    <tr><td colspan="5" class="table-empty-state">Loading sector peers comparison...</td></tr>
+                                </tbody>
+                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Price Chart -->
+                    <div class="chart-container-card equity-reveal-card">
                         <div class="chart-header">
                             <h3>Historical Price Trajectory</h3>
                             <div class="chart-timeframe-selectors">
@@ -246,27 +332,94 @@
                         </div>
                     </div>
 
-                    <div class="ratios-container-card">
+                    <!-- KPI Summary Bar (Key Statistics) -->
+                    <div class="equity-kpi-container equity-reveal-card">
+                        <div class="kpi-bar-header">
+                            <i class="fa-solid fa-chart-simple"></i>
+                            <span>Key Statistics</span>
+                        </div>
+                        <div id="equity-kpi-bar" class="portfolio-kpi-bar">
+                            <div class="portfolio-kpi-tile">
+                                <div class="kpi-accent" style="background: var(--neon-cyan-vibrant)"></div>
+                                <div class="kpi-body">
+                                    <span class="kpi-value" id="kpi-eps">--</span>
+                                    <span class="kpi-label">EPS (TTM)</span>
+                                </div>
+                            </div>
+                            <div class="portfolio-kpi-tile">
+                                <div class="kpi-accent" style="background: var(--neon-green-positive)"></div>
+                                <div class="kpi-body">
+                                    <span class="kpi-value" id="kpi-div-yield">--</span>
+                                    <span class="kpi-label">Dividend Yield</span>
+                                </div>
+                            </div>
+                            <div class="portfolio-kpi-tile">
+                                <div class="kpi-accent" style="background: #f59e0b"></div>
+                                <div class="kpi-body">
+                                    <span class="kpi-value" id="kpi-pe">--</span>
+                                    <span class="kpi-label">P/E Ratio</span>
+                                </div>
+                            </div>
+                            <div class="portfolio-kpi-tile">
+                                <div class="kpi-accent" style="background: var(--neon-blue-accent)"></div>
+                                <div class="kpi-body">
+                                    <span class="kpi-value" id="kpi-mkt-cap">--</span>
+                                    <span class="kpi-label">Market Capitalization</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ratios Grid -->
+                    <div class="ratios-container-card equity-reveal-card">
                         <h3>Key Valuation & Financial Ratios (TTM)</h3>
                         <div id="ratios-grid-target" class="ratios-data-grid">
                         </div>
                     </div>
 
-                    <div class="tabs-container-card">
+                    <!-- Tabbed Financial Data -->
+                    <div class="tabs-container-card equity-reveal-card">
                         <div class="tab-selectors-strip">
                             <button class="panel-tab-btn active" data-tab="tab-desc">Corporate Profile</button>
-                            <button class="panel-tab-btn" data-tab="tab-balance">Balance Sheet Summary</button>
-                            <button class="panel-tab-btn" data-tab="tab-cashflow">Cash Flow Summary</button>
+                            <button class="panel-tab-btn" data-tab="tab-income">Income Statement</button>
+                            <button class="panel-tab-btn" data-tab="tab-balance">Balance Sheet</button>
+                            <button class="panel-tab-btn" data-tab="tab-cashflow">Cash Flow</button>
                         </div>
                         <div class="tab-panels-viewport">
+                            <!-- Corporate Profile + AI Summary -->
                             <div id="tab-desc" class="tab-panel active-panel">
                                 <p id="corporate-description-text" class="narrative-p">Perform a financial ticker query to construct internal narrative summaries.</p>
+                                <div class="ai-profile-section">
+                                    <div class="ai-profile-header">
+                                        <h4><i class="fa-solid fa-robot"></i> AI Executive Summary</h4>
+                                        <button id="generate-ai-profile-btn" class="secondary-btn" style="padding: 6px 14px; font-size: 0.82rem;">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                                        </button>
+                                    </div>
+                                    <div id="ai-profile-output" class="ai-profile-output">
+                                        <span class="empty-notice">Click "Generate" to create an AI-powered executive summary for this company.</span>
+                                    </div>
+                                </div>
                             </div>
+                            <!-- Income Statement -->
+                            <div id="tab-income" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Metric</th><th>Reported Value</th></tr>
+                                        </thead>
+                                        <tbody id="income-statement-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Balance Sheet -->
                             <div id="tab-balance" class="tab-panel">
                                 <div class="financial-table-wrapper">
                                     <table class="financial-data-table">
                                         <thead>
-                                            <tr><th>Summary Metric</th><th>Reported Value</th></tr>
+                                            <tr><th>Metric</th><th>Reported Value</th></tr>
                                         </thead>
                                         <tbody id="balance-sheet-table-body">
                                             <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
@@ -274,11 +427,12 @@
                                     </table>
                                 </div>
                             </div>
+                            <!-- Cash Flow -->
                             <div id="tab-cashflow" class="tab-panel">
                                 <div class="financial-table-wrapper">
                                     <table class="financial-data-table">
                                         <thead>
-                                            <tr><th>Summary Metric</th><th>Reported Value</th></tr>
+                                            <tr><th>Metric</th><th>Reported Value</th></tr>
                                         </thead>
                                         <tbody id="cashflow-table-body">
                                             <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
