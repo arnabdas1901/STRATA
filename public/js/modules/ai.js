@@ -249,12 +249,12 @@ async function exportAiPdf() {
 
     // Programmatic white-background branded memo container
     const element = document.createElement('div');
-    element.style.position = 'fixed';
-    element.style.left = '0';
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
     element.style.top = '0';
     element.style.width = '750px';
     element.style.background = '#ffffff';
-    element.style.zIndex = '-9999';
+    element.style.zIndex = '1';
 
     element.innerHTML = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; padding: 40px; line-height: 1.6;">
@@ -310,7 +310,7 @@ async function exportAiPdf() {
         margin:       10,
         filename:     `STRATA_AI_Analysis_${report.ticker}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     

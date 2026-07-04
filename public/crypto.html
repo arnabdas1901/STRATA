@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATA - Cryptocurrency Market Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-text-group">
+                    <span class="logo-text">STRATA</span>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+                <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker">
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>Equity Analysis</span>
+                </a>
+                <a class="nav-item" href="calculators.html">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Financial Calculators</span>
+                </a>
+                <a class="nav-item" href="portfolio.html">
+                    <i class="fa-solid fa-pie-chart"></i>
+                    <span>Mock Portfolio</span>
+                </a>
+                <a class="nav-item" href="ai.html">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>AI Analyst</span>
+                </a>
+                <a class="nav-item active" href="crypto.html">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>Crypto Analysis</span>
+                </a>
+                <a class="nav-item" href="commodities.html">
+                    <i class="fa-solid fa-wheat-awn"></i>
+                    <span>Commodities</span>
+                </a>
+                <a class="nav-item" href="macro.html">
+                    <i class="fa-solid fa-earth-americas"></i>
+                    <span>Global Inflation</span>
+                </a>
+                <a class="nav-item" href="forex.html">
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <span>Currencies</span>
+                </a>
+                <a class="nav-item" href="stress.html">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Stress Tester</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="mobile-header">
+                <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="mobile-logo">
+                    <span>STRATA</span>
+                    <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile">
+                </div>
+            </header>
+
+            <section id="dashboard-crypto" class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <h1>Cryptocurrency Market Terminal</h1>
+                    <p class="subtitle">Real-time crypto price tracking with advanced market analytics and historical trends</p>
+                </div>
+
+                <div class="search-wrapper">
+                    <div class="search-bar-container">
+                        <i class="fa-solid fa-search search-icon"></i>
+                        <input type="text" id="crypto-search-input" aria-label="Search cryptocurrency" placeholder="Search crypto by symbol or name (e.g., BTC, ETH, Solana)..." autocomplete="off">
+                        <button id="crypto-search-btn" class="primary-btn">Search Crypto</button>
+                    </div>
+                </div>
+
+                <p class="crypto-landing-note">Tap a card below or search by symbol/name to load market profile, price action and chart details.</p>
+
+                <div class="crypto-brackets-container" id="crypto-landing-view">
+                    <h3>Top 6 Cryptocurrencies</h3>
+                    <div id="crypto-brackets-grid" class="crypto-brackets-grid" role="list">
+                    </div>
+                </div>
+
+                <div id="crypto-loader" class="loader-container hidden-element">
+                    <div class="spinner"></div>
+                    <p>Fetching real-time crypto market data...</p>
+                </div>
+
+                <div id="crypto-results-container" class="hidden-element">
+                    <div class="equity-results-header">
+                        <button id="crypto-back-btn" class="secondary-btn">← Back to Top Cryptos</button>
+                    </div>
+                    <div class="ticker-hero-card">
+                        <div class="hero-meta">
+                            <div class="crypto-hero-identity">
+                                <span id="crypto-icon-display" style="font-size: 32px;">💰</span>
+                                <div>
+                                    <h2 id="crypto-name-display">Bitcoin</h2>
+                                    <div class="ticker-badges">
+                                        <span id="crypto-ticker-badge" class="badge">BTC</span>
+                                        <span id="crypto-rank-badge" class="badge secondary">#1</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hero-pricing">
+                            <div id="crypto-live-price-display" class="price-value">$0.00</div>
+                            <div id="crypto-live-change-display" class="price-change-percent">0.00% (24h)</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-summary-grid">
+                        <div class="metric-card">
+                            <span class="metric-title">24h High</span>
+                            <span id="crypto-metric-24h-high" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">24h Low</span>
+                            <span id="crypto-metric-24h-low" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Market Cap</span>
+                            <span id="crypto-metric-market-cap" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">24h Volume</span>
+                            <span id="crypto-metric-volume" class="metric-value">--</span>
+                        </div>
+                    </div>
+
+                    <div class="metric-summary-grid">
+                        <div class="metric-card">
+                            <span class="metric-title">Circulating Supply</span>
+                            <span id="crypto-metric-supply" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Total Supply</span>
+                            <span id="crypto-metric-total-supply" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">All-Time High</span>
+                            <span id="crypto-metric-ath" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">ATH Date</span>
+                            <span id="crypto-metric-ath-date" class="metric-value">--</span>
+                        </div>
+                    </div>
+
+                    <div class="chart-container-card">
+                        <div class="chart-header">
+                            <h3>Historical Price Trajectory</h3>
+                            <div class="chart-timeframe-selectors">
+                                <button class="tf-btn" data-tf="7">7D</button>
+                                <button class="tf-btn" data-tf="30">30D</button>
+                                <button class="tf-btn" data-tf="90">90D</button>
+                                <button class="tf-btn active" data-tf="365">1Y</button>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box">
+                            <canvas id="cryptoHistoricalChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="tabs-container-card">
+                        <div class="tab-selectors-strip">
+                            <button class="panel-tab-btn active" data-tab="tab-crypto-overview">Market Overview</button>
+                            <button class="panel-tab-btn" data-tab="tab-crypto-stats">Advanced Statistics</button>
+                        </div>
+                        <div class="tab-panels-viewport">
+                            <div id="tab-crypto-overview" class="tab-panel active-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Metric</th><th>Value</th></tr>
+                                        </thead>
+                                        <tbody id="crypto-overview-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">Select a cryptocurrency to view details.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="tab-crypto-stats" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Statistic</th><th>Value</th></tr>
+                                        </thead>
+                                        <tbody id="crypto-stats-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">Select a cryptocurrency to view statistics.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="global-toast-notification" class="toast-system hidden-toast"></div>
+
+    <script type="module" src="js/main.js"></script>
+    <script type="module">
+        import { setupCryptoTracker } from './js/modules/crypto.js';
+        setupCryptoTracker();
+    </script>
+</body>
+</html>

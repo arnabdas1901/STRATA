@@ -778,9 +778,9 @@ function generateCustomShockInputs() {
 // ─── Import from Portfolio Builder ──────────────────────────────────
 
 function importFromPortfolio() {
-    const capital = document.getElementById('portfolio-capital-input')?.value;
-    const age = document.getElementById('portfolio-age-input')?.value;
-    const risk = document.getElementById('portfolio-risk-input')?.value;
+    const capital = sessionStorage.getItem('portfolio_param_capital');
+    const age = sessionStorage.getItem('portfolio_param_age');
+    const risk = sessionStorage.getItem('portfolio_param_risk');
 
     let imported = false;
     if (capital) { document.getElementById('stress-capital-input').value = capital; imported = true; }
@@ -880,6 +880,35 @@ export function setupStressTester() {
 
     // Generate custom shock slider inputs
     generateCustomShockInputs();
+
+    // Check for auto-run or parameters passed from portfolio page
+    const runOnLoad = sessionStorage.getItem('stress_param_autorun');
+    const savedCapital = sessionStorage.getItem('stress_param_capital');
+    const savedAge = sessionStorage.getItem('stress_param_age');
+    const savedRisk = sessionStorage.getItem('stress_param_risk');
+
+    if (savedCapital) {
+        const input = document.getElementById('stress-capital-input');
+        if (input) input.value = savedCapital;
+        sessionStorage.removeItem('stress_param_capital');
+    }
+    if (savedAge) {
+        const input = document.getElementById('stress-age-input');
+        if (input) input.value = savedAge;
+        sessionStorage.removeItem('stress_param_age');
+    }
+    if (savedRisk) {
+        const input = document.getElementById('stress-risk-input');
+        if (input) input.value = savedRisk;
+        sessionStorage.removeItem('stress_param_risk');
+    }
+
+    if (runOnLoad === 'true') {
+        sessionStorage.removeItem('stress_param_autorun');
+        setTimeout(() => {
+            if (runBtn) runBtn.click();
+        }, 150);
+    }
 }
 
 function navigateToPortfolio() {
@@ -888,16 +917,12 @@ function navigateToPortfolio() {
     const age = document.getElementById('stress-age-input')?.value;
     const risk = document.getElementById('stress-risk-input')?.value;
 
-    // 2. Sync them into the Portfolio Builder inputs
-    const portfolioCapital = document.getElementById('portfolio-capital-input');
-    const portfolioAge = document.getElementById('portfolio-age-input');
-    const portfolioRisk = document.getElementById('portfolio-risk-input');
+    // 2. Sync them into sessionStorage
+    if (capital) sessionStorage.setItem('portfolio_param_capital', capital);
+    if (age) sessionStorage.setItem('portfolio_param_age', age);
+    if (risk) sessionStorage.setItem('portfolio_param_risk', risk);
 
-    if (portfolioCapital && capital) portfolioCapital.value = capital;
-    if (portfolioAge && age) portfolioAge.value = age;
-    if (portfolioRisk && risk) portfolioRisk.value = risk;
-
-    // 3. Navigate to the Portfolio Builder dashboard
-    const portfolioNav = document.querySelector('[data-target="dashboard-portfolio"]');
-    if (portfolioNav) portfolioNav.click();
+    // 3. Redirect to portfolio.html
+    window.location.href = 'portfolio.html';
 }
+

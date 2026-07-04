@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATA - Financial Calculators</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-text-group">
+                    <span class="logo-text">STRATA</span>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+                <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker">
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>Equity Analysis</span>
+                </a>
+                <a class="nav-item active" href="calculators.html">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Financial Calculators</span>
+                </a>
+                <a class="nav-item" href="portfolio.html">
+                    <i class="fa-solid fa-pie-chart"></i>
+                    <span>Mock Portfolio</span>
+                </a>
+                <a class="nav-item" href="ai.html">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>AI Analyst</span>
+                </a>
+                <a class="nav-item" href="crypto.html">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>Crypto Analysis</span>
+                </a>
+                <a class="nav-item" href="commodities.html">
+                    <i class="fa-solid fa-wheat-awn"></i>
+                    <span>Commodities</span>
+                </a>
+                <a class="nav-item" href="macro.html">
+                    <i class="fa-solid fa-earth-americas"></i>
+                    <span>Global Inflation</span>
+                </a>
+                <a class="nav-item" href="forex.html">
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <span>Currencies</span>
+                </a>
+                <a class="nav-item" href="stress.html">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Stress Tester</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="mobile-header">
+                <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="mobile-logo">
+                    <span>STRATA</span>
+                    <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile">
+                </div>
+            </header>
+
+            <section id="dashboard-calculators" class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <h1>Actuarial Engineering & Wealth Calculators</h1>
+                    <p class="subtitle">High-precision mathematical projection models for wealth compounding and structures</p>
+                </div>
+
+                <div class="calculator-layout-grid">
+                    <div class="calculator-control-card">
+                        <div class="calc-type-selector">
+                            <button class="calc-toggle active" data-calc="sip">SIP Projections</button>
+                            <button class="calc-toggle" data-calc="emi">Amortized EMI</button>
+                            <button class="calc-toggle" data-calc="swp">Systematic Withdrawal (SWP)</button>
+                            <button class="calc-toggle" data-calc="fire">FIRE Planner</button>
+                        </div>
+
+                        <div id="calc-inputs-wrapper" class="calc-inputs-form">
+                        </div>
+                    </div>
+
+                    <div class="calculator-visualization-card">
+                        <h3>Capital Breakdown Matrix</h3>
+                        <div class="pie-chart-wrapper">
+                            <canvas id="calculatorPieChart"></canvas>
+                        </div>
+
+                        <div class="bar-chart-section">
+                            <h3><i class="fa-solid fa-chart-column"></i> Year-by-Year Projection</h3>
+                            <div class="bar-chart-wrapper">
+                                <canvas id="calculatorBarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div id="calc-numerical-summary" class="calc-summary-metrics">
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="global-toast-notification" class="toast-system hidden-toast"></div>
+
+    <script type="module" src="js/main.js"></script>
+    <script type="module">
+        import { setupCalculators } from './js/modules/calculators.js';
+        setupCalculators();
+    </script>
+</body>
+</html>

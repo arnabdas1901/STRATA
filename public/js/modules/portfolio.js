@@ -32,6 +32,24 @@ export function setupPortfolioBuilder() {
     if (stressBtn) stressBtn.addEventListener('click', navigateToStressTest);
     if (pdfBtn) pdfBtn.addEventListener('click', exportPortfolioPdf);
 
+    // Restore state from sessionStorage if any
+    const savedCapital = sessionStorage.getItem('portfolio_param_capital');
+    const savedAge = sessionStorage.getItem('portfolio_param_age');
+    const savedRisk = sessionStorage.getItem('portfolio_param_risk');
+
+    if (savedCapital) {
+        const input = document.getElementById('portfolio-capital-input');
+        if (input) input.value = savedCapital;
+    }
+    if (savedAge) {
+        const input = document.getElementById('portfolio-age-input');
+        if (input) input.value = savedAge;
+    }
+    if (savedRisk) {
+        const input = document.getElementById('portfolio-risk-input');
+        if (input) input.value = savedRisk;
+    }
+
     // Generate initial
     generatePortfolio();
 }
@@ -42,30 +60,34 @@ function navigateToStressTest() {
     const age = document.getElementById('portfolio-age-input')?.value;
     const risk = document.getElementById('portfolio-risk-input')?.value;
 
-    // 2. Sync them into the Stress Tester inputs
-    const stressCapital = document.getElementById('stress-capital-input');
-    const stressAge = document.getElementById('stress-age-input');
-    const stressRisk = document.getElementById('stress-risk-input');
+    // 2. Sync them into sessionStorage
+    if (capital) {
+        sessionStorage.setItem('portfolio_param_capital', capital);
+        sessionStorage.setItem('stress_param_capital', capital);
+    }
+    if (age) {
+        sessionStorage.setItem('portfolio_param_age', age);
+        sessionStorage.setItem('stress_param_age', age);
+    }
+    if (risk) {
+        sessionStorage.setItem('portfolio_param_risk', risk);
+        sessionStorage.setItem('stress_param_risk', risk);
+    }
+    sessionStorage.setItem('stress_param_autorun', 'true');
 
-    if (stressCapital && capital) stressCapital.value = capital;
-    if (stressAge && age) stressAge.value = age;
-    if (stressRisk && risk) stressRisk.value = risk;
-
-    // 3. Navigate to the Stress Tester dashboard
-    const stressNav = document.querySelector('[data-target="dashboard-stress"]');
-    if (stressNav) stressNav.click();
-
-    // 4. Auto-run the stress test after a brief delay for the dashboard to render
-    setTimeout(() => {
-        const runBtn = document.getElementById('stress-run-btn');
-        if (runBtn) runBtn.click();
-    }, 150);
+    // 3. Redirect to stress.html
+    window.location.href = 'stress.html';
 }
 
 function generatePortfolio() {
     const age = parseInt(document.getElementById('portfolio-age-input')?.value) || 30;
     const risk = document.getElementById('portfolio-risk-input')?.value || 'moderate';
     const initialCapital = parseFloat(document.getElementById('portfolio-capital-input')?.value) || 100000;
+
+    // Sync current values to sessionStorage so they can be imported on the stress page
+    sessionStorage.setItem('portfolio_param_capital', String(initialCapital));
+    sessionStorage.setItem('portfolio_param_age', String(age));
+    sessionStorage.setItem('portfolio_param_risk', risk);
 
     // Macro Allocation (Tier 1)
     let baseEquity = Math.max(0, Math.min(100, 110 - age));
@@ -714,12 +736,12 @@ async function exportPortfolioPdf() {
     `).join('');
 
     const element = document.createElement('div');
-    element.style.position = 'fixed';
-    element.style.left = '0';
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
     element.style.top = '0';
     element.style.width = '750px';
     element.style.background = '#ffffff';
-    element.style.zIndex = '-9999';
+    element.style.zIndex = '1';
 
     element.innerHTML = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; padding: 40px; line-height: 1.5;">
@@ -810,7 +832,7 @@ async function exportPortfolioPdf() {
         margin:       10,
         filename:     `STRATA_Portfolio_Architect.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 

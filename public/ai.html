@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATA - AI Analyst Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-text-group">
+                    <span class="logo-text">STRATA</span>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+                <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker">
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>Equity Analysis</span>
+                </a>
+                <a class="nav-item" href="calculators.html">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Financial Calculators</span>
+                </a>
+                <a class="nav-item" href="portfolio.html">
+                    <i class="fa-solid fa-pie-chart"></i>
+                    <span>Mock Portfolio</span>
+                </a>
+                <a class="nav-item active" href="ai.html">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>AI Analyst</span>
+                </a>
+                <a class="nav-item" href="crypto.html">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>Crypto Analysis</span>
+                </a>
+                <a class="nav-item" href="commodities.html">
+                    <i class="fa-solid fa-wheat-awn"></i>
+                    <span>Commodities</span>
+                </a>
+                <a class="nav-item" href="macro.html">
+                    <i class="fa-solid fa-earth-americas"></i>
+                    <span>Global Inflation</span>
+                </a>
+                <a class="nav-item" href="forex.html">
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <span>Currencies</span>
+                </a>
+                <a class="nav-item" href="stress.html">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Stress Tester</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="mobile-header">
+                <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="mobile-logo">
+                    <span>STRATA</span>
+                    <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile">
+                </div>
+            </header>
+
+            <section id="dashboard-ai" class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <h1>Algorithmic Quant & AI Analyst Terminal</h1>
+                    <p class="subtitle">Advanced quantitative logic processing structural models, safety parameters, and intrinsic equations</p>
+                </div>
+
+                <div class="ai-control-panel-card">
+                    <div class="ai-input-strip">
+                        <div class="input-container-inline">
+                            <label for="ai-ticker-input">Target Equity Ticker</label>
+                            <input type="text" id="ai-ticker-input" placeholder="e.g., NVDA" autocomplete="off">
+                        </div>
+                        <div class="input-container-inline">
+                            <label for="ai-model-select">Analytical Quant Frame</label>
+                            <select id="ai-model-select">
+                                <optgroup label="Core Analysis">
+                                    <option value="dupont">3-Stage DuPont Decomposition</option>
+                                    <option value="redflags">Automated Financial Red Flags Scan</option>
+                                    <option value="dcf">Discounted Cash Flow (DCF) Intrinsic Value</option>
+                                    <option value="benchmarking">Peer-Group Sector Benchmarking</option>
+                                </optgroup>
+                                <optgroup label="Advanced Frames">
+                                    <option value="piotroski">Piotroski F-Score (Value Quality)</option>
+                                    <option value="altman">Altman Z-Score (Distress Risk)</option>
+                                    <option value="momentum">Technical Momentum & Price Action</option>
+                                    <option value="moat">Buffett/Munger Economic Moat</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <button id="execute-ai-btn" class="primary-btn execution-btn"><i class="fa-solid fa-microchip"></i> Execute Deep Scan</button>
+                        <button id="ai-pdf-btn" class="secondary-btn" style="display: none; white-space: nowrap;"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+                    </div>
+                </div>
+
+                <div class="ai-terminal-card">
+                    <div class="terminal-header">
+                        <div class="window-buttons"><span></span><span></span><span></span></div>
+                        <div class="terminal-title">quant-engine-v4.0.1 // core_analysis_stream</div>
+                    </div>
+                    <div id="ai-terminal-output" class="terminal-screen-body">
+                        <span class="terminal-prompt">&gt; Groq AI analyst online. Enter a ticker and select an analysis frame.</span>
+                    </div>
+                    <div class="gemini-integration-notice">
+                        <i class="fa-solid fa-robot gemini-icon"></i>
+                        <span>Powered by Groq free tier (Llama 3.3 70B). ~1,000 AI scans/day, 30/min — your 2–3/day usage is well within limits. Educational only—not investment advice.</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="global-toast-notification" class="toast-system hidden-toast"></div>
+
+    <script type="module" src="js/main.js"></script>
+    <script type="module">
+        import { setupAiAdvisor } from './js/modules/ai.js';
+        setupAiAdvisor();
+    </script>
+</body>
+</html>

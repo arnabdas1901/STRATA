@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATA - Portfolio Stress Testing & Risk Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-text-group">
+                    <span class="logo-text">STRATA</span>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+                <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker">
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>Equity Analysis</span>
+                </a>
+                <a class="nav-item" href="calculators.html">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Financial Calculators</span>
+                </a>
+                <a class="nav-item" href="portfolio.html">
+                    <i class="fa-solid fa-pie-chart"></i>
+                    <span>Mock Portfolio</span>
+                </a>
+                <a class="nav-item" href="ai.html">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>AI Analyst</span>
+                </a>
+                <a class="nav-item" href="crypto.html">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>Crypto Analysis</span>
+                </a>
+                <a class="nav-item" href="commodities.html">
+                    <i class="fa-solid fa-wheat-awn"></i>
+                    <span>Commodities</span>
+                </a>
+                <a class="nav-item" href="macro.html">
+                    <i class="fa-solid fa-earth-americas"></i>
+                    <span>Global Inflation</span>
+                </a>
+                <a class="nav-item" href="forex.html">
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <span>Currencies</span>
+                </a>
+                <a class="nav-item active" href="stress.html">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Stress Tester</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="mobile-header">
+                <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="mobile-logo">
+                    <span>STRATA</span>
+                    <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile">
+                </div>
+            </header>
+
+            <section id="dashboard-stress" class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <h1>Portfolio Stress Testing & Risk Engine</h1>
+                    <p class="subtitle">Monte Carlo simulation, historical scenario replay, and correlation-aware risk analytics with Cholesky decomposition</p>
+                </div>
+
+                <div class="stress-input-grid">
+                    <div class="stress-inputs-card">
+                        <h3><i class="fa-solid fa-sliders"></i> Portfolio Configuration</h3>
+                        <div class="input-field-group">
+                            <label for="stress-capital-input">Initial Capital ($)</label>
+                            <input type="number" id="stress-capital-input" value="100000" min="1000" step="1000" placeholder="e.g., 100000">
+                        </div>
+                        <div class="input-field-group">
+                            <label for="stress-age-input">Investor Age (Years)</label>
+                            <input type="number" id="stress-age-input" value="30" min="1" max="120" placeholder="e.g., 30">
+                        </div>
+                        <div class="input-field-group">
+                            <label for="stress-risk-input">Risk Profile</label>
+                            <select id="stress-risk-input">
+                                <option value="conservative">Conservative (Capital Preservation)</option>
+                                <option value="moderate" selected>Moderate (Balanced Growth)</option>
+                                <option value="aggressive">Aggressive (High Alpha)</option>
+                            </select>
+                        </div>
+                        <button id="stress-import-btn" class="secondary-btn fluid-btn" style="margin-top: 8px;">
+                            <i class="fa-solid fa-download"></i> Import from Portfolio Builder
+                        </button>
+                        <button id="stress-to-portfolio-btn" class="secondary-btn fluid-btn" style="margin-top: 6px;">
+                            <i class="fa-solid fa-arrow-left"></i> Back to Portfolio Builder
+                        </button>
+                    </div>
+
+                    <div class="stress-inputs-card">
+                        <h3><i class="fa-solid fa-flask-vial"></i> Simulation Parameters</h3>
+                        <div class="input-field-group">
+                            <label for="stress-scenario-select">Stress Scenario</label>
+                            <select id="stress-scenario-select">
+                                <optgroup label="Historical Events">
+                                    <option value="gfc2008" selected>📉 2008 Global Financial Crisis</option>
+                                    <option value="covid2020">🦠 2020 COVID-19 Crash</option>
+                                    <option value="dotcom2000">💥 2000 Dot-Com Bubble Burst</option>
+                                    <option value="rateShock2022">🏦 2022 Rate Hike Shock</option>
+                                </optgroup>
+                                <optgroup label="Custom">
+                                    <option value="custom">⚙️ Custom Shock (Define Below)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div id="custom-shock-inputs" class="hidden-element">
+                            <!-- Generated dynamically by stress.js -->
+                        </div>
+                        <div class="input-field-group">
+                            <label for="stress-mc-years">Monte Carlo Horizon (Years)</label>
+                            <input type="number" id="stress-mc-years" value="5" min="1" max="30" step="1">
+                        </div>
+                        <div class="input-field-group">
+                            <label for="stress-mc-paths">Simulation Paths</label>
+                            <select id="stress-mc-paths">
+                                <option value="500">500 paths (Fast)</option>
+                                <option value="1000" selected>1,000 paths (Balanced)</option>
+                                <option value="3000">3,000 paths (Precise)</option>
+                            </select>
+                        </div>
+                        <button id="stress-run-btn" class="primary-btn fluid-btn" style="margin-top: 8px;">
+                            <i class="fa-solid fa-bolt"></i> Execute Stress Test
+                        </button>
+                    </div>
+                </div>
+
+                <div id="stress-loader" class="loader-container hidden-element">
+                    <div class="spinner"></div>
+                    <p>Running Monte Carlo simulation & stress scenarios...</p>
+                </div>
+
+                <div id="stress-results-container" class="hidden-element">
+
+                    <div class="stress-section-card">
+                        <h3><i class="fa-solid fa-layer-group"></i> Active Allocation Profile</h3>
+                        <div id="stress-allocation-chips" class="stress-chips-row"></div>
+                    </div>
+
+                    <div class="stress-section-card">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Historical Scenario Impact</h3>
+                        <p class="section-desc" id="stress-scenario-desc">Simulating portfolio performance under the selected crisis event.</p>
+                        <div class="stress-scenario-grid">
+                            <div class="chart-wrapper-box" style="height: 340px;">
+                                <canvas id="stressDrawdownChart"></canvas>
+                            </div>
+                            <div id="stress-scenario-metrics" class="stress-metrics-side">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stress-section-card">
+                        <h3><i class="fa-solid fa-dice"></i> Monte Carlo Probability Distribution</h3>
+                        <p class="section-desc">Simulated portfolio trajectories with correlated asset returns using Cholesky decomposition.</p>
+                        <div class="chart-wrapper-box" style="height: 400px;">
+                            <canvas id="stressMonteCarloChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="stress-section-card">
+                        <h3><i class="fa-solid fa-gauge-high"></i> Quantitative Risk Metrics</h3>
+                        <div id="stress-risk-metrics" class="metric-summary-grid">
+                        </div>
+                    </div>
+
+                    <div class="stress-section-card">
+                        <h3><i class="fa-solid fa-robot"></i> AI Risk Assessment</h3>
+                        <div id="stress-ai-commentary" class="stress-ai-output">
+                            <span class="terminal-prompt">Risk assessment will appear after running a stress test.</span>
+                        </div>
+                    </div>
+
+                    <p class="projection-disclaimer"><i class="fa-solid fa-circle-info"></i> <strong>Disclaimer:</strong> Stress tests use historical drawdown data and Monte Carlo simulations based on trailing volatility estimates. Past performance does not guarantee future results. This is for educational purposes only—not investment advice.</p>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="global-toast-notification" class="toast-system hidden-toast"></div>
+
+    <script type="module" src="js/main.js"></script>
+    <script type="module">
+        import { setupStressTester } from './js/modules/stress.js';
+        setupStressTester();
+    </script>
+</body>
+</html>
