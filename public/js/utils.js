@@ -2,6 +2,15 @@ export const BACKEND_URL = window.location.origin.includes('localhost')
     ? 'http://localhost:3000' 
     : window.location.origin;
 
+const requestCache = new Map();
+const inFlightRequests = new Map();
+
+function getCacheKey(resource, options = {}) {
+    const url = typeof resource === 'string' ? resource : resource.url;
+    const method = (options.method || 'GET').toUpperCase();
+    return `${method}:${url}`;
+}
+
 export function setupTabs(containerSelector) {
     const container = document.querySelector(containerSelector);
     if (!container) return;
@@ -22,15 +31,40 @@ export function setupTabs(containerSelector) {
 }
 
 export async function fetchWithTimeout(resource, options = {}) {
-    const { timeout = 8000 } = options;
+    const { timeout = 8000, cache = false, cacheTtl = 30000 } = options;
+    const key = getCacheKey(resource, options);
+
+    if (cache && requestCache.has(key)) {
+        return requestCache.get(key);
+    }
+
+    if (cache && inFlightRequests.has(key)) {
+        return inFlightRequests.get(key);
+    }
+
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
-    const response = await fetch(resource, {
+    const requestPromise = fetch(resource, {
         ...options,
-        signal: controller.signal  
+        signal: controller.signal
+    }).then((response) => {
+        clearTimeout(id);
+        if (cache) {
+            requestCache.set(key, response);
+            setTimeout(() => {
+                requestCache.delete(key);
+            }, cacheTtl);
+        }
+        return response;
+    }).catch((error) => {
+        clearTimeout(id);
+        throw error;
+    }).finally(() => {
+        inFlightRequests.delete(key);
     });
-    clearTimeout(id);
-    return response;
+
+    inFlightRequests.set(key, requestPromise);
+    return requestPromise;
 }
 
 export async function safeJsonParse(response) {

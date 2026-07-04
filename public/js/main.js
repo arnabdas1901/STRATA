@@ -1,5 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     setupMobileMenu();
+    enhancePageShell();
+    animateMetricValues();
+    setupPageReveal();
+    setupExecutiveToolbar();
 });
 
 function setupMobileMenu() {
@@ -25,4 +29,85 @@ function setupMobileMenu() {
             toggleBtn.setAttribute('aria-expanded', 'false');
         }
     });
+}
+
+function enhancePageShell() {
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach((item) => {
+        item.addEventListener('mouseenter', () => {
+            item.style.transform = 'translateX(3px)';
+        });
+        item.addEventListener('mouseleave', () => {
+            if (!item.classList.contains('active')) {
+                item.style.transform = '';
+            }
+        });
+    });
+
+    const heroCards = document.querySelectorAll('.ticker-hero-card, .chart-container-card, .metric-card, .news-widget');
+    heroCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 70}ms`;
+        card.classList.add('premium-card-enter');
+    });
+}
+
+function animateMetricValues() {
+    const metricValues = document.querySelectorAll('.metric-value, .index-price, .price-value, .kpi-value');
+    metricValues.forEach((el) => {
+        if (!el.textContent.trim() || el.textContent.includes('--')) return;
+        el.classList.add('metric-value-animated');
+    });
+}
+
+function setupPageReveal() {
+    const content = document.querySelector('.main-content');
+    if (!content) return;
+    content.classList.add('page-revealed');
+}
+
+function setupExecutiveToolbar() {
+    const content = document.querySelector('.main-content');
+    if (!content) return;
+
+    if (document.getElementById('executive-toolbar')) return;
+
+    const toolbar = document.createElement('section');
+    toolbar.id = 'executive-toolbar';
+    toolbar.className = 'executive-toolbar';
+    toolbar.innerHTML = `
+        <div class="toolbar-left">
+            <span class="toolbar-badge"><span class="pulse-dot"></span> LIVE COMMAND CENTER</span>
+            <span class="toolbar-ticker" id="toolbar-ticker">AAPL +1.42% · NVDA +3.07% · SPY +0.38%</span>
+        </div>
+        <div class="toolbar-right">
+            <span class="toolbar-clock" id="toolbar-clock">--:--</span>
+            <span class="toolbar-chip">AI insights online</span>
+            <span class="toolbar-chip">Risk monitor active</span>
+        </div>
+    `;
+
+    content.insertAdjacentElement('beforebegin', toolbar);
+
+    const clockEl = document.getElementById('toolbar-clock');
+    const tickerEl = document.getElementById('toolbar-ticker');
+    const tickers = ['AAPL +1.42% · NVDA +3.07% · SPY +0.38%', 'BTC +2.11% · ETH +1.84% · SOL +3.62%', 'TSLA +0.94% · AMZN +1.21% · GOOGL +0.67%'];
+    let tickerIndex = 0;
+
+    const updateClock = () => {
+        if (clockEl) {
+            const now = new Date();
+            clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+    };
+
+    const rotateTicker = () => {
+        if (tickerEl) {
+            tickerIndex = (tickerIndex + 1) % tickers.length;
+            tickerEl.textContent = tickers[tickerIndex];
+        }
+    };
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    setInterval(rotateTicker, 3200);
 }

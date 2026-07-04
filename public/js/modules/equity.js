@@ -531,13 +531,15 @@ function renderEquityChart(data) {
     const color = isPositive ? '#10b981' : '#ef4444';
     
     const ctx = canvas.getContext('2d');
-    const priceGradient = ctx.createLinearGradient(0, 0, 0, 300);
+    const priceGradient = ctx.createLinearGradient(0, 0, 0, 320);
     if (isPositive) {
-        priceGradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
-        priceGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+        priceGradient.addColorStop(0, 'rgba(16, 185, 129, 0.34)');
+        priceGradient.addColorStop(0.45, 'rgba(6, 182, 212, 0.16)');
+        priceGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
     } else {
-        priceGradient.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
-        priceGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        priceGradient.addColorStop(0, 'rgba(239, 68, 68, 0.32)');
+        priceGradient.addColorStop(0.45, 'rgba(236, 72, 153, 0.14)');
+        priceGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
     }
 
     // Color volume bars: green for days closing higher than previous close, red for lower
@@ -562,11 +564,14 @@ function renderEquityChart(data) {
                     data: prices,
                     borderColor: color,
                     backgroundColor: priceGradient,
-                    borderWidth: 2,
+                    borderWidth: 2.5,
                     pointRadius: 0,
                     pointHoverRadius: 6,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#f8fafc',
+                    pointBorderWidth: 1.5,
                     fill: true,
-                    tension: 0.15,
+                    tension: 0.22,
                     yAxisID: 'y'
                 },
                 {
@@ -575,8 +580,10 @@ function renderEquityChart(data) {
                     type: 'bar',
                     backgroundColor: volumeColors,
                     hoverBackgroundColor: volumeColors.map(c => c.replace('0.3', '0.6').replace('0.2', '0.5')),
-                    barPercentage: 0.7,
-                    categoryPercentage: 0.8,
+                    borderColor: 'rgba(255,255,255,0.02)',
+                    borderWidth: 1,
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.82,
                     yAxisID: 'yVolume'
                 }
             ]
@@ -591,13 +598,14 @@ function renderEquityChart(data) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(10, 14, 23, 0.95)',
-                    titleColor: 'rgba(255, 255, 255, 0.7)',
+                    backgroundColor: 'rgba(3, 7, 18, 0.97)',
+                    titleColor: 'rgba(255, 255, 255, 0.85)',
                     bodyColor: '#ffffff',
                     bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderColor: 'rgba(37, 99, 235, 0.45)',
                     borderWidth: 1,
                     padding: 12,
+                    displayColors: false,
                     callbacks: {
                         label: function(context) {
                             const val = context.parsed.y;
@@ -646,6 +654,10 @@ function renderEquityChart(data) {
                     min: 0,
                     max: Math.max(...volumes) * 4
                 }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
             }
         }
     });
