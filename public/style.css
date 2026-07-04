@@ -150,6 +150,7 @@ select {
     cursor: pointer;
     text-align: left;
     transition: all var(--transition-speed) ease;
+    text-decoration: none;
 }
 
 .nav-item:hover {

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATA - Commodities Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-text-group">
+                    <span class="logo-text">STRATA</span>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+                <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker">
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>Equity Analysis</span>
+                </a>
+                <a class="nav-item" href="calculators.html">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Financial Calculators</span>
+                </a>
+                <a class="nav-item" href="portfolio.html">
+                    <i class="fa-solid fa-pie-chart"></i>
+                    <span>Mock Portfolio</span>
+                </a>
+                <a class="nav-item" href="ai.html">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>AI Analyst</span>
+                </a>
+                <a class="nav-item" href="crypto.html">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>Crypto Analysis</span>
+                </a>
+                <a class="nav-item active" href="commodities.html">
+                    <i class="fa-solid fa-wheat-awn"></i>
+                    <span>Commodities</span>
+                </a>
+                <a class="nav-item" href="macro.html">
+                    <i class="fa-solid fa-earth-americas"></i>
+                    <span>Global Inflation</span>
+                </a>
+                <a class="nav-item" href="forex.html">
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <span>Currencies</span>
+                </a>
+                <a class="nav-item" href="stress.html">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Stress Tester</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="mobile-header">
+                <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="mobile-logo">
+                    <span>STRATA</span>
+                    <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile">
+                </div>
+            </header>
+
+            <section id="dashboard-commodities" class="dashboard-viewport active">
+                <div class="dashboard-header-block commodities-terminal-header">
+                    <div>
+                        <h1>Commodities Terminal</h1>
+                        <p class="subtitle">Spot &amp; futures pricing across precious metals, energy, industrial metals, and agriculture</p>
+                    </div>
+                </div>
+
+                <div class="search-wrapper">
+                    <div class="search-bar-container commodities-search-bar">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="commodity-search-input" aria-label="Search commodity futures or spot symbol" placeholder="Search futures ticker or commodity (e.g., GC=F, Brent, Copper)…" autocomplete="off">
+                        <button id="commodity-search-btn" class="primary-btn">Analyze</button>
+                    </div>
+                </div>
+
+                <div id="commodity-loader" class="loader-container">
+                    <div class="spinner"></div>
+                    <p>Loading futures curve, historical series &amp; macro profile…</p>
+                </div>
+
+                <div id="commodity-results-container" class="hidden-element">
+                    <div class="commodities-detail-hero">
+                        <div class="commodities-detail-identity">
+                            <div class="commodities-detail-icon" id="commodity-icon-display" aria-hidden="true">
+                                <i class="fa-solid fa-gem"></i>
+                            </div>
+                            <div>
+                                <div class="commodities-detail-labels">
+                                    <span id="commodity-sector-badge" class="commodities-sector-badge">Precious Metals</span>
+                                    <span id="commodity-exchange-badge" class="badge secondary">COMEX</span>
+                                </div>
+                                <h2 id="commodity-name-display">Gold</h2>
+                                <div class="ticker-badges">
+                                    <span id="commodity-ticker-badge" class="badge">GC=F</span>
+                                    <span id="commodity-unit-badge" class="badge secondary">USD/oz</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="commodities-detail-pricing">
+                            <div id="commodity-live-price-display" class="price-value">—</div>
+                            <div id="commodity-live-change-display" class="price-change-percent">—</div>
+                            <div id="commodity-provider-label" class="commodities-provider-label">Source: —</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-summary-grid commodities-metrics-grid">
+                        <div class="metric-card">
+                            <span class="metric-title">52-Week High</span>
+                            <span id="commodity-metric-52h" class="metric-value">—</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">52-Week Low</span>
+                            <span id="commodity-metric-52l" class="metric-value">—</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Range Position</span>
+                            <span id="commodity-metric-range-pct" class="metric-value">—</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Ann. Volatility</span>
+                            <span id="commodity-metric-volatility" class="metric-value">—</span>
+                        </div>
+                    </div>
+
+                    <div class="chart-container-card commodities-chart-card">
+                        <div class="chart-header">
+                            <div>
+                                <h3><i class="fa-solid fa-chart-area"></i> Price History</h3>
+                                <p class="commodities-chart-subtitle" id="commodity-chart-subtitle">Futures continuous contract</p>
+                            </div>
+                            <div class="chart-timeframe-selectors" id="commodity-chart-timeframes">
+                                <button class="tf-btn" data-tf="1M">1M</button>
+                                <button class="tf-btn" data-tf="3M">3M</button>
+                                <button class="tf-btn" data-tf="6M">6M</button>
+                                <button class="tf-btn active" data-tf="1Y">1Y</button>
+                                <button class="tf-btn" data-tf="5Y">5Y</button>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box commodities-chart-wrapper">
+                            <canvas id="commodity-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="commodities-detail-grid">
+                        <div class="commodities-profile-card">
+                            <h3><i class="fa-solid fa-file-lines"></i> Macro Profile</h3>
+                            <p id="commodity-description-display" class="commodities-profile-text">Market profile will appear after analysis.</p>
+                        </div>
+                        <div class="commodities-drivers-card">
+                            <h3><i class="fa-solid fa-sliders"></i> Key Price Drivers</h3>
+                            <ul id="commodity-drivers-list" class="commodities-drivers-list">
+                                <li class="commodities-driver-placeholder">Select an instrument to view macro drivers.</li>
+                            </ul>
+                            <div class="commodities-range-bar-wrap">
+                                <div class="commodities-range-bar-header">
+                                    <span>52W Range</span>
+                                    <span id="commodity-range-label">—</span>
+                                </div>
+                                <div class="commodities-range-track">
+                                    <div id="commodity-range-marker" class="commodities-range-marker"></div>
+                                </div>
+                                <div class="commodities-range-labels">
+                                    <span id="commodity-range-low">—</span>
+                                    <span id="commodity-range-high">—</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="projection-disclaimer commodities-disclaimer">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <strong>Market Data Notice:</strong> Prices reflect third-party feeds (Alpha Vantage, Twelve Data, Yahoo Finance) and may be delayed. Futures symbols are continuous contracts for charting purposes. Not investment advice.
+                    </p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="global-toast-notification" class="toast-system hidden-toast"></div>
+
+    <script type="module" src="js/main.js"></script>
+    <script type="module">
+        import { initCommoditiesDashboard } from './js/modules/commodities.js';
+        initCommoditiesDashboard();
+    </script>
+</body>
+</html>

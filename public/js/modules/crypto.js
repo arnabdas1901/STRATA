@@ -4,36 +4,104 @@ let cryptoChartInstance = null;
 let activeCryptoId = null;
 
 export function setupCryptoTracker() {
+    const isDetailsPage = window.location.pathname.includes('crypto-details.html');
+
+    if (isDetailsPage) {
+        setupDetailsSearch();
+        setupCryptoTimeframeSelectors();
+        setupTabs('#dashboard-crypto');
+
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        const query = params.get('query');
+        if (id) {
+            displayCryptoDetails(id);
+        } else if (query) {
+            executeCryptoSearchWithQuery(query);
+        } else {
+            window.location.href = 'crypto.html';
+        }
+    } else {
+        setupLandingSearch();
+        loadTopCryptos();
+    }
+}
+
+function setupLandingSearch() {
     const searchBtn = document.getElementById('crypto-search-btn');
     const searchInput = document.getElementById('crypto-search-input');
-    const backBtn = document.getElementById('crypto-back-btn');
-    
+
+    const handleSearch = () => {
+        if (!searchInput) return;
+        const query = searchInput.value.trim();
+        if (query) {
+            window.location.href = `crypto-details.html?query=${encodeURIComponent(query)}`;
+        } else {
+            showToast('Enter a cryptocurrency ticker or name to search.');
+        }
+    };
+
     if (searchBtn) {
-        searchBtn.addEventListener('click', executeCryptoSearch);
+        searchBtn.addEventListener('click', handleSearch);
     }
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') executeCryptoSearch();
+            if (e.key === 'Enter') handleSearch();
         });
     }
-    if (backBtn) {
-        backBtn.addEventListener('click', clearCryptoResults);
-    }
-
-    setupTabs('#dashboard-crypto');
-    loadTopCryptos();
-    setupCryptoTimeframeSelectors();
 }
 
-function clearCryptoResults() {
-    const results = document.getElementById('crypto-results-container');
-    const landing = document.getElementById('crypto-landing-view');
+function setupDetailsSearch() {
+    const searchBtn = document.getElementById('crypto-search-btn');
     const searchInput = document.getElementById('crypto-search-input');
-    
-    if (results) results.classList.add('hidden-element');
-    if (landing) landing.classList.remove('hidden-element');
-    if (searchInput) searchInput.value = '';
-    activeCryptoId = null;
+
+    const handleSearch = () => {
+        if (!searchInput) return;
+        const query = searchInput.value.trim();
+        if (query) {
+            window.location.href = `crypto-details.html?query=${encodeURIComponent(query)}`;
+        } else {
+            showToast('Enter a cryptocurrency ticker or name to search.');
+        }
+    };
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', handleSearch);
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSearch();
+        });
+    }
+}
+
+async function executeCryptoSearchWithQuery(query) {
+    const loader = document.getElementById('crypto-loader');
+    if (loader) loader.classList.remove('hidden-element');
+
+    try {
+        const response = await fetchWithTimeout(`${BACKEND_URL}/api/crypto/search?query=${encodeURIComponent(query)}`, {
+            timeout: 10000,
+        });
+        const data = await safeJsonParse(response);
+
+        if (!response.ok) {
+            throw new Error(data?.error || 'Search failed.');
+        }
+
+        if (!data.coins || data.coins.length === 0) {
+            showToast('No cryptocurrencies found. Try another search.');
+            if (loader) loader.classList.add('hidden-element');
+            return;
+        }
+
+        const topResult = data.coins[0];
+        displayCryptoDetails(topResult.id);
+    } catch (error) {
+        console.error('Search error:', error);
+        showToast('Search failed. Please try again.');
+        if (loader) loader.classList.add('hidden-element');
+    }
 }
 
 async function loadTopCryptos() {
@@ -71,9 +139,13 @@ async function loadTopCryptos() {
                 <div class="bracket-change" style="color: ${changeColor};">${changeIcon} ${Math.abs(change24h).toFixed(2)}%</div>
             `;
 
-            bracket.addEventListener('click', () => displayCryptoDetails(crypto.id));
+            bracket.addEventListener('click', () => {
+                window.location.href = `crypto-details.html?id=${crypto.id}`;
+            });
             bracket.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') displayCryptoDetails(crypto.id);
+                if (e.key === 'Enter' || e.key === ' ') {
+                    window.location.href = `crypto-details.html?id=${crypto.id}`;
+                }
             });
 
             bracketsGrid.appendChild(bracket);
@@ -85,47 +157,12 @@ async function loadTopCryptos() {
     }
 }
 
-async function executeCryptoSearch() {
-    const input = document.getElementById('crypto-search-input');
-    const query = input?.value.trim();
-
-    if (!query) {
-        showToast('Enter a cryptocurrency ticker or name to search.');
-        return;
-    }
-
-    try {
-        const response = await fetchWithTimeout(`${BACKEND_URL}/api/crypto/search?query=${encodeURIComponent(query)}`, {
-            timeout: 10000,
-        });
-        const data = await safeJsonParse(response);
-
-        if (!response.ok) {
-            throw new Error(data?.error || 'Search failed.');
-        }
-
-        if (!data.coins || data.coins.length === 0) {
-            showToast('No cryptocurrencies found. Try another search.');
-            return;
-        }
-
-        const topResult = data.coins[0];
-        displayCryptoDetails(topResult.id);
-        showToast(`Found: ${topResult.name}`);
-    } catch (error) {
-        console.error('Search error:', error);
-        showToast('Search failed. Please try again.');
-    }
-}
-
 async function displayCryptoDetails(cryptoId) {
     const loader = document.getElementById('crypto-loader');
     const resultsContainer = document.getElementById('crypto-results-container');
-    const landing = document.getElementById('crypto-landing-view');
 
     if (loader) loader.classList.remove('hidden-element');
     if (resultsContainer) resultsContainer.classList.add('hidden-element');
-    if (landing) landing.classList.add('hidden-element');
 
     try {
         activeCryptoId = cryptoId;

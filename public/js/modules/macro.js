@@ -4,21 +4,7 @@ let macroChartInstance = null;
 let globalCountryMap = [];
 
 export async function setupInflationTracker() {
-    const searchBtn = document.getElementById('inflation-search-btn');
-    const searchInput = document.getElementById('inflation-search-input');
-    const backBtn = document.getElementById('inflation-back-btn');
-    
-    if (searchBtn) {
-        searchBtn.addEventListener('click', executeInflationSearch);
-    }
-    if (searchInput) {
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') executeInflationSearch();
-        });
-    }
-    if (backBtn) {
-        backBtn.addEventListener('click', clearInflationResults);
-    }
+    const isDetailsPage = window.location.pathname.includes('macro-details.html');
 
     try {
         const res = await fetch('https://api.worldbank.org/v2/country?format=json&per_page=300');
@@ -30,17 +16,96 @@ export async function setupInflationTracker() {
         console.warn('Could not load WB country map', e);
     }
 
-    loadMajorEconomies();
+    if (isDetailsPage) {
+        setupDetailsSearch();
+        
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const name = params.get('name');
+        const flag = params.get('flag') || '🌍';
+        const bank = params.get('bank') || 'Central Bank';
+        
+        if (code && name) {
+            displayMacroDetails(code, name, flag, bank);
+        } else {
+            window.location.href = 'macro.html';
+        }
+    } else {
+        setupLandingSearch();
+        loadMajorEconomies();
+    }
 }
 
-function clearInflationResults() {
-    const results = document.getElementById('inflation-results-container');
-    const landing = document.getElementById('macro-landing-view');
+function setupLandingSearch() {
+    const searchBtn = document.getElementById('inflation-search-btn');
     const searchInput = document.getElementById('inflation-search-input');
     
-    if (results) results.classList.add('hidden-element');
-    if (landing) landing.classList.remove('hidden-element');
-    if (searchInput) searchInput.value = '';
+    const handleSearch = () => {
+        if (!searchInput) return;
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            showToast("Enter a country name (e.g., Brazil, Canada).");
+            return;
+        }
+
+        let country = globalCountryMap.find(c => 
+            c.name.toLowerCase().includes(query) || 
+            c.id.toLowerCase() === query || 
+            c.iso2Code.toLowerCase() === query
+        );
+
+        if (!country) {
+            showToast("Country not found in database. Try another name.");
+            return;
+        }
+
+        window.location.href = `macro-details.html?code=${country.id}&name=${encodeURIComponent(country.name)}&flag=🌍&bank=Central%20Bank`;
+    };
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', handleSearch);
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSearch();
+        });
+    }
+}
+
+function setupDetailsSearch() {
+    const searchBtn = document.getElementById('inflation-search-btn');
+    const searchInput = document.getElementById('inflation-search-input');
+    
+    const handleSearch = () => {
+        if (!searchInput) return;
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            showToast("Enter a country name (e.g., Brazil, Canada).");
+            return;
+        }
+
+        let country = globalCountryMap.find(c => 
+            c.name.toLowerCase().includes(query) || 
+            c.id.toLowerCase() === query || 
+            c.iso2Code.toLowerCase() === query
+        );
+
+        if (!country) {
+            showToast("Country not found in database. Try another name.");
+            return;
+        }
+
+        window.location.href = `macro-details.html?code=${country.id}&name=${encodeURIComponent(country.name)}&flag=🌍&bank=Central%20Bank`;
+    };
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', handleSearch);
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSearch();
+        });
+    }
 }
 
 async function fetchWorldBankIndicator(countryCode, indicator) {
@@ -79,9 +144,13 @@ async function loadMajorEconomies() {
         `;
         grid.appendChild(bracket);
         
-        bracket.addEventListener('click', () => displayMacroDetails(eco.code, eco.name, eco.flag, eco.bank));
+        bracket.addEventListener('click', () => {
+            window.location.href = `macro-details.html?code=${eco.code}&name=${encodeURIComponent(eco.name)}&flag=${encodeURIComponent(eco.flag)}&bank=${encodeURIComponent(eco.bank)}`;
+        });
         bracket.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') displayMacroDetails(eco.code, eco.name, eco.flag, eco.bank);
+            if (e.key === 'Enter' || e.key === ' ') {
+                window.location.href = `macro-details.html?code=${eco.code}&name=${encodeURIComponent(eco.name)}&flag=${encodeURIComponent(eco.flag)}&bank=${encodeURIComponent(eco.bank)}`;
+            }
         });
 
         fetchWorldBankIndicator(eco.code, 'FP.CPI.TOTL.ZG').then(data => {
@@ -99,38 +168,12 @@ async function loadMajorEconomies() {
     }
 }
 
-async function executeInflationSearch() {
-    const input = document.getElementById('inflation-search-input');
-    const query = input?.value.trim().toLowerCase();
-    
-    if (!query) {
-        showToast("Enter a country name (e.g., Brazil, Canada).");
-        return;
-    }
-
-    let country = globalCountryMap.find(c => 
-        c.name.toLowerCase().includes(query) || 
-        c.id.toLowerCase() === query || 
-        c.iso2Code.toLowerCase() === query
-    );
-
-    if (!country) {
-        showToast("Country not found in database. Try another name.");
-        return;
-    }
-
-    displayMacroDetails(country.id, country.name, '🌍', 'Central Bank');
-    showToast(`Connecting to World Bank data for ${country.name}`);
-}
-
 async function displayMacroDetails(code, name, flag, bank) {
     const loader = document.getElementById('inflation-loader');
     const results = document.getElementById('inflation-results-container');
-    const landing = document.getElementById('macro-landing-view');
 
     if(loader) loader.classList.remove('hidden-element');
     if(results) results.classList.add('hidden-element');
-    if(landing) landing.classList.add('hidden-element');
 
     document.getElementById('country-name-display').innerText = name;
     document.getElementById('country-flag-display').innerText = flag;

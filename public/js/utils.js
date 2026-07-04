@@ -52,11 +52,15 @@ export function escapeHtml(text) {
 }
 
 export function formatLargeCurrency(value) {
-    if (value == null || isNaN(value)) return 'N/A';
-    if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-    return `$${value.toLocaleString()}`;
+    if (value == null) return 'N/A';
+    const num = Number(value);
+    if (isNaN(num)) return 'N/A';
+    const absNum = Math.abs(num);
+    const sign = num < 0 ? '-' : '';
+    if (absNum >= 1e12) return `${sign}$${(absNum / 1e12).toFixed(2)}T`;
+    if (absNum >= 1e9) return `${sign}$${(absNum / 1e9).toFixed(2)}B`;
+    if (absNum >= 1e6) return `${sign}$${(absNum / 1e6).toFixed(2)}M`;
+    return `${sign}$${absNum.toLocaleString('en-US')}`;
 }
 
 export function showToast(message) {

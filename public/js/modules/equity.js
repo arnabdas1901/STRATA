@@ -7,24 +7,38 @@ let rawNewsArticles = []; // Global store for loaded news articles
 
 export function loadDashboard() {
     setupTabs('#dashboard-equity');
-    setupSearch();
-    setupWatchlist();
-    setupTimeframeSelectors();
-    fetchLiveIndexValues();
-    setupMarketNews();
-    setupNewsFilters();
+    
+    const isDetailsPage = window.location.pathname.includes('equity-details.html');
+    
+    if (isDetailsPage) {
+        setupSearch();
+        setupTimeframeSelectors();
+        
+        const params = new URLSearchParams(window.location.search);
+        const symbol = params.get('symbol');
+        if (symbol) {
+            executeEquityAnalysis(symbol);
+        } else {
+            window.location.href = 'index.html';
+        }
+    } else {
+        setupSearch();
+        setupWatchlist();
+        fetchLiveIndexValues();
+        setupMarketNews();
+        setupNewsFilters();
+    }
 }
 
 function setupSearch() {
     const searchBtn = document.getElementById('equity-search-btn');
     const searchInput = document.getElementById('equity-search-input');
-    const backBtn = document.getElementById('equity-back-btn');
 
     const handleSearch = () => {
         if (!searchInput) return;
         const ticker = searchInput.value.trim().toUpperCase();
         if (ticker) {
-            executeEquityAnalysis(ticker);
+            window.location.href = `equity-details.html?symbol=${ticker}`;
         } else {
             showToast("Please enter a valid US ticker symbol");
         }
@@ -45,25 +59,6 @@ function setupSearch() {
             }
         });
     }
-
-    if (backBtn) {
-        backBtn.addEventListener('click', clearEquityResults);
-    }
-}
-
-function clearEquityResults() {
-    const resultsContainer = document.getElementById('equity-results-container');
-    const searchInput = document.getElementById('equity-search-input');
-    const newsWidget = document.querySelector('#dashboard-equity .news-widget');
-    const indexStrip = document.querySelector('#dashboard-equity .index-summary-strip');
-    const trendingStrip = document.querySelector('#dashboard-equity .trending-tickers-strip');
-    
-    if (resultsContainer) resultsContainer.classList.add('hidden-element');
-    if (searchInput) searchInput.value = '';
-    if (newsWidget) newsWidget.classList.remove('hidden-element');
-    if (indexStrip) indexStrip.classList.remove('hidden-element');
-    if (trendingStrip) trendingStrip.classList.remove('hidden-element');
-    activeEquityTicker = null;
 }
 
 function setupTimeframeSelectors() {
@@ -382,10 +377,8 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
             rows.forEach((row, idx) => {
                 row.addEventListener('click', () => {
                     const peerSymbol = peersDetailed[idx].symbol;
-                    const searchInput = document.getElementById('equity-search-input');
-                    if (searchInput) {
-                        searchInput.value = peerSymbol;
-                        executeEquityAnalysis(peerSymbol);
+                    if (peerSymbol) {
+                        window.location.href = `equity-details.html?symbol=${peerSymbol}`;
                     }
                 });
             });
@@ -764,10 +757,8 @@ function setupWatchlist() {
     items.forEach(item => {
         item.addEventListener('click', () => {
             const symbol = item.getAttribute('data-symbol');
-            const searchInput = document.getElementById('equity-search-input');
-            if (searchInput) {
-                searchInput.value = symbol;
-                executeEquityAnalysis(symbol);
+            if (symbol) {
+                window.location.href = `equity-details.html?symbol=${symbol}`;
             }
         });
     });

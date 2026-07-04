@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STRATA - Global Macro & Inflation Tracker</title>
+    <title>STRATA - Macroeconomic Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -77,33 +76,68 @@
                 </div>
             </header>
 
-            <section id="dashboard-inflation" class="dashboard-viewport active">
+            <section id="dashboard-macro" class="dashboard-viewport active">
                 <div class="dashboard-header-block">
-                    <h1>Global Macro & Inflation Tracker</h1>
-                    <p class="subtitle">Monitor CPI, core inflation, and interest rate trends across global economies (Powered by World Bank Data)</p>
+                    <h1>Global Inflation & Macro Terminal</h1>
+                    <p class="subtitle">Sovereign macroeconomic indicator tracking and monetary policy metrics</p>
                 </div>
 
                 <div class="search-wrapper">
                     <div class="search-bar-container">
                         <i class="fa-solid fa-search search-icon"></i>
-                        <input type="text" id="inflation-search-input" aria-label="Search Country" placeholder="Search country (e.g., United States, India, Germany)..." autocomplete="off">
+                        <input type="text" id="inflation-search-input" aria-label="Search countries for inflation" placeholder="Enter country name (e.g. United States, Germany, Brazil)..." autocomplete="off">
                         <button id="inflation-search-btn" class="primary-btn">Search Country</button>
                     </div>
                 </div>
 
-                <p class="crypto-landing-note">Select a major economy below or search by country name to view detailed macroeconomic indicators.</p>
-
-                <div class="crypto-brackets-container" id="macro-landing-view">
-                    <h3>Major Economies (Latest CPI)</h3>
-                    <div id="macro-brackets-grid" class="crypto-brackets-grid" role="list">
-                        <!-- Populated by JavaScript -->
-                    </div>
-                    <p class="projection-disclaimer" style="margin-top: 24px; text-align: center;">
-                        <i class="fa-solid fa-circle-info"></i> <strong>Data Notice:</strong> Macroeconomic indicators are sourced from the <strong>World Bank API</strong>, which provides official finalized <em>annual</em> data. Because global macroeconomic data requires extensive auditing across countries, the most recent finalized data often lags by 1-2 years (e.g., 2024 data being the latest available in 2026).
-                    </p>
+                <div id="inflation-loader" class="loader-container">
+                    <div class="spinner"></div>
+                    <p>Retrieving macroeconomic indicators from the World Bank...</p>
                 </div>
 
+                <div id="inflation-results-container" class="hidden-element">
+                    <div class="ticker-hero-card">
+                        <div class="hero-meta">
+                            <div class="macro-hero-identity">
+                                <span id="country-flag-display" style="font-size: 32px; margin-right: 12px;">🌍</span>
+                                <div>
+                                    <h2 id="country-name-display">Country Name</h2>
+                                    <div class="ticker-badges">
+                                        <span id="central-bank-badge" class="badge">Central Bank</span>
+                                        <span id="central-bank-badge" class="badge secondary">Macro</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hero-pricing">
+                            <div id="inflation-live-display" class="price-value">0.0%</div>
+                            <div id="inflation-change-display" class="price-change-percent">Current CPI (YoY)</div>
+                        </div>
+                    </div>
 
+                    <div class="metric-summary-grid">
+                        <div class="metric-card"><span class="metric-title">Headline Inflation (CPI)</span><span id="metric-core-inflation" class="metric-value">--</span></div>
+                        <div class="metric-card"><span class="metric-title">Lending Interest Rate</span><span id="metric-interest-rate" class="metric-value">--</span></div>
+                        <div class="metric-card"><span class="metric-title">GDP Growth (Annual)</span><span id="metric-gdp-growth" class="metric-value">--</span></div>
+                        <div class="metric-card"><span class="metric-title">Unemployment Rate</span><span id="metric-unemployment" class="metric-value">--</span></div>
+                        <div class="metric-card"><span class="metric-title">Current Account (% GDP)</span><span id="metric-current-account" class="metric-value">--</span></div>
+                        <div class="metric-card"><span class="metric-title">Last Updated (CPI)</span><span id="metric-inflation-date" class="metric-value">--</span></div>
+                    </div>
+
+                    <div class="company-profile-card" style="margin-top: 24px; margin-bottom: 24px;">
+                        <h3>Monetary Policy Analysis</h3>
+                        <p id="macro-analysis-display" style="color: var(--text-secondary-muted); line-height: 1.6; margin-top: 12px;">
+                            <span class="pulse-text" style="color: var(--neon-cyan-vibrant);">Generating macroeconomic insights...</span>
+                        </p>
+                    </div>
+
+                    <div class="chart-container-card">
+                        <div class="chart-header">
+                            <h3>Inflation & Lending Rate Trajectory</h3>
+                        </div>
+                        <div class="chart-wrapper-box"><canvas id="inflationHistoricalChart"></canvas></div>
+                    </div>
+                </div>
             </section>
         </main>
     </div>

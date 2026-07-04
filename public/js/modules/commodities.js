@@ -40,23 +40,68 @@ const SECTOR_DRIVERS = {
 };
 
 export function initCommoditiesDashboard() {
-    setupUIListeners();
-    loadCommodityDashboard();
+    const isDetailsPage = window.location.pathname.includes('commodity-details.html');
+    
+    if (isDetailsPage) {
+        setupDetailsUIListeners();
+        
+        const params = new URLSearchParams(window.location.search);
+        const symbol = params.get('symbol');
+        const name = params.get('name');
+        const query = params.get('query');
+        if (symbol && name) {
+            performCommoditySearch(name, symbol);
+        } else if (query) {
+            performCommoditySearch(query);
+        } else {
+            window.location.href = 'commodities.html';
+        }
+    } else {
+        setupLandingUIListeners();
+        loadCommodityDashboard();
+    }
 }
 
-function setupUIListeners() {
-    document.getElementById('commodity-back-btn')?.addEventListener('click', showLandingView);
-
+function setupDetailsUIListeners() {
     const searchBtn = document.getElementById('commodity-search-btn');
     const searchInput = document.getElementById('commodity-search-input');
     if (searchBtn && searchInput) {
         searchBtn.addEventListener('click', () => {
             const query = searchInput.value.trim();
-            if (!query) {
+            if (query) {
+                window.location.href = `commodity-details.html?query=${encodeURIComponent(query)}`;
+            } else {
                 showToast('Enter a futures ticker or commodity name');
-                return;
             }
-            performCommoditySearch(query);
+        });
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchBtn.click();
+        });
+    }
+
+    document.querySelectorAll('#commodity-chart-timeframes .tf-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            document.querySelectorAll('#commodity-chart-timeframes .tf-btn').forEach((b) => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeTimeframe = btn.getAttribute('data-tf') || '1Y';
+            if (activeCommodity?.futuresTicker || activeCommodity?.symbol) {
+                await reloadChart(activeCommodity.futuresTicker || activeCommodity.symbol);
+            }
+        });
+    });
+}
+
+function setupLandingUIListeners() {
+    const searchBtn = document.getElementById('commodity-search-btn');
+    const searchInput = document.getElementById('commodity-search-input');
+    if (searchBtn && searchInput) {
+        searchBtn.addEventListener('click', () => {
+            const query = searchInput.value.trim();
+            if (query) {
+                window.location.href = `commodity-details.html?query=${encodeURIComponent(query)}`;
+            } else {
+                showToast('Enter a futures ticker or commodity name');
+            }
         });
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') searchBtn.click();
@@ -76,29 +121,6 @@ function setupUIListeners() {
             renderQuickGrid(commoditiesData);
         });
     });
-
-    document.querySelectorAll('#commodity-chart-timeframes .tf-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            document.querySelectorAll('#commodity-chart-timeframes .tf-btn').forEach((b) => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeTimeframe = btn.getAttribute('data-tf') || '1Y';
-            if (activeCommodity?.futuresTicker || activeCommodity?.symbol) {
-                await reloadChart(activeCommodity.futuresTicker || activeCommodity.symbol);
-            }
-        });
-    });
-}
-
-function showLandingView() {
-    document.getElementById('commodity-results-container')?.classList.add('hidden-element');
-    document.getElementById('commodity-loader')?.classList.add('hidden-element');
-    document.getElementById('commodity-landing-view')?.classList.remove('hidden-element');
-    activeCommodity = null;
-}
-
-function showDetailView() {
-    document.getElementById('commodity-landing-view')?.classList.add('hidden-element');
-    document.getElementById('commodity-results-container')?.classList.remove('hidden-element');
 }
 
 async function loadCommodityDashboard() {
@@ -282,16 +304,11 @@ function renderQuickGrid(items) {
 function selectCommodity(id) {
     const item = commoditiesData.find((c) => c.id === id);
     if (!item || item.error) return;
-    activeCommodity = item;
-    activeTimeframe = '1Y';
-    document.querySelectorAll('#commodity-chart-timeframes .tf-btn').forEach((b) => {
-        b.classList.toggle('active', b.getAttribute('data-tf') === '1Y');
-    });
-    performCommoditySearch(item.name, item.futuresTicker);
+    const ticker = item.futuresTicker || item.symbol;
+    window.location.href = `commodity-details.html?symbol=${ticker}&name=${encodeURIComponent(item.name)}`;
 }
 
 async function performCommoditySearch(query, directSymbol = null) {
-    showDetailView();
     document.getElementById('commodity-loader')?.classList.remove('hidden-element');
     document.getElementById('commodity-results-container')?.classList.add('hidden-element');
     setDetailLoadingState();

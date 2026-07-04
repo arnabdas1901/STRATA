@@ -326,10 +326,10 @@ router.get('/twelvedata/statements', async (req, res) => {
                         const total_assets = stmt.assets?.total_assets ?? stmt.total_assets ?? stmt.totalAssets;
                         const total_liabilities = stmt.liabilities?.total_liabilities ?? stmt.total_liabilities ?? stmt.totalLiabilities;
                         const total_shareholders_equity = stmt.shareholders_equity?.total_shareholders_equity ?? stmt.total_shareholders_equity ?? stmt.totalEquity;
-                        const cash_and_equivalents = stmt.assets?.cash_and_equivalents ?? stmt.cash_and_equivalents ?? stmt.cashAndCashEquivalents;
-                        const total_current_assets = stmt.assets?.total_current_assets ?? stmt.total_current_assets ?? stmt.totalCurrentAssets;
-                        const short_term_debt = stmt.liabilities?.short_term_debt ?? stmt.short_term_debt ?? stmt.shortTermDebt;
-                        const long_term_debt = stmt.liabilities?.long_term_debt ?? stmt.liabilities?.long_term_debt_capital_leases ?? stmt.long_term_debt ?? stmt.longTermDebt;
+                        const cash_and_equivalents = stmt.assets?.current_assets?.cash_and_cash_equivalents ?? stmt.assets?.current_assets?.cash_equivalents ?? stmt.assets?.current_assets?.cash ?? stmt.assets?.cash_and_equivalents ?? stmt.cash_and_equivalents ?? stmt.cashAndCashEquivalents;
+                        const total_current_assets = stmt.assets?.current_assets?.total_current_assets ?? stmt.assets?.total_current_assets ?? stmt.totalCurrentAssets;
+                        const short_term_debt = stmt.liabilities?.current_liabilities?.short_term_debt ?? stmt.liabilities?.short_term_debt ?? stmt.shortTermDebt;
+                        const long_term_debt = stmt.liabilities?.non_current_liabilities?.long_term_debt ?? stmt.liabilities?.long_term_debt ?? stmt.longTermDebt;
                         return res.json({
                             balance_sheet: [{
                                 total_assets,
@@ -364,7 +364,7 @@ router.get('/twelvedata/statements', async (req, res) => {
                     if (Array.isArray(data.income_statement) && data.income_statement.length > 0) {
                         const stmt = data.income_statement[0];
                         const total_revenue = stmt.sales ?? stmt.total_revenue ?? stmt.revenue;
-                        const cost_of_revenue = stmt.cost_of_goods_sold ?? stmt.cost_of_revenue;
+                        const cost_of_revenue = stmt.cost_of_goods_sold ?? stmt.cost_of_goods ?? stmt.cost_of_revenue;
                         const gross_profit = stmt.gross_profit;
                         const operating_income = stmt.operating_income;
                         const net_income = stmt.net_income;

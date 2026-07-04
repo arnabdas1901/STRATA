@@ -166,53 +166,7 @@
                     </div>
                 </div>
 
-                <div id="forex-loader" class="loader-container hidden-element">
-                    <div class="spinner"></div>
-                    <p id="forex-loader-text">Analyzing exchange rates...</p>
-                </div>
 
-                <div id="forex-results-container" class="hidden-element">
-                    <div class="equity-results-header">
-                        <button id="forex-back-btn" class="secondary-btn">← Back to Major Pairs</button>
-                    </div>
-                    <div class="ticker-hero-card">
-                        <div class="hero-meta">
-                            <div class="macro-hero-identity">
-                                <div class="ticker-logo-box" style="background: var(--surface-300);">
-                                    <i class="fa-solid fa-money-bill-transfer" style="color: var(--text-primary);"></i>
-                                </div>
-                                <div>
-                                    <h2 id="forex-name-display">Currency Name</h2>
-                                    <div class="ticker-badges">
-                                        <span id="forex-symbol-badge" class="badge">SYMBOL</span>
-                                        <span class="badge secondary">Forex</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="hero-pricing">
-                            <div id="forex-live-price" class="price-value">--</div>
-                            <div id="forex-change-display" class="price-change-percent">--</div>
-                        </div>
-                    </div>
-
-                    <div class="company-profile-card" id="forex-pdf-export-area">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <h3 style="margin: 0;"><i class="fa-solid fa-globe"></i> Currency Profile & Macro Analysis</h3>
-                            <button id="forex-ai-generate-btn" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem;"><i class="fa-solid fa-robot"></i> Generate Profile</button>
-                        </div>
-                        <p id="forex-description-display" style="color: var(--text-secondary-muted); line-height: 1.6; margin-top: 12px;">
-                            Click "Generate Profile" to run on-demand AI macroeconomic analysis.
-                        </p>
-                    </div>
-
-                    <div class="chart-container-card">
-                        <div class="chart-header">
-                            <h3>1-Year Exchange Rate History</h3>
-                        </div>
-                        <div class="chart-wrapper-box"><canvas id="forexHistoricalChart" width="100%" height="300"></canvas></div>
-                    </div>
-                </div>
             </section>
         </main>
     </div>

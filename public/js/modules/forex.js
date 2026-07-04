@@ -3,60 +3,94 @@ import { BACKEND_URL, safeJsonParse, showToast } from '../utils.js';
 let forexChartInstance = null;
 
 export async function setupForexTracker() {
+    const isDetailsPage = window.location.pathname.includes('forex-details.html');
+
+    if (isDetailsPage) {
+        setupDetailsSearch();
+        
+        const aiGenBtn = document.getElementById('forex-ai-generate-btn');
+        if (aiGenBtn) {
+            aiGenBtn.addEventListener('click', generateAiForexProfile);
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const symbol = params.get('symbol');
+        if (symbol) {
+            executeForexSearch(symbol);
+        } else {
+            window.location.href = 'forex.html';
+        }
+    } else {
+        setupLandingSearch();
+        setupLandingGridClicks();
+        loadLatestForexRates();
+    }
+}
+
+function setupLandingSearch() {
     const searchBtn = document.getElementById('forex-search-btn');
     const searchInput = document.getElementById('forex-search-input');
-    const backBtn = document.getElementById('forex-back-btn');
+
+    const handleSearch = () => {
+        if (!searchInput) return;
+        const query = searchInput.value.trim();
+        if (query) {
+            window.location.href = `forex-details.html?symbol=${encodeURIComponent(query)}`;
+        } else {
+            showToast('Please enter a currency pair (e.g. GBP/USD)');
+        }
+    };
 
     if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
-            const query = searchInput.value.trim();
-            if (query) executeForexSearch(query);
-            else showToast('Please enter a currency pair (e.g. GBP/USD)');
-        });
+        searchBtn.addEventListener('click', handleSearch);
     }
-
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const query = searchInput.value.trim();
-                if (query) executeForexSearch(query);
-                else showToast('Please enter a currency pair (e.g. GBP/USD)');
-            }
+            if (e.key === 'Enter') handleSearch();
         });
     }
+}
 
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            document.getElementById('forex-results-container').classList.add('hidden-element');
-            document.getElementById('forex-landing-view').classList.remove('hidden-element');
-            if (searchInput) searchInput.value = '';
+function setupDetailsSearch() {
+    const searchBtn = document.getElementById('forex-search-btn');
+    const searchInput = document.getElementById('forex-search-input');
+
+    const handleSearch = () => {
+        if (!searchInput) return;
+        const query = searchInput.value.trim();
+        if (query) {
+            window.location.href = `forex-details.html?symbol=${encodeURIComponent(query)}`;
+        } else {
+            showToast('Please enter a currency pair (e.g. GBP/USD)');
+        }
+    };
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', handleSearch);
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSearch();
         });
     }
+}
 
+function setupLandingGridClicks() {
     const cards = document.querySelectorAll('#forex-brackets-grid .forex-table-row');
     cards.forEach(card => {
-        card.addEventListener('click', () => {
+        const getSymbolAndRedirect = () => {
             const symbol = card.querySelector('.bracket-symbol').innerText;
-            if (searchInput) searchInput.value = symbol;
-            executeForexSearch(symbol);
-        });
+            if (symbol) {
+                window.location.href = `forex-details.html?symbol=${encodeURIComponent(symbol)}`;
+            }
+        };
+        card.addEventListener('click', getSymbolAndRedirect);
         card.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-                const symbol = card.querySelector('.bracket-symbol').innerText;
-                if (searchInput) searchInput.value = symbol;
-                executeForexSearch(symbol);
+                getSymbolAndRedirect();
             }
         });
     });
-
-    const aiGenBtn = document.getElementById('forex-ai-generate-btn');
-    if (aiGenBtn) {
-        aiGenBtn.addEventListener('click', generateAiForexProfile);
-    }
-
-
-
-    loadLatestForexRates();
 }
 
 async function loadLatestForexRates() {
@@ -92,11 +126,9 @@ async function loadLatestForexRates() {
 async function executeForexSearch(pairQuery) {
     const loader = document.getElementById('forex-loader');
     const results = document.getElementById('forex-results-container');
-    const landing = document.getElementById('forex-landing-view');
 
     if (loader) loader.classList.remove('hidden-element');
     if (results) results.classList.add('hidden-element');
-    if (landing) landing.classList.add('hidden-element');
 
     try {
         const res = await fetch(`${BACKEND_URL}/api/forex/search?pair=${encodeURIComponent(pairQuery)}`);
@@ -128,6 +160,7 @@ async function executeForexSearch(pairQuery) {
         
 
 
+
         window.currentForexPair = {
             fromSymbol: data.fromSymbol,
             toSymbol: data.toSymbol,
@@ -145,7 +178,6 @@ async function executeForexSearch(pairQuery) {
         console.error("Forex Search Error:", err);
         showToast(err.message || "Failed to load forex data.");
         if (loader) loader.classList.add('hidden-element');
-        if (landing) landing.classList.remove('hidden-element');
     }
 }
 
