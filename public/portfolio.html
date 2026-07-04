@@ -105,6 +105,36 @@
                                 <option value="aggressive">Aggressive — Maximum Alpha</option>
                             </select>
                         </div>
+                        <div class="input-field-group">
+                            <label for="portfolio-goal-input">Investment Goal</label>
+                            <select id="portfolio-goal-input">
+                                <option value="wealth" selected>Wealth Creation</option>
+                                <option value="retirement">Retirement Planning</option>
+                                <option value="house">House / Major Purchase</option>
+                                <option value="education">Education Corpus</option>
+                                <option value="emergency">Emergency Reserve</option>
+                            </select>
+                        </div>
+                        <div class="portfolio-input-pair">
+                            <div class="input-field-group">
+                                <label for="portfolio-horizon-input">Time Horizon (Years)</label>
+                                <input type="number" id="portfolio-horizon-input" min="1" max="40" value="10" step="1">
+                            </div>
+                            <div class="input-field-group">
+                                <label for="portfolio-target-input">Goal Target ($)</label>
+                                <input type="number" id="portfolio-target-input" min="0" value="250000" step="5000">
+                            </div>
+                        </div>
+                        <div class="portfolio-input-pair">
+                            <div class="input-field-group">
+                                <label for="portfolio-sip-input">Monthly Contribution ($)</label>
+                                <input type="number" id="portfolio-sip-input" min="0" value="1000" step="100">
+                            </div>
+                            <div class="input-field-group">
+                                <label for="portfolio-stepup-input">Annual Step-Up (%)</label>
+                                <input type="number" id="portfolio-stepup-input" min="0" max="25" value="5" step="1">
+                            </div>
+                        </div>
                         <button id="generate-portfolio-btn" class="primary-btn fluid-btn portfolio-generate-btn">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> Construct Portfolio
                         </button>
@@ -136,6 +166,46 @@
                     </div>
                 </div>
 
+                <!-- Portfolio Command Center -->
+                <div class="portfolio-command-grid portfolio-reveal-card">
+                    <div class="portfolio-health-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-heart-pulse"></i>
+                            <h3>Portfolio Health</h3>
+                        </div>
+                        <div class="portfolio-health-score">
+                            <span id="portfolio-health-score">--</span>
+                            <small>/ 100</small>
+                        </div>
+                        <div id="portfolio-health-label" class="portfolio-health-label">Generate portfolio</div>
+                        <div id="portfolio-health-drivers" class="portfolio-health-drivers">
+                            <span>Risk, diversification, cost, and goal progress will appear here.</span>
+                        </div>
+                    </div>
+
+                    <div class="portfolio-goal-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-bullseye"></i>
+                            <h3>Goal Projection</h3>
+                        </div>
+                        <div class="goal-projection-grid">
+                            <div>
+                                <span class="goal-label">Projected Value</span>
+                                <strong id="portfolio-goal-projected">--</strong>
+                            </div>
+                            <div>
+                                <span class="goal-label">Goal Gap</span>
+                                <strong id="portfolio-goal-gap">--</strong>
+                            </div>
+                            <div>
+                                <span class="goal-label">Success Signal</span>
+                                <strong id="portfolio-goal-signal">--</strong>
+                            </div>
+                        </div>
+                        <p id="portfolio-goal-summary" class="section-desc">Set a goal target and monthly contribution to model goal progress.</p>
+                    </div>
+                </div>
+
                 <!-- KPI Summary Bar -->
                 <div class="portfolio-kpi-container portfolio-reveal-card">
                     <div class="kpi-bar-header">
@@ -158,32 +228,53 @@
                     <div class="holdings-header">
                         <div class="card-section-header">
                             <i class="fa-solid fa-layer-group"></i>
-                            <h3>ETF-Level Holdings Breakdown</h3>
+                            <h3>Live Holdings & Rebalancing</h3>
                         </div>
-                        <span class="holdings-subtitle">Granular allocation with underlying instrument detail</span>
+                        <span class="holdings-subtitle">Edit weights, add holdings, and track drift against the generated target</span>
+                    </div>
+                    <div class="portfolio-add-holding-panel">
+                        <select id="portfolio-add-asset-select" aria-label="Select asset to add">
+                            <option value="nifty50">NIFTY 50 ETF Proxy</option>
+                            <option value="next50">NIFTY Next 50 Proxy</option>
+                            <option value="liquidFund">Liquid Fund Proxy</option>
+                            <option value="giltFund">Gilt Fund Proxy</option>
+                            <option value="cash">Cash / Treasury Bills</option>
+                            <option value="btc">Bitcoin Satellite</option>
+                        </select>
+                        <input type="number" id="portfolio-add-weight-input" min="1" max="25" value="5" step="1" aria-label="New holding weight">
+                        <button id="portfolio-add-holding-btn" class="secondary-btn">
+                            <i class="fa-solid fa-plus"></i> Add Holding
+                        </button>
+                    </div>
+                    <div id="portfolio-drift-summary" class="portfolio-drift-summary">
+                        <span>Drift monitor activates after portfolio generation.</span>
                     </div>
                     <div class="portfolio-holdings-table-wrap">
                         <table class="portfolio-holdings-table" id="portfolio-etf-table">
                             <thead>
                                 <tr>
-                                    <th>Asset Class</th>
+                                    <th>Holding</th>
                                     <th>Ticker</th>
                                     <th class="num-col">Weight</th>
+                                    <th class="num-col">Target</th>
+                                    <th class="num-col">Drift</th>
                                     <th class="num-col">Allocation</th>
                                     <th class="num-col">Exp. Return</th>
                                     <th class="num-col">Volatility</th>
-                                    <th class="num-col">Yield</th>
-                                    <th class="num-col">Exp. Ratio</th>
+                                    <th class="num-col">Cost</th>
+                                    <th class="num-col">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="portfolio-etf-tbody">
-                                <tr><td colspan="8" class="table-empty-state">Generate a portfolio to view holdings.</td></tr>
+                                <tr><td colspan="10" class="table-empty-state">Generate a portfolio to view holdings.</td></tr>
                             </tbody>
                             <tfoot>
                                 <tr class="etf-totals-row">
                                     <td colspan="2"><strong>Portfolio Total</strong></td>
                                     <td class="num-col"><strong id="etf-total-weight">—</strong></td>
-                                    <td class="num-col"><strong id="etf-total-allocation">—</strong></td>
+                                    <td class="num-col"><strong id="etf-total-target">--</strong></td>
+                                    <td class="num-col"><strong id="etf-total-drift">--</strong></td>
+                                    <td class="num-col"><strong id="etf-total-allocation">--</strong></td>
                                     <td colspan="4"></td>
                                 </tr>
                             </tfoot>

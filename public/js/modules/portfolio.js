@@ -2,6 +2,8 @@ let portfolioChartInstance = null;
 let projectionChartInstance = null;
 let scatterChartInstance = null;
 let currentSubAllocations = []; // Global store for active ETF sub-allocations
+let currentTargetAllocations = {};
+let currentPortfolioContext = {};
 
 const CORRELATION_MATRIX = {
     VOO: { VOO: 1.0,  VEA: 0.82, VWO: 0.76, TLT: -0.31, LQD: 0.24, GLD: 0.08 },
@@ -15,27 +17,46 @@ const CORRELATION_MATRIX = {
 const RISK_FREE_RATE = 0.045; // Current approx. US T-Bill rate
 
 const ASSET_CLASSES = {
-    usLargeCap: { name: 'US Large Cap', etf: 'Vanguard S&P 500 ETF', ticker: 'VOO', return: 0.10, vol: 0.15, er: 0.0003, yield: 0.013, color: '#2563eb', icon: 'fa-landmark' },
-    intlDev: { name: 'Intl Developed', etf: 'Vanguard FTSE Developed Markets', ticker: 'VEA', return: 0.07, vol: 0.16, er: 0.0005, yield: 0.031, color: '#7c3aed', icon: 'fa-globe' },
-    emerging: { name: 'Emerging Markets', etf: 'Vanguard FTSE Emerging Markets', ticker: 'VWO', return: 0.08, vol: 0.22, er: 0.0008, yield: 0.035, color: '#06b6d4', icon: 'fa-earth-asia' },
-    govBonds: { name: 'Government Bonds', etf: 'iShares 20+ Year Treasury Bond', ticker: 'TLT', return: 0.04, vol: 0.10, er: 0.0015, yield: 0.038, color: '#64748b', icon: 'fa-building-columns' },
-    corpBonds: { name: 'Corporate Bonds', etf: 'iShares iBoxx $ Inv Grade Corp', ticker: 'LQD', return: 0.05, vol: 0.07, er: 0.0014, yield: 0.042, color: '#94a3b8', icon: 'fa-file-contract' },
-    gold: { name: 'Gold', etf: 'SPDR Gold Shares', ticker: 'GLD', return: 0.06, vol: 0.14, er: 0.0040, yield: 0.000, color: '#f59e0b', icon: 'fa-coins' }
+    usLargeCap: { name: 'US Large Cap', etf: 'Vanguard S&P 500 ETF', ticker: 'VOO', return: 0.10, vol: 0.15, er: 0.0003, yield: 0.013, color: '#2563eb', icon: 'fa-landmark', bucket: 'equity' },
+    intlDev: { name: 'Intl Developed', etf: 'Vanguard FTSE Developed Markets', ticker: 'VEA', return: 0.07, vol: 0.16, er: 0.0005, yield: 0.031, color: '#7c3aed', icon: 'fa-globe', bucket: 'equity' },
+    emerging: { name: 'Emerging Markets', etf: 'Vanguard FTSE Emerging Markets', ticker: 'VWO', return: 0.08, vol: 0.22, er: 0.0008, yield: 0.035, color: '#06b6d4', icon: 'fa-earth-asia', bucket: 'equity' },
+    govBonds: { name: 'Government Bonds', etf: 'iShares 20+ Year Treasury Bond', ticker: 'TLT', return: 0.04, vol: 0.10, er: 0.0015, yield: 0.038, color: '#64748b', icon: 'fa-building-columns', bucket: 'fixedIncome' },
+    corpBonds: { name: 'Corporate Bonds', etf: 'iShares iBoxx $ Inv Grade Corp', ticker: 'LQD', return: 0.05, vol: 0.07, er: 0.0014, yield: 0.042, color: '#94a3b8', icon: 'fa-file-contract', bucket: 'fixedIncome' },
+    gold: { name: 'Gold', etf: 'SPDR Gold Shares', ticker: 'GLD', return: 0.06, vol: 0.14, er: 0.0040, yield: 0.000, color: '#f59e0b', icon: 'fa-coins', bucket: 'metals' },
+    nifty50: { name: 'India Large Cap', etf: 'NIFTY 50 ETF Proxy', ticker: 'NIFTY50', return: 0.105, vol: 0.18, er: 0.0015, yield: 0.012, color: '#10b981', icon: 'fa-chart-line', bucket: 'equity' },
+    next50: { name: 'India Next 50', etf: 'NIFTY Next 50 Proxy', ticker: 'NEXT50', return: 0.12, vol: 0.24, er: 0.0020, yield: 0.008, color: '#22c55e', icon: 'fa-arrow-trend-up', bucket: 'equity' },
+    liquidFund: { name: 'Liquid Fund', etf: 'Ultra Short Duration Proxy', ticker: 'LIQUID', return: 0.055, vol: 0.015, er: 0.0025, yield: 0.045, color: '#38bdf8', icon: 'fa-droplet', bucket: 'cash' },
+    giltFund: { name: 'Gilt Fund', etf: 'Government Securities Proxy', ticker: 'GILT', return: 0.065, vol: 0.06, er: 0.0035, yield: 0.055, color: '#818cf8', icon: 'fa-building-columns', bucket: 'fixedIncome' },
+    cash: { name: 'Cash Reserve', etf: 'Treasury Bills / Savings Proxy', ticker: 'CASH', return: 0.04, vol: 0.005, er: 0.0000, yield: 0.035, color: '#e2e8f0', icon: 'fa-wallet', bucket: 'cash' },
+    btc: { name: 'Bitcoin Satellite', etf: 'BTC Allocation Proxy', ticker: 'BTC', return: 0.14, vol: 0.65, er: 0.0000, yield: 0.000, color: '#f97316', icon: 'fa-coins', bucket: 'alternatives' }
+};
+
+const GOAL_CONFIG = {
+    wealth: { label: 'Wealth Creation', equityTilt: 8, metalFloor: 5 },
+    retirement: { label: 'Retirement Planning', equityTilt: 0, metalFloor: 7 },
+    house: { label: 'House / Major Purchase', equityTilt: -12, metalFloor: 5 },
+    education: { label: 'Education Corpus', equityTilt: -8, metalFloor: 5 },
+    emergency: { label: 'Emergency Reserve', equityTilt: -35, metalFloor: 0 }
 };
 
 export function setupPortfolioBuilder() {
     const generateBtn = document.getElementById('generate-portfolio-btn');
     const stressBtn = document.getElementById('portfolio-to-stress-btn');
     const pdfBtn = document.getElementById('portfolio-pdf-btn');
+    const addHoldingBtn = document.getElementById('portfolio-add-holding-btn');
 
     if (generateBtn) generateBtn.addEventListener('click', generatePortfolio);
     if (stressBtn) stressBtn.addEventListener('click', navigateToStressTest);
     if (pdfBtn) pdfBtn.addEventListener('click', exportPortfolioPdf);
+    if (addHoldingBtn) addHoldingBtn.addEventListener('click', addCustomHolding);
 
     // Restore state from sessionStorage if any
     const savedCapital = sessionStorage.getItem('portfolio_param_capital');
     const savedAge = sessionStorage.getItem('portfolio_param_age');
     const savedRisk = sessionStorage.getItem('portfolio_param_risk');
+    const savedGoal = sessionStorage.getItem('portfolio_param_goal');
+    const savedHorizon = sessionStorage.getItem('portfolio_param_horizon');
+    const savedMonthly = sessionStorage.getItem('portfolio_param_monthly');
 
     if (savedCapital) {
         const input = document.getElementById('portfolio-capital-input');
@@ -48,6 +69,18 @@ export function setupPortfolioBuilder() {
     if (savedRisk) {
         const input = document.getElementById('portfolio-risk-input');
         if (input) input.value = savedRisk;
+    }
+    if (savedGoal) {
+        const input = document.getElementById('portfolio-goal-input');
+        if (input) input.value = savedGoal;
+    }
+    if (savedHorizon) {
+        const input = document.getElementById('portfolio-horizon-input');
+        if (input) input.value = savedHorizon;
+    }
+    if (savedMonthly) {
+        const input = document.getElementById('portfolio-sip-input');
+        if (input) input.value = savedMonthly;
     }
 
     // Generate initial
@@ -83,17 +116,33 @@ function generatePortfolio() {
     const age = parseInt(document.getElementById('portfolio-age-input')?.value) || 30;
     const risk = document.getElementById('portfolio-risk-input')?.value || 'moderate';
     const initialCapital = parseFloat(document.getElementById('portfolio-capital-input')?.value) || 100000;
+    const goal = document.getElementById('portfolio-goal-input')?.value || 'wealth';
+    const horizon = clampNumber(parseInt(document.getElementById('portfolio-horizon-input')?.value) || 10, 1, 40);
+    const target = Math.max(0, parseFloat(document.getElementById('portfolio-target-input')?.value) || 0);
+    const monthlyContribution = Math.max(0, parseFloat(document.getElementById('portfolio-sip-input')?.value) || 0);
+    const stepUp = clampNumber(parseFloat(document.getElementById('portfolio-stepup-input')?.value) || 0, 0, 25) / 100;
 
     // Sync current values to sessionStorage so they can be imported on the stress page
     sessionStorage.setItem('portfolio_param_capital', String(initialCapital));
     sessionStorage.setItem('portfolio_param_age', String(age));
     sessionStorage.setItem('portfolio_param_risk', risk);
+    sessionStorage.setItem('portfolio_param_goal', goal);
+    sessionStorage.setItem('portfolio_param_horizon', String(horizon));
+    sessionStorage.setItem('portfolio_param_monthly', String(monthlyContribution));
+
+    currentPortfolioContext = { age, risk, initialCapital, goal, horizon, target, monthlyContribution, stepUp };
 
     // Macro Allocation (Tier 1)
+    const goalConfig = GOAL_CONFIG[goal] || GOAL_CONFIG.wealth;
     let baseEquity = Math.max(0, Math.min(100, 110 - age));
+    baseEquity += goalConfig.equityTilt;
+    if (horizon <= 3) baseEquity -= 25;
+    else if (horizon <= 5) baseEquity -= 12;
+    else if (horizon >= 15) baseEquity += 8;
+    baseEquity = clampNumber(baseEquity, 10, 95);
     let equity = baseEquity;
     let fixedIncome = 100 - baseEquity;
-    let metals = 0;
+    let metals = goalConfig.metalFloor;
 
     if (risk === 'aggressive') {
         equity = Math.min(100, baseEquity + 15);
@@ -103,15 +152,9 @@ function generatePortfolio() {
         fixedIncome = 100 - equity;
     }
 
-    if (risk === 'conservative') {
-        metals = 10;
-        fixedIncome -= 10;
-    } else if (risk === 'moderate') {
-        metals = 5;
-        fixedIncome -= 5;
-    } else {
-        metals = 0;
-    }
+    if (risk === 'conservative') metals = Math.max(metals, 10);
+    else if (risk === 'aggressive') metals = Math.max(0, metals - 3);
+    fixedIncome -= metals;
 
     if (fixedIncome < 0) fixedIncome = 0;
     
@@ -121,7 +164,11 @@ function generatePortfolio() {
     fixedIncome = 100 - equity - metals;
 
     // Micro Allocation for Projection (Tier 2/3)
-    currentSubAllocations = calculateSubAllocations(equity, fixedIncome, metals, risk);
+    currentSubAllocations = calculateSubAllocations(equity, fixedIncome, metals, risk).map((asset) => ({
+        ...asset,
+        targetWeight: asset.weight
+    }));
+    currentTargetAllocations = Object.fromEntries(currentSubAllocations.map((asset) => [asset.ticker, asset.weight]));
     
     updatePortfolioRender(currentSubAllocations, initialCapital);
 
@@ -164,20 +211,18 @@ function renderPortfolioSummaryBar(allocations, initialCapital) {
     const target = document.getElementById('portfolio-kpi-bar');
     if (!target) return;
 
-    let weightedReturn = 0;
-    let weightedER = 0;
-    let weightedYield = 0;
-
-    allocations.forEach(a => {
-        const w = a.weight / 100;
-        weightedReturn += w * a.return;
-        weightedER += w * a.er;
-        weightedYield += w * a.yield;
-    });
+    const { weightedReturn, weightedER, weightedYield } = calculatePortfolioStats(allocations);
 
     const portfolioVol = calculatePortfolioVolatility(allocations);
     const sharpe = portfolioVol > 0 ? (weightedReturn - RISK_FREE_RATE) / portfolioVol : 0;
-    const projectedValue = initialCapital * Math.pow(1 + weightedReturn, 10);
+    const horizon = currentPortfolioContext.horizon || 10;
+    const projection = projectPortfolioValue(
+        initialCapital,
+        currentPortfolioContext.monthlyContribution || 0,
+        currentPortfolioContext.stepUp || 0,
+        weightedReturn,
+        horizon
+    );
 
     const kpis = [
         { label: 'Expected Return', value: (weightedReturn * 100).toFixed(2), suffix: '%', accent: 'var(--neon-green-positive)' },
@@ -185,7 +230,7 @@ function renderPortfolioSummaryBar(allocations, initialCapital) {
         { label: 'Sharpe Ratio', value: sharpe.toFixed(2), suffix: '', accent: 'var(--neon-cyan-vibrant)' },
         { label: 'Weighted Exp. Ratio', value: (weightedER * 100).toFixed(3), suffix: '%', accent: '#94a3b8' },
         { label: 'Dividend Yield', value: (weightedYield * 100).toFixed(2), suffix: '%', accent: '#7c3aed' },
-        { label: '10Y Projected Value', value: formatCurrency(projectedValue), suffix: '', accent: '#2563eb' }
+        { label: `${horizon}Y Projected Value`, value: formatCurrency(projection.finalValue), suffix: '', accent: '#2563eb' }
     ];
 
     target.innerHTML = kpis.map(kpi => `
@@ -207,16 +252,22 @@ function renderETFHoldingsTable(allocations, initialCapital) {
     const tbody = document.getElementById('portfolio-etf-tbody');
     if (!tbody) return;
 
-    // Sort by weight descending
     const sorted = [...allocations].sort((a, b) => b.weight - a.weight);
 
     let totalWeight = 0;
+    let totalTarget = 0;
     let totalAllocation = 0;
+    let totalAbsDrift = 0;
 
     tbody.innerHTML = sorted.map((a, i) => {
         const dollarValue = (a.weight / 100) * initialCapital;
+        const targetWeight = a.targetWeight ?? currentTargetAllocations[a.ticker] ?? 0;
+        const drift = a.weight - targetWeight;
         totalWeight += a.weight;
+        totalTarget += targetWeight;
         totalAllocation += dollarValue;
+        totalAbsDrift += Math.abs(drift);
+        const driftClass = Math.abs(drift) < 0.5 ? 'neutral-drift' : drift > 0 ? 'positive-drift' : 'negative-drift';
         return `
             <tr class="etf-row" style="animation-delay: ${i * 60}ms">
                 <td>
@@ -231,33 +282,42 @@ function renderETFHoldingsTable(allocations, initialCapital) {
                 <td><span class="etf-ticker-badge">${a.ticker}</span></td>
                 <td class="num-col" style="padding-top: 8px; padding-bottom: 8px;">
                     <div class="weight-cell" style="display: flex; align-items: center; justify-content: flex-end;">
-                        <input type="number" class="etf-weight-input font-mono" data-ticker="${a.ticker}" value="${a.weight.toFixed(1)}" min="0" max="100" step="0.5" style="width: 60px; background: rgba(10, 14, 23, 0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 4px 6px; border-radius: 4px; text-align: right; font-size: 0.85rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--neon-cyan-vibrant)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                        <input type="number" class="etf-weight-input font-mono" data-ticker="${a.ticker}" value="${a.weight.toFixed(1)}" min="0" max="100" step="0.5">
                         <div class="weight-bar-track" style="width: 40px; height: 4px; background: rgba(255,255,255,0.05); margin-left: 8px; border-radius: 2px; overflow: hidden; position: relative;">
                             <div class="weight-bar-fill" style="width: ${a.weight}%; height: 100%; background: ${a.color}; border-radius: 2px;"></div>
                         </div>
                     </div>
                 </td>
+                <td class="num-col font-mono">${targetWeight.toFixed(1)}%</td>
+                <td class="num-col font-mono ${driftClass}">${drift >= 0 ? '+' : ''}${drift.toFixed(1)}%</td>
                 <td class="num-col font-mono">${formatCurrency(dollarValue)}</td>
                 <td class="num-col pos-change font-mono">${(a.return * 100).toFixed(1)}%</td>
                 <td class="num-col font-mono">${(a.vol * 100).toFixed(1)}%</td>
-                <td class="num-col font-mono">${(a.yield * 100).toFixed(2)}%</td>
                 <td class="num-col fees-col font-mono">${(a.er * 100).toFixed(2)}%</td>
+                <td class="num-col"><button class="portfolio-row-action" data-ticker="${a.ticker}" title="Remove holding"><i class="fa-solid fa-xmark"></i></button></td>
             </tr>
         `;
     }).join('');
 
-    // Update footer totals
     const footerWeight = document.getElementById('etf-total-weight');
+    const footerTarget = document.getElementById('etf-total-target');
+    const footerDrift = document.getElementById('etf-total-drift');
     const footerAllocation = document.getElementById('etf-total-allocation');
     if (footerWeight) footerWeight.textContent = totalWeight.toFixed(1) + '%';
+    if (footerTarget) footerTarget.textContent = totalTarget.toFixed(1) + '%';
+    if (footerDrift) footerDrift.textContent = totalAbsDrift.toFixed(1) + '%';
     if (footerAllocation) footerAllocation.textContent = formatCurrency(totalAllocation);
+    renderDriftSummary(totalAbsDrift);
 
-    // Attach rebalancer listeners
     tbody.querySelectorAll('.etf-weight-input').forEach(input => {
         input.addEventListener('change', handleWeightChange);
         input.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') handleWeightChange(e);
         });
+    });
+
+    tbody.querySelectorAll('.portfolio-row-action').forEach((button) => {
+        button.addEventListener('click', () => removeHolding(button.dataset.ticker));
     });
 }
 
@@ -349,15 +409,13 @@ function renderPortfolioDoughnut(dataArr, initialCapital) {
 
 // ── 10-Year Projection with Scenario Bands ─────────────────────
 function calculateAndRenderProjection(allocations, initialCapital) {
-    let weightedReturn = 0;
-    allocations.forEach(alloc => {
-        const w = alloc.weight / 100;
-        weightedReturn += w * alloc.return;
-    });
+    const { weightedReturn } = calculatePortfolioStats(allocations);
 
     const portfolioVol = calculatePortfolioVolatility(allocations);
 
-    const years = 10;
+    const years = currentPortfolioContext.horizon || 10;
+    const monthlyContribution = currentPortfolioContext.monthlyContribution || 0;
+    const stepUp = currentPortfolioContext.stepUp || 0;
     const labels = [];
     const baseData = [];
     const optimisticData = [];
@@ -378,9 +436,10 @@ function calculateAndRenderProjection(allocations, initialCapital) {
         const optReturn = weightedReturn + portfolioVol * (Math.sqrt(t) - Math.sqrt(i));
         const pessReturn = Math.max(0.001, weightedReturn - portfolioVol * (Math.sqrt(t) - Math.sqrt(i)));
 
-        baseVal *= (1 + weightedReturn);
-        optVal *= (1 + optReturn);
-        pessVal *= (1 + pessReturn);
+        const yearlyContribution = monthlyContribution * 12 * Math.pow(1 + stepUp, i);
+        baseVal = baseVal * (1 + weightedReturn) + yearlyContribution;
+        optVal = optVal * (1 + optReturn) + yearlyContribution;
+        pessVal = pessVal * (1 + pessReturn) + yearlyContribution;
     }
 
     const cagrPercent = (weightedReturn * 100).toFixed(2);
@@ -583,9 +642,11 @@ function renderRiskReturnScatter(allocations) {
 
 // ── Utilities ──────────────────────────────────────────────────
 function formatCurrency(val) {
-    if (val >= 1000000) return '$' + (val / 1000000).toFixed(2) + 'M';
-    if (val >= 1000) return '$' + (val / 1000).toFixed(1) + 'K';
-    return '$' + val.toFixed(0);
+    const sign = val < 0 ? '-' : '';
+    const abs = Math.abs(val);
+    if (abs >= 1000000) return sign + '$' + (abs / 1000000).toFixed(2) + 'M';
+    if (abs >= 1000) return sign + '$' + (abs / 1000).toFixed(1) + 'K';
+    return sign + '$' + abs.toFixed(0);
 }
 
 function animateKPICounters(container) {
@@ -615,18 +676,21 @@ function animateCardReveals() {
 }
 
 function updatePortfolioRender(subAllocations, initialCapital) {
-    let equity = 0, fixedIncome = 0, metals = 0;
+    let equity = 0, fixedIncome = 0, metals = 0, other = 0;
     subAllocations.forEach(a => {
-        if (a.ticker === 'VOO' || a.ticker === 'VEA' || a.ticker === 'VWO') equity += a.weight;
-        else if (a.ticker === 'TLT' || a.ticker === 'LQD') fixedIncome += a.weight;
-        else if (a.ticker === 'GLD') metals += a.weight;
+        if (a.bucket === 'equity') equity += a.weight;
+        else if (a.bucket === 'fixedIncome' || a.bucket === 'cash') fixedIncome += a.weight;
+        else if (a.bucket === 'metals') metals += a.weight;
+        else other += a.weight;
     });
+    if (other > 0) equity += other;
 
     renderPortfolioDoughnut([equity, fixedIncome, metals], initialCapital);
     renderPortfolioSummaryBar(subAllocations, initialCapital);
     renderETFHoldingsTable(subAllocations, initialCapital);
     calculateAndRenderProjection(subAllocations, initialCapital);
     renderRiskReturnScatter(subAllocations);
+    renderPortfolioCommandCenter(subAllocations, initialCapital);
 }
 
 function calculatePortfolioVolatility(allocations) {
@@ -645,12 +709,185 @@ function calculatePortfolioVolatility(allocations) {
             const assetB = active[j];
             const wA = assetA.weight / 100;
             const wB = assetB.weight / 100;
-            const corr = CORRELATION_MATRIX[assetA.ticker][assetB.ticker] || 0;
+            const corr = getAssetCorrelation(assetA, assetB);
             variance += 2 * wA * wB * assetA.vol * assetB.vol * corr;
         }
     }
     
     return Math.sqrt(variance);
+}
+
+function calculatePortfolioStats(allocations) {
+    return allocations.reduce((stats, asset) => {
+        const w = asset.weight / 100;
+        stats.weightedReturn += w * asset.return;
+        stats.weightedER += w * asset.er;
+        stats.weightedYield += w * asset.yield;
+        return stats;
+    }, { weightedReturn: 0, weightedER: 0, weightedYield: 0 });
+}
+
+function getAssetCorrelation(assetA, assetB) {
+    if (assetA.ticker === assetB.ticker) return 1;
+    const direct = CORRELATION_MATRIX[assetA.ticker]?.[assetB.ticker];
+    if (direct != null) return direct;
+    if (assetA.bucket === assetB.bucket) {
+        if (assetA.bucket === 'equity') return 0.75;
+        if (assetA.bucket === 'fixedIncome') return 0.55;
+        if (assetA.bucket === 'cash') return 0.15;
+        return 0.35;
+    }
+    if (assetA.bucket === 'cash' || assetB.bucket === 'cash') return 0.05;
+    if (assetA.bucket === 'metals' || assetB.bucket === 'metals') return 0.15;
+    if (assetA.bucket === 'alternatives' || assetB.bucket === 'alternatives') return 0.25;
+    return 0.2;
+}
+
+function projectPortfolioValue(initialCapital, monthlyContribution, stepUp, annualReturn, years) {
+    let value = initialCapital;
+    let totalContributed = initialCapital;
+    for (let year = 0; year < years; year++) {
+        const yearlyContribution = monthlyContribution * 12 * Math.pow(1 + stepUp, year);
+        value = value * (1 + annualReturn) + yearlyContribution;
+        totalContributed += yearlyContribution;
+    }
+    return { finalValue: value, totalContributed };
+}
+
+function calculateHealthScore(allocations, initialCapital) {
+    const { weightedReturn, weightedER } = calculatePortfolioStats(allocations);
+    const volatility = calculatePortfolioVolatility(allocations);
+    const projection = projectPortfolioValue(
+        initialCapital,
+        currentPortfolioContext.monthlyContribution || 0,
+        currentPortfolioContext.stepUp || 0,
+        weightedReturn,
+        currentPortfolioContext.horizon || 10
+    );
+    const target = currentPortfolioContext.target || 0;
+    const goalProgress = target > 0 ? Math.min(1, projection.finalValue / target) : 0.75;
+    const activeCount = allocations.filter((a) => a.weight > 1).length;
+    const diversificationScore = Math.min(1, activeCount / 6);
+    const riskFit = currentPortfolioContext.risk === 'aggressive'
+        ? Math.max(0, 1 - Math.abs(volatility - 0.18) / 0.22)
+        : currentPortfolioContext.risk === 'conservative'
+            ? Math.max(0, 1 - Math.abs(volatility - 0.08) / 0.18)
+            : Math.max(0, 1 - Math.abs(volatility - 0.13) / 0.2);
+    const costScore = Math.max(0, 1 - weightedER / 0.006);
+    const score = Math.round(100 * (
+        goalProgress * 0.3 +
+        diversificationScore * 0.25 +
+        riskFit * 0.3 +
+        costScore * 0.15
+    ));
+    return { score: clampNumber(score, 0, 100), projection, volatility, weightedReturn, weightedER, goalProgress, diversificationScore, riskFit };
+}
+
+function renderPortfolioCommandCenter(allocations, initialCapital) {
+    const scoreEl = document.getElementById('portfolio-health-score');
+    const labelEl = document.getElementById('portfolio-health-label');
+    const driversEl = document.getElementById('portfolio-health-drivers');
+    const projectedEl = document.getElementById('portfolio-goal-projected');
+    const gapEl = document.getElementById('portfolio-goal-gap');
+    const signalEl = document.getElementById('portfolio-goal-signal');
+    const summaryEl = document.getElementById('portfolio-goal-summary');
+    if (!scoreEl) return;
+
+    const health = calculateHealthScore(allocations, initialCapital);
+    const target = currentPortfolioContext.target || 0;
+    const gap = health.projection.finalValue - target;
+    const signal = target <= 0 ? 'Tracking' : gap >= 0 ? 'On Track' : 'Needs Boost';
+    const goalLabel = GOAL_CONFIG[currentPortfolioContext.goal]?.label || 'Wealth Creation';
+
+    scoreEl.textContent = String(health.score);
+    labelEl.textContent = health.score >= 80 ? 'Strong Setup' : health.score >= 65 ? 'Balanced, Watch Risk' : health.score >= 50 ? 'Needs Tuning' : 'High Attention';
+    driversEl.innerHTML = `
+        <span>Diversification: ${(health.diversificationScore * 100).toFixed(0)}%</span>
+        <span>Risk fit: ${(health.riskFit * 100).toFixed(0)}%</span>
+        <span>Expense drag: ${(health.weightedER * 100).toFixed(2)}%</span>
+    `;
+
+    if (projectedEl) projectedEl.textContent = formatCurrency(health.projection.finalValue);
+    if (gapEl) {
+        gapEl.textContent = target > 0 ? `${gap >= 0 ? '+' : ''}${formatCurrency(gap)}` : '--';
+        gapEl.style.color = gap >= 0 ? '#10b981' : '#f59e0b';
+    }
+    if (signalEl) {
+        signalEl.textContent = signal;
+        signalEl.style.color = signal === 'On Track' ? '#10b981' : '#f59e0b';
+    }
+    if (summaryEl) {
+        const monthly = formatCurrency(currentPortfolioContext.monthlyContribution || 0);
+        summaryEl.textContent = `${goalLabel} over ${currentPortfolioContext.horizon || 10} years with ${monthly}/month and ${(currentPortfolioContext.stepUp || 0) * 100}% annual step-up.`;
+    }
+}
+
+function renderDriftSummary(totalAbsDrift) {
+    const summary = document.getElementById('portfolio-drift-summary');
+    if (!summary) return;
+    const largest = [...currentSubAllocations]
+        .map((asset) => ({ ...asset, drift: asset.weight - (asset.targetWeight ?? 0) }))
+        .sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift))[0];
+    if (!largest || totalAbsDrift < 1) {
+        summary.innerHTML = '<span class="drift-ok">Portfolio is close to target weights.</span>';
+        return;
+    }
+    summary.innerHTML = `
+        <span class="drift-watch">Total drift: ${totalAbsDrift.toFixed(1)}%</span>
+        <span>Largest move: ${largest.ticker} ${largest.drift >= 0 ? '+' : ''}${largest.drift.toFixed(1)}% vs target.</span>
+    `;
+}
+
+function addCustomHolding() {
+    const select = document.getElementById('portfolio-add-asset-select');
+    const weightInput = document.getElementById('portfolio-add-weight-input');
+    const key = select?.value;
+    const template = ASSET_CLASSES[key];
+    if (!template) return;
+    const desiredWeight = clampNumber(parseFloat(weightInput?.value) || 5, 1, 25);
+    const existing = currentSubAllocations.find((asset) => asset.ticker === template.ticker);
+    if (existing) {
+        existing.weight = clampNumber(existing.weight + desiredWeight, 0, 100);
+    } else {
+        currentSubAllocations.push({ ...template, weight: desiredWeight, targetWeight: 0 });
+    }
+    scaleOtherHoldings(template.ticker, desiredWeight);
+    normalizeWeights();
+    updatePortfolioRender(currentSubAllocations, parseFloat(document.getElementById('portfolio-capital-input')?.value) || 100000);
+}
+
+function removeHolding(ticker) {
+    if (currentSubAllocations.length <= 1) return;
+    const removed = currentSubAllocations.find((asset) => asset.ticker === ticker);
+    currentSubAllocations = currentSubAllocations.filter((asset) => asset.ticker !== ticker);
+    const redistribute = removed?.weight || 0;
+    const total = currentSubAllocations.reduce((sum, asset) => sum + asset.weight, 0);
+    currentSubAllocations.forEach((asset) => {
+        asset.weight += total > 0 ? redistribute * (asset.weight / total) : redistribute / currentSubAllocations.length;
+    });
+    normalizeWeights();
+    updatePortfolioRender(currentSubAllocations, parseFloat(document.getElementById('portfolio-capital-input')?.value) || 100000);
+}
+
+function scaleOtherHoldings(ticker, addedWeight) {
+    const others = currentSubAllocations.filter((asset) => asset.ticker !== ticker);
+    const total = others.reduce((sum, asset) => sum + asset.weight, 0);
+    if (total <= 0) return;
+    others.forEach((asset) => {
+        asset.weight = Math.max(0, asset.weight - addedWeight * (asset.weight / total));
+    });
+}
+
+function normalizeWeights() {
+    const total = currentSubAllocations.reduce((sum, asset) => sum + asset.weight, 0);
+    if (total <= 0) return;
+    currentSubAllocations.forEach((asset) => {
+        asset.weight = (asset.weight / total) * 100;
+    });
+}
+
+function clampNumber(value, min, max) {
+    return Math.min(max, Math.max(min, value));
 }
 
 function handleWeightChange(e) {

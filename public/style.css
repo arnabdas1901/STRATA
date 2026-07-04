@@ -1205,6 +1205,95 @@ select {
 .portfolio-content-box { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .portfolio-pie-box { position: relative; height: 240px; width: 100%; }
 .portfolio-metrics-breakdown { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.portfolio-input-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.portfolio-command-grid {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.portfolio-health-card,
+.portfolio-goal-card {
+    background: var(--bg-card-midnight);
+    border: 1px solid var(--border-cyan-glow);
+    border-radius: 12px;
+    padding: 24px;
+    min-width: 0;
+}
+
+.portfolio-health-score {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.portfolio-health-score span {
+    font-family: var(--font-mono);
+    font-size: 3rem;
+    line-height: 1;
+    color: var(--neon-cyan-vibrant);
+    font-weight: 700;
+}
+
+.portfolio-health-score small {
+    color: var(--text-secondary-muted);
+    font-family: var(--font-mono);
+}
+
+.portfolio-health-label {
+    margin-top: 8px;
+    font-weight: 700;
+    color: var(--text-primary-white);
+}
+
+.portfolio-health-drivers {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 16px;
+    color: var(--text-secondary-muted);
+    font-size: 0.82rem;
+}
+
+.portfolio-health-drivers span,
+.portfolio-drift-summary span {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(21, 30, 54, 0.45);
+    border-radius: 8px;
+    padding: 9px 10px;
+}
+
+.goal-projection-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.goal-projection-grid > div {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(21, 30, 54, 0.45);
+    border-radius: 8px;
+    padding: 14px;
+}
+
+.goal-label {
+    display: block;
+    color: var(--text-secondary-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.goal-projection-grid strong {
+    font-family: var(--font-mono);
+    color: var(--text-primary-white);
+    font-size: 1.05rem;
+}
 
 /* Card Section Headers */
 .card-section-header {
@@ -1508,6 +1597,61 @@ select {
     padding-top: 6px;
 }
 
+.portfolio-add-holding-panel {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) 110px auto;
+    gap: 10px;
+    margin-top: 18px;
+    align-items: center;
+}
+
+.portfolio-add-holding-panel select,
+.portfolio-add-holding-panel input,
+.etf-weight-input {
+    background: rgba(10, 14, 23, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary-white);
+    border-radius: 6px;
+    padding: 9px 10px;
+    outline: none;
+    font-family: var(--font-main);
+}
+
+.portfolio-add-holding-panel input,
+.etf-weight-input {
+    font-family: var(--font-mono);
+}
+
+.etf-weight-input {
+    width: 64px;
+    text-align: right;
+    font-size: 0.82rem;
+}
+
+.portfolio-add-holding-panel select:focus,
+.portfolio-add-holding-panel input:focus,
+.etf-weight-input:focus {
+    border-color: var(--neon-cyan-vibrant);
+    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.08);
+}
+
+.portfolio-drift-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    color: var(--text-secondary-muted);
+    font-size: 0.78rem;
+}
+
+.drift-ok {
+    color: #10b981;
+}
+
+.drift-watch {
+    color: #f59e0b;
+}
+
 .portfolio-holdings-table-wrap {
     overflow-x: auto;
     margin-top: 16px;
@@ -1600,6 +1744,29 @@ select {
     font-weight: 600;
     color: var(--neon-cyan-vibrant);
     letter-spacing: 0.5px;
+}
+
+.positive-drift { color: #10b981 !important; }
+.negative-drift { color: #f59e0b !important; }
+.neutral-drift { color: var(--text-secondary-muted) !important; }
+
+.portfolio-row-action {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(239, 68, 68, 0.24);
+    background: rgba(239, 68, 68, 0.08);
+    color: #fca5a5;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.portfolio-row-action:hover {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fff;
 }
 
 /* Weight Cell with Bar */
@@ -2246,13 +2413,14 @@ select {
    ========================================================================== */
 @media (max-width: 1024px) {
     .main-content { padding: 30px; }
-    .calculator-layout-grid, .portfolio-grid-layout, .portfolio-advanced-grid, .stress-input-grid { grid-template-columns: 1fr; gap: 24px; }
+    .calculator-layout-grid, .portfolio-grid-layout, .portfolio-command-grid, .portfolio-advanced-grid, .stress-input-grid { grid-template-columns: 1fr; gap: 24px; }
     .stress-scenario-grid { grid-template-columns: 1fr; }
     .metric-summary-grid { grid-template-columns: repeat(2, 1fr); }
     .ratios-data-grid { grid-template-columns: repeat(2, 1fr); }
     .portfolio-kpi-bar { grid-template-columns: repeat(3, 1fr); }
     .portfolio-kpi-tile:nth-child(3) { border-right: none; }
     .portfolio-holdings-table-wrap { margin-left: -12px; margin-right: -12px; border-radius: 0; }
+    .goal-projection-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -2329,6 +2497,8 @@ select {
 
     /* Portfolio responsive */
     .portfolio-kpi-bar { grid-template-columns: repeat(2, 1fr); }
+    .portfolio-input-pair, .portfolio-add-holding-panel { grid-template-columns: 1fr; }
+    .portfolio-health-score span { font-size: 2.4rem; }
     .portfolio-kpi-tile { padding: 14px 12px; }
     .portfolio-kpi-tile:nth-child(2n) { border-right: none; }
     .kpi-value { font-size: 1rem; }
