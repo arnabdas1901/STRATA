@@ -200,6 +200,23 @@ async function displayCryptoDetails(cryptoId) {
 
 function populateCryptoDetails(crypto) {
     const marketData = crypto.market_data || {};
+    const currentPrice = marketData.current_price?.usd || 0;
+    const change24h = marketData.price_change_percentage_24h || 0;
+    const change7d = marketData.price_change_percentage_7d || 0;
+    const change30d = marketData.price_change_percentage_30d || 0;
+    const marketCap = marketData.market_cap?.usd || 0;
+    const volume24h = marketData.total_volume?.usd || 0;
+    const high24h = marketData.high_24h?.usd || 0;
+    const low24h = marketData.low_24h?.usd || 0;
+    const ath = marketData.ath?.usd || 0;
+    const atl = marketData.atl?.usd || 0;
+    const circulatingSupply = crypto.market_data?.circulating_supply || 0;
+    const totalSupply = crypto.market_data?.total_supply || 0;
+    const maxSupply = crypto.market_data?.max_supply || 0;
+    const volumeToMarketCap = marketCap > 0 ? volume24h / marketCap : 0;
+    const rangePercent = currentPrice > 0 && high24h && low24h ? ((high24h - low24h) / currentPrice) * 100 : 0;
+    const athGapPercent = currentPrice > 0 && ath > 0 ? ((ath - currentPrice) / ath) * 100 : 0;
+    const atlGapPercent = currentPrice > 0 && atl > 0 ? ((currentPrice - atl) / atl) * 100 : 0;
     
     const nameDisplay = document.getElementById('crypto-name-display');
     const tickerBadge = document.getElementById('crypto-ticker-badge');
@@ -217,9 +234,6 @@ function populateCryptoDetails(crypto) {
             ? `<img src="${iconUrl}" alt="${crypto.name}">`
             : '💰';
     }
-    
-    const currentPrice = marketData.current_price?.usd || 0;
-    const change24h = marketData.price_change_percentage_24h || 0;
     
     if (priceDisplay) priceDisplay.textContent = `$${currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
     if (changeDisplay) {
@@ -253,16 +267,63 @@ function populateCryptoDetails(crypto) {
         }
     });
 
+    const signalValue = document.getElementById('crypto-signal-value');
+    const signalDetail = document.getElementById('crypto-signal-detail');
+    const liquidityValue = document.getElementById('crypto-liquidity-value');
+    const liquidityDetail = document.getElementById('crypto-liquidity-detail');
+    const supplyValue = document.getElementById('crypto-supply-value');
+    const supplyDetail = document.getElementById('crypto-supply-detail');
+    const rangeValue = document.getElementById('crypto-range-value');
+    const rangeDetail = document.getElementById('crypto-range-detail');
+    const briefingBadge = document.getElementById('crypto-briefing-badge');
+    const briefingText = document.getElementById('crypto-briefing-text');
+
+    const signalLabel = change24h > 2.5 || (change7d > 3 && change30d > 1.5)
+        ? 'Momentum Acceleration'
+        : change24h > 0 || change7d > 0
+            ? 'Bullish Structure'
+            : change24h < -2.5 || (change7d < -3 && change30d < -1.5)
+                ? 'Risk Off'
+                : 'Balanced';
+    const signalDetailText = `${change24h >= 0 ? '+' : ''}${change24h.toFixed(1)}% 24h • ${change7d >= 0 ? '+' : ''}${change7d.toFixed(1)}% 7d`;
+
+    const liquidityLabel = volumeToMarketCap > 0.18 ? 'Deep Liquidity' : volumeToMarketCap > 0.08 ? 'Healthy' : 'Selective';
+    const liquidityDetailText = `${formatLargeCurrency(volume24h)} traded vs ${formatLargeCurrency(marketCap)} cap`;
+
+    const supplyPercent = totalSupply > 0 ? Math.min(100, (circulatingSupply / totalSupply) * 100) : 0;
+    const supplyLabel = maxSupply > 0 ? 'Capped Supply' : supplyPercent > 90 ? 'Near Full Circulation' : 'Moderate Float';
+    const supplyDetailText = totalSupply > 0 ? `${supplyPercent.toFixed(1)}% in circulation` : 'Supply data pending';
+
+    const rangeLabel = rangePercent > 6 ? 'Expanded Range' : rangePercent > 3 ? 'Balanced Range' : 'Compressed Range';
+    const rangeDetailText = high24h && low24h ? `${formatLargeCurrency(high24h - low24h)} intraday swing` : 'Range data pending';
+
+    if (signalValue) signalValue.textContent = signalLabel;
+    if (signalDetail) signalDetail.textContent = signalDetailText;
+    if (liquidityValue) liquidityValue.textContent = liquidityLabel;
+    if (liquidityDetail) liquidityDetail.textContent = liquidityDetailText;
+    if (supplyValue) supplyValue.textContent = supplyLabel;
+    if (supplyDetail) supplyDetail.textContent = supplyDetailText;
+    if (rangeValue) rangeValue.textContent = rangeLabel;
+    if (rangeDetail) rangeDetail.textContent = rangeDetailText;
+    if (briefingBadge) briefingBadge.textContent = signalLabel;
+    if (briefingText) {
+        const briefDirection = change24h >= 0 ? 'maintaining upward traction' : 'facing pressure';
+        const athStatus = ath > 0 ? `${athGapPercent.toFixed(1)}% below ATH` : 'ATH data pending';
+        const atlStatus = atl > 0 ? `${atlGapPercent.toFixed(1)}% above ATL` : 'ATL data pending';
+        briefingText.textContent = `${crypto.name} is ${briefDirection} with ${signalDetailText} and ${liquidityDetailText.toLowerCase()}. Current price is ${athStatus} and ${atlStatus}.`;
+    }
+
     const overviewBody = document.getElementById('crypto-overview-table-body');
     if (overviewBody) {
         overviewBody.innerHTML = `
             <tr><td>Market Cap Rank</td><td>#${crypto.market_cap_rank || '--'}</td></tr>
             <tr><td>Current Price (USD)</td><td>$${currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td></tr>
             <tr><td>24h Change</td><td style="color: ${change24h >= 0 ? '#10b981' : '#ef4444'}">${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%</td></tr>
-            <tr><td>7d Change</td><td style="color: ${(marketData.price_change_percentage_7d || 0) >= 0 ? '#10b981' : '#ef4444'}">${(marketData.price_change_percentage_7d || 0) >= 0 ? '+' : ''}${(marketData.price_change_percentage_7d || 0).toFixed(2)}%</td></tr>
-            <tr><td>30d Change</td><td style="color: ${(marketData.price_change_percentage_30d || 0) >= 0 ? '#10b981' : '#ef4444'}">${(marketData.price_change_percentage_30d || 0) >= 0 ? '+' : ''}${(marketData.price_change_percentage_30d || 0).toFixed(2)}%</td></tr>
-            <tr><td>Market Cap</td><td>${formatLargeCurrency(marketData.market_cap?.usd)}</td></tr>
-            <tr><td>24h Trading Volume</td><td>${formatLargeCurrency(marketData.total_volume?.usd)}</td></tr>
+            <tr><td>7d Change</td><td style="color: ${change7d >= 0 ? '#10b981' : '#ef4444'}">${change7d >= 0 ? '+' : ''}${change7d.toFixed(2)}%</td></tr>
+            <tr><td>30d Change</td><td style="color: ${change30d >= 0 ? '#10b981' : '#ef4444'}">${change30d >= 0 ? '+' : ''}${change30d.toFixed(2)}%</td></tr>
+            <tr><td>Market Cap</td><td>${formatLargeCurrency(marketCap)}</td></tr>
+            <tr><td>24h Trading Volume</td><td>${formatLargeCurrency(volume24h)}</td></tr>
+            <tr><td>Volume / Market Cap</td><td>${volumeToMarketCap.toFixed(3)}</td></tr>
             <tr><td>Fully Diluted Valuation</td><td>${formatLargeCurrency(marketData.fully_diluted_valuation?.usd)}</td></tr>
         `;
     }

@@ -702,6 +702,85 @@ select {
 .metric-title { font-size: 0.8rem; color: var(--text-secondary-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
 .metric-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 600; overflow-wrap: anywhere; }
 
+.crypto-intel-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.crypto-intel-card {
+    background: linear-gradient(145deg, rgba(8, 15, 31, 0.96), rgba(12, 18, 34, 0.96));
+    border: 1px solid rgba(96, 165, 250, 0.16);
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 120px;
+}
+
+.intel-title {
+    color: var(--text-secondary-muted);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.intel-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary-white);
+}
+
+.intel-detail {
+    color: var(--text-secondary-muted);
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+.crypto-briefing-card {
+    background: linear-gradient(135deg, rgba(13, 19, 38, 0.96), rgba(9, 14, 28, 0.94));
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    border-radius: 18px;
+    padding: 20px 22px;
+    margin-bottom: 24px;
+}
+
+.briefing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.briefing-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary-white);
+}
+
+.briefing-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    background: rgba(37, 99, 235, 0.16);
+    color: var(--neon-cyan-vibrant);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.crypto-briefing-card p {
+    margin: 0;
+    color: var(--text-secondary-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
 /* Chart Containers and Canvas Wrappers */
 .chart-container-card {
     background: linear-gradient(145deg, rgba(13, 19, 38, 0.96), rgba(9, 14, 28, 0.96));
