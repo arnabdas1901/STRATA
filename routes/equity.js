@@ -171,7 +171,7 @@ router.get('/twelvedata/statements', async (req, res) => {
         if (process.env.TWELVEDATA_API_KEY) {
             const response = await fetch(`https://api.twelvedata.com/${type}?symbol=${encodeURIComponent(symbol)}&apikey=${process.env.TWELVEDATA_API_KEY}`);
             data = await response.json();
-            if (data?.status === 'error') {
+            if (data?.status === 'error' || !data || data?.code >= 400) {
                 twelvedataFailed = true;
             }
         } else {
@@ -181,17 +181,94 @@ router.get('/twelvedata/statements', async (req, res) => {
         if (twelvedataFailed) {
             const fmpKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY;
             if (fmpKey) {
-                const fmpType = type === 'balance_sheet' ? 'balance-sheet-statement' : 'cash-flow-statement';
-                const fmpUrl = `https://financialmodelingprep.com/api/v3/${fmpType}/${encodeURIComponent(symbol)}?limit=1&apikey=${fmpKey}`;
-                const fmpResponse = await fetch(fmpUrl);
-                const fmpData = await fmpResponse.json();
+                try {
+                    const fmpType = type === 'balance_sheet' ? 'balance-sheet-statement' : 'cash-flow-statement';
+                    const fmpUrl = `https://financialmodelingprep.com/api/v3/${fmpType}/${encodeURIComponent(symbol)}?limit=1&apikey=${fmpKey}`;
+                    const fmpResponse = await fetch(fmpUrl);
+                    const fmpData = await fmpResponse.json();
 
-                if (Array.isArray(fmpData) && fmpData.length > 0) {
-                    const stmt = fmpData[0];
-                    if (type === 'balance_sheet') {
-                        return res.json({ balance_sheet: [{ total_assets: stmt.totalAssets, total_liabilities: stmt.totalLiabilities, total_shareholders_equity: stmt.totalStockholdersEquity || stmt.totalEquity }] });
-                    } else {
-                        return res.json({ cash_flow: [{ operating_cash_flow: stmt.operatingCashFlow, investing_cash_flow: stmt.netCashUsedForInvestingActivites || stmt.netCashUsedForInvestingActivities, financing_cash_flow: stmt.netCashUsedProvidedByFinancingActivities, net_change_in_cash: stmt.netChangeInCash }] });
+                    if (Array.isArray(fmpData) && fmpData.length > 0 && !fmpData[0]?.['Error Message']) {
+                        const stmt = fmpData[0];
+                        if (type === 'balance_sheet') {
+                            return res.json({ balance_sheet: [{ total_assets: stmt.totalAssets, total_liabilities: stmt.totalLiabilities, total_shareholders_equity: stmt.totalStockholdersEquity || stmt.totalEquity }] });
+                        } else {
+                            return res.json({ cash_flow: [{ operating_cash_flow: stmt.operatingCashFlow, investing_cash_flow: stmt.netCashUsedForInvestingActivites || stmt.netCashUsedForInvestingActivities, financing_cash_flow: stmt.netCashUsedProvidedByFinancingActivities, net_change_in_cash: stmt.netChangeInCash }] });
+                        }
+                    }
+                } catch (fmpErr) {
+                    console.warn("FMP statement fallback attempt failed:", fmpErr);
+                }
+            }
+
+            // AlphaVantage statement fallback
+            if (process.env.ALPHAVANTAGE_API_KEY) {
+                try {
+                    const avFunc = type === 'balance_sheet' ? 'BALANCE_SHEET' : 'CASH_FLOW';
+                    const avUrl = `https://www.alphavantage.co/query?function=${avFunc}&symbol=${encodeURIComponent(symbol)}&apikey=${process.env.ALPHAVANTAGE_API_KEY}`;
+                    const avResponse = await fetch(avUrl);
+                    const avData = await avResponse.json();
+
+                    if (avData.annualReports && avData.annualReports.length > 0) {
+                        const stmt = avData.annualReports[0];
+                        if (type === 'balance_sheet') {
+                            return res.json({
+                                balance_sheet: [{
+                                    total_assets: stmt.totalAssets && stmt.totalAssets !== 'None' ? Number(stmt.totalAssets) : null,
+                                    total_liabilities: stmt.totalLiabilities && stmt.totalLiabilities !== 'None' ? Number(stmt.totalLiabilities) : null,
+                                    total_shareholders_equity: stmt.totalShareholderEquity && stmt.totalShareholderEquity !== 'None' ? Number(stmt.totalShareholderEquity) : null
+                                }]
+                            });
+                        } else {
+                            const operating = stmt.operatingCashflow && stmt.operatingCashflow !== 'None' ? Number(stmt.operatingCashflow) : 0;
+                            const investing = stmt.cashflowFromInvestment && stmt.cashflowFromInvestment !== 'None' ? Number(stmt.cashflowFromInvestment) : 0;
+                            const financing = stmt.cashflowFromFinancing && stmt.cashflowFromFinancing !== 'None' ? Number(stmt.cashflowFromFinancing) : 0;
+                            const netChange = stmt.changeInCashAndCashEquivalents && stmt.changeInCashAndCashEquivalents !== 'None' ? Number(stmt.changeInCashAndCashEquivalents) : (operating + investing + financing);
+                            return res.json({
+                                cash_flow: [{
+                                    operating_cash_flow: operating,
+                                    investing_cash_flow: investing,
+                                    financing_cash_flow: financing,
+                                    net_change_in_cash: netChange
+                                }]
+                            });
+                        }
+                    }
+                } catch (avErr) {
+                    console.warn("AlphaVantage statement fallback failed:", avErr);
+                }
+            }
+        } else {
+            // Normalise TwelveData response format to standard flat format
+            if (data && !data.error) {
+                if (type === 'balance_sheet') {
+                    if (Array.isArray(data.balance_sheet) && data.balance_sheet.length > 0) {
+                        const stmt = data.balance_sheet[0];
+                        const total_assets = stmt.assets?.total_assets ?? stmt.total_assets ?? stmt.totalAssets;
+                        const total_liabilities = stmt.liabilities?.total_liabilities ?? stmt.total_liabilities ?? stmt.totalLiabilities;
+                        const total_shareholders_equity = stmt.shareholders_equity?.total_shareholders_equity ?? stmt.total_shareholders_equity ?? stmt.totalEquity;
+                        return res.json({
+                            balance_sheet: [{
+                                total_assets,
+                                total_liabilities,
+                                total_shareholders_equity
+                            }]
+                        });
+                    }
+                } else if (type === 'cash_flow') {
+                    if (Array.isArray(data.cash_flow) && data.cash_flow.length > 0) {
+                        const stmt = data.cash_flow[0];
+                        const operating = stmt.operating_activities?.operating_cash_flow ?? stmt.operating_cash_flow ?? stmt.operatingCashFlow;
+                        const investing = stmt.investing_activities?.investing_cash_flow ?? stmt.investing_cash_flow ?? stmt.netCashUsedForInvestingActivites;
+                        const financing = stmt.financing_activities?.financing_cash_flow ?? stmt.financing_cash_flow ?? stmt.netCashUsedProvidedByFinancingActivities;
+                        const netChange = stmt.net_change_in_cash ?? stmt.netChangeInCash ?? (Number(operating || 0) + Number(investing || 0) + Number(financing || 0));
+                        return res.json({
+                            cash_flow: [{
+                                operating_cash_flow: operating,
+                                investing_cash_flow: investing,
+                                financing_cash_flow: financing,
+                                net_change_in_cash: netChange
+                            }]
+                        });
                     }
                 }
             }

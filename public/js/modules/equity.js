@@ -56,11 +56,13 @@ function clearEquityResults() {
     const searchInput = document.getElementById('equity-search-input');
     const newsWidget = document.querySelector('#dashboard-equity .news-widget');
     const indexStrip = document.querySelector('#dashboard-equity .index-summary-strip');
+    const trendingStrip = document.querySelector('#dashboard-equity .trending-tickers-strip');
     
     if (resultsContainer) resultsContainer.classList.add('hidden-element');
     if (searchInput) searchInput.value = '';
     if (newsWidget) newsWidget.classList.remove('hidden-element');
     if (indexStrip) indexStrip.classList.remove('hidden-element');
+    if (trendingStrip) trendingStrip.classList.remove('hidden-element');
     activeEquityTicker = null;
 }
 
@@ -83,6 +85,7 @@ async function executeEquityAnalysis(ticker) {
     const searchBtn = document.getElementById('equity-search-btn');
     const newsWidget = document.querySelector('#dashboard-equity .news-widget');
     const indexStrip = document.querySelector('#dashboard-equity .index-summary-strip');
+    const trendingStrip = document.querySelector('#dashboard-equity .trending-tickers-strip');
     const loader = document.getElementById('equity-loader');
     const resultsContainer = document.getElementById('equity-results-container');
 
@@ -93,9 +96,10 @@ async function executeEquityAnalysis(ticker) {
         searchBtn.textContent = 'Analyzing...';
     }
 
-    // Hide the news and index area, show the loader
+    // Hide the news, index area and trending cards, show the loader
     if (newsWidget) newsWidget.classList.add('hidden-element');
     if (indexStrip) indexStrip.classList.add('hidden-element');
+    if (trendingStrip) trendingStrip.classList.add('hidden-element');
     if (loader) loader.classList.remove('hidden-element');
     if (resultsContainer) resultsContainer.classList.add('hidden-element');
 
@@ -134,9 +138,10 @@ async function executeEquityAnalysis(ticker) {
     } catch (error) {
         console.error("Market Data Fetch Error:", error);
         showToast(error.message || "Failed to load market data");
-        // On error, restore the news and index area so user can try again
+        // On error, restore the news, index area and trending cards so user can try again
         if (newsWidget) newsWidget.classList.remove('hidden-element');
         if (indexStrip) indexStrip.classList.remove('hidden-element');
+        if (trendingStrip) trendingStrip.classList.remove('hidden-element');
     } finally {
         if (loader) loader.classList.add('hidden-element');
         // Restore button state
