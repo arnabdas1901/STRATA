@@ -23,10 +23,10 @@ const ASSET_CLASSES = {
     govBonds: { name: 'Government Bonds', etf: 'iShares 20+ Year Treasury Bond', ticker: 'TLT', return: 0.04, vol: 0.10, er: 0.0015, yield: 0.038, color: '#64748b', icon: 'fa-building-columns', bucket: 'fixedIncome' },
     corpBonds: { name: 'Corporate Bonds', etf: 'iShares iBoxx $ Inv Grade Corp', ticker: 'LQD', return: 0.05, vol: 0.07, er: 0.0014, yield: 0.042, color: '#94a3b8', icon: 'fa-file-contract', bucket: 'fixedIncome' },
     gold: { name: 'Gold', etf: 'SPDR Gold Shares', ticker: 'GLD', return: 0.06, vol: 0.14, er: 0.0040, yield: 0.000, color: '#f59e0b', icon: 'fa-coins', bucket: 'metals' },
-    nifty50: { name: 'India Large Cap', etf: 'NIFTY 50 ETF Proxy', ticker: 'NIFTY50', return: 0.105, vol: 0.18, er: 0.0015, yield: 0.012, color: '#10b981', icon: 'fa-chart-line', bucket: 'equity' },
-    next50: { name: 'India Next 50', etf: 'NIFTY Next 50 Proxy', ticker: 'NEXT50', return: 0.12, vol: 0.24, er: 0.0020, yield: 0.008, color: '#22c55e', icon: 'fa-arrow-trend-up', bucket: 'equity' },
-    liquidFund: { name: 'Liquid Fund', etf: 'Ultra Short Duration Proxy', ticker: 'LIQUID', return: 0.055, vol: 0.015, er: 0.0025, yield: 0.045, color: '#38bdf8', icon: 'fa-droplet', bucket: 'cash' },
-    giltFund: { name: 'Gilt Fund', etf: 'Government Securities Proxy', ticker: 'GILT', return: 0.065, vol: 0.06, er: 0.0035, yield: 0.055, color: '#818cf8', icon: 'fa-building-columns', bucket: 'fixedIncome' },
+    usSmallCap: { name: 'US Small Cap', etf: 'iShares Russell 2000 ETF', ticker: 'IWM', return: 0.085, vol: 0.19, er: 0.0019, yield: 0.014, color: '#10b981', icon: 'fa-chart-line', bucket: 'equity' },
+    nasdaq100: { name: 'US Technology', etf: 'Invesco QQQ Trust', ticker: 'QQQ', return: 0.115, vol: 0.18, er: 0.0020, yield: 0.006, color: '#22c55e', icon: 'fa-arrow-trend-up', bucket: 'equity' },
+    shortTreasury: { name: 'Short-Term Treasury', etf: 'SPDR Bloomberg 1-3 Month T-Bill', ticker: 'BIL', return: 0.045, vol: 0.005, er: 0.0013, yield: 0.051, color: '#38bdf8', icon: 'fa-droplet', bucket: 'cash' },
+    muniBonds: { name: 'Municipal Bonds', etf: 'iShares National Muni Bond ETF', ticker: 'MUB', return: 0.045, vol: 0.04, er: 0.0005, yield: 0.028, color: '#818cf8', icon: 'fa-building-columns', bucket: 'fixedIncome' },
     cash: { name: 'Cash Reserve', etf: 'Treasury Bills / Savings Proxy', ticker: 'CASH', return: 0.04, vol: 0.005, er: 0.0000, yield: 0.035, color: '#e2e8f0', icon: 'fa-wallet', bucket: 'cash' },
     btc: { name: 'Bitcoin Satellite', etf: 'BTC Allocation Proxy', ticker: 'BTC', return: 0.14, vol: 0.65, er: 0.0000, yield: 0.000, color: '#f97316', icon: 'fa-coins', bucket: 'alternatives' }
 };

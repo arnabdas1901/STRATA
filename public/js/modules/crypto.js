@@ -13,9 +13,10 @@ export function setupCryptoTracker() {
 
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
+        const symbol = params.get('symbol');
         const query = params.get('query');
         if (id) {
-            displayCryptoDetails(id);
+            displayCryptoDetails(id, symbol);
         } else if (query) {
             executeCryptoSearchWithQuery(query);
         } else {
@@ -96,7 +97,7 @@ async function executeCryptoSearchWithQuery(query) {
         }
 
         const topResult = data.coins[0];
-        displayCryptoDetails(topResult.id);
+        window.location.href = `crypto-details.html?id=${topResult.id}&symbol=${topResult.symbol}`;
     } catch (error) {
         console.error('Search error:', error);
         showToast('Search failed. Please try again.');
@@ -140,11 +141,11 @@ async function loadTopCryptos() {
             `;
 
             bracket.addEventListener('click', () => {
-                window.location.href = `crypto-details.html?id=${crypto.id}`;
+                window.location.href = `crypto-details.html?id=${crypto.id}&symbol=${crypto.symbol}`;
             });
             bracket.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
-                    window.location.href = `crypto-details.html?id=${crypto.id}`;
+                    window.location.href = `crypto-details.html?id=${crypto.id}&symbol=${crypto.symbol}`;
                 }
             });
 
@@ -157,7 +158,7 @@ async function loadTopCryptos() {
     }
 }
 
-async function displayCryptoDetails(cryptoId) {
+async function displayCryptoDetails(cryptoId, cryptoSymbol = null) {
     const loader = document.getElementById('crypto-loader');
     const resultsContainer = document.getElementById('crypto-results-container');
 
@@ -174,8 +175,12 @@ async function displayCryptoDetails(cryptoId) {
             else btn.classList.remove('active');
         });
 
+        const params = new URLSearchParams();
+        if (cryptoId) params.set('id', cryptoId);
+        if (cryptoSymbol) params.set('symbol', cryptoSymbol);
+
         const [detailsResponse, historyResponse] = await Promise.all([
-            fetchWithTimeout(`${BACKEND_URL}/api/crypto/details?id=${encodeURIComponent(cryptoId)}`, { timeout: 10000 }),
+            fetchWithTimeout(`${BACKEND_URL}/api/crypto/details?${params}`, { timeout: 10000 }),
             fetchWithTimeout(`${BACKEND_URL}/api/crypto/history?id=${encodeURIComponent(cryptoId)}&days=365`, { timeout: 10000 }).catch(() => null),
         ]);
 
@@ -193,7 +198,6 @@ async function displayCryptoDetails(cryptoId) {
     } catch (error) {
         console.error('Error displaying crypto:', error);
         if (loader) loader.classList.add('hidden-element');
-        if (landing) landing.classList.remove('hidden-element');
         showToast('Failed to load cryptocurrency details.');
     }
 }
