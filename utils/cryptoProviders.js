@@ -6,7 +6,11 @@ const COINMARKETCAP_API_KEY = process.env.COINMARKETCAP_API_KEY;
 function coinGeckoHeaders() {
     const headers = {};
     if (COINGECKO_API_KEY) {
-        headers['x-cg-pro-api-key'] = COINGECKO_API_KEY;
+        if (COINGECKO_API_KEY.startsWith('CG-')) {
+            headers['x-cg-demo-api-key'] = COINGECKO_API_KEY;
+        } else {
+            headers['x-cg-pro-api-key'] = COINGECKO_API_KEY;
+        }
     }
     return headers;
 }
@@ -99,6 +103,17 @@ async function fetchCoinMarketCapDetailsBySymbol(symbol) {
         symbol: quote.symbol || symbol,
         market_cap_rank: quote.cmc_rank || null,
         image: info.logo || null,
+        description: { en: info.description || '' },
+        categories: info.tags || [],
+        genesis_date: info.date_launched || info.date_added || null,
+        links: {
+            homepage: [info.urls?.website?.[0] || ''],
+            twitter_screen_name: info.twitter_username || '',
+            subreddit_url: info.urls?.reddit?.[0] || '',
+            repos_url: {
+                github: [info.urls?.source_code?.[0] || '']
+            }
+        },
         market_data: {
             current_price: { usd: quote.quote?.USD?.price ?? null },
             price_change_percentage_24h: quote.quote?.USD?.percent_change_24h ?? null,

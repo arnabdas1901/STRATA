@@ -258,6 +258,20 @@ function populateCryptoDetails(crypto) {
         return `<span style="color: ${color}; font-family: 'JetBrains Mono', monospace;">${prefix}${val.toFixed(2)}%</span>`;
     }
 
+    // Helper for dynamic price formatting
+    function formatCryptoPrice(price) {
+        if (price == null || isNaN(price) || price === '') return '--';
+        const num = Number(price);
+        if (num === 0) return '$0.00';
+        if (num < 0.01) {
+            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 8 });
+        }
+        if (num < 1) {
+            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+        }
+        return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     // ── Hero Card ───────────────────────────────────────────────────────────────
     const nameDisplay = document.getElementById('crypto-name-display');
     const tickerBadge = document.getElementById('crypto-ticker-badge');
@@ -276,7 +290,7 @@ function populateCryptoDetails(crypto) {
             : '💰';
     }
 
-    if (priceDisplay) priceDisplay.textContent = `$${currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+    if (priceDisplay) priceDisplay.textContent = formatCryptoPrice(currentPrice);
     if (changeDisplay) {
         changeDisplay.textContent = `${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}% (24h)`;
         changeDisplay.style.color = change24h >= 0 ? '#10b981' : '#ef4444';
@@ -338,10 +352,10 @@ function populateCryptoDetails(crypto) {
     if (metricVolume) metricVolume.textContent = formatLargeCurrency(volume24h);
 
     const metricHigh = document.getElementById('crypto-metric-24h-high');
-    if (metricHigh) metricHigh.textContent = high24h ? `$${high24h.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '--';
+    if (metricHigh) metricHigh.textContent = formatCryptoPrice(high24h);
 
     const metricLow = document.getElementById('crypto-metric-24h-low');
-    if (metricLow) metricLow.textContent = low24h ? `$${low24h.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '--';
+    if (metricLow) metricLow.textContent = formatCryptoPrice(low24h);
 
     const metricFdv = document.getElementById('crypto-metric-fdv');
     if (metricFdv) metricFdv.textContent = formatLargeCurrency(fdv);
@@ -360,7 +374,7 @@ function populateCryptoDetails(crypto) {
 
     // ── ATH / ATL Distance Cards ────────────────────────────────────────────────
     const athPriceEl = document.getElementById('crypto-ath-price');
-    if (athPriceEl) athPriceEl.textContent = ath ? `$${ath.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '--';
+    if (athPriceEl) athPriceEl.textContent = formatCryptoPrice(ath);
 
     const athDateEl = document.getElementById('crypto-ath-date-val');
     if (athDateEl) athDateEl.textContent = athDate ? new Date(athDate).toLocaleDateString() : '--';
@@ -372,7 +386,7 @@ function populateCryptoDetails(crypto) {
     if (athBarEl) athBarEl.style.width = `${Math.max(0, 100 + athChangePct)}%`;
 
     const atlPriceEl = document.getElementById('crypto-atl-price');
-    if (atlPriceEl) atlPriceEl.textContent = atl ? `$${atl.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '--';
+    if (atlPriceEl) atlPriceEl.textContent = formatCryptoPrice(atl);
 
     const atlDateEl = document.getElementById('crypto-atl-date-val');
     if (atlDateEl) atlDateEl.textContent = atlDate ? new Date(atlDate).toLocaleDateString() : '--';
@@ -475,7 +489,7 @@ function populateCryptoDetails(crypto) {
     if (overviewBody) {
         overviewBody.innerHTML = `
             <tr><td>Market Cap Rank</td><td>#${crypto.market_cap_rank || '--'}</td></tr>
-            <tr><td>Current Price</td><td>$${currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td></tr>
+            <tr><td>Current Price</td><td>${formatCryptoPrice(currentPrice)}</td></tr>
             <tr><td>1h Change</td><td>${coloredPct(change1h)}</td></tr>
             <tr><td>24h Change</td><td>${coloredPct(change24h)}</td></tr>
             <tr><td>7d Change</td><td>${coloredPct(change7d)}</td></tr>
@@ -513,14 +527,14 @@ function populateCryptoDetails(crypto) {
         const rangeDiff = high24h && low24h ? high24h - low24h : 0;
 
         recordsBody.innerHTML = `
-            <tr><td>All-Time High</td><td>${ath ? `$${ath.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '--'}</td></tr>
+            <tr><td>All-Time High</td><td>${formatCryptoPrice(ath)}</td></tr>
             <tr><td>ATH Date</td><td>${athDateStr}</td></tr>
             <tr><td>ATH Change</td><td>${coloredPct(athChangePct)}</td></tr>
-            <tr><td>All-Time Low</td><td>${atl ? `$${atl.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '--'}</td></tr>
+            <tr><td>All-Time Low</td><td>${formatCryptoPrice(atl)}</td></tr>
             <tr><td>ATL Date</td><td>${atlDateStr}</td></tr>
             <tr><td>ATL Change</td><td>${coloredPct(atlChangePct)}</td></tr>
-            <tr><td>24h High</td><td>${high24h ? `$${high24h.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '--'}</td></tr>
-            <tr><td>24h Low</td><td>${low24h ? `$${low24h.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '--'}</td></tr>
+            <tr><td>24h High</td><td>${formatCryptoPrice(high24h)}</td></tr>
+            <tr><td>24h Low</td><td>${formatCryptoPrice(low24h)}</td></tr>
             <tr><td>24h Range</td><td>${rangeDiff ? formatLargeCurrency(rangeDiff) : '--'}</td></tr>
         `;
     }

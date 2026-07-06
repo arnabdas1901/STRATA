@@ -4853,6 +4853,9 @@ select {
     .crypto-kpi-grid-8 {
         grid-template-columns: repeat(2, 1fr) !important;
     }
+    .crypto-intel-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
 }
 
 @media (max-width: 768px) {
@@ -4876,6 +4879,10 @@ select {
         text-align: center;
         padding-bottom: 0;
     }
+    .crypto-intel-card {
+        min-height: auto;
+        padding: 14px 16px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -4884,5 +4891,8 @@ select {
     }
     .supply-labels {
         grid-template-columns: 1fr;
+    }
+    .crypto-intel-grid {
+        grid-template-columns: 1fr !important;
     }
 }
