@@ -96,6 +96,7 @@
                 </div>
 
                 <div id="crypto-results-container" class="hidden-element">
+                    <!-- Section 1: Enhanced Hero Card -->
                     <div class="ticker-hero-card">
                         <div class="hero-meta">
                             <div class="crypto-hero-identity">
@@ -108,14 +109,30 @@
                                     </div>
                                 </div>
                             </div>
+                            <div id="crypto-category-tags" class="crypto-category-tags"></div>
                         </div>
                         <div class="hero-pricing">
                             <div id="crypto-live-price-display" class="price-value">$0.00</div>
                             <div id="crypto-live-change-display" class="price-change-percent">0.00% (24h)</div>
                         </div>
+                        <div id="crypto-social-links" class="crypto-social-links"></div>
                     </div>
 
-                    <div class="metric-summary-grid">
+                    <!-- Section 2: Multi-Timeframe Price Strip -->
+                    <div id="crypto-timeframe-strip" class="crypto-timeframe-strip">
+                        <!-- JS will populate with pills for 1h, 24h, 7d, 14d, 30d, 60d, 200d, 1y -->
+                    </div>
+
+                    <!-- Section 3: Primary KPI Grid (8 cards) -->
+                    <div class="metric-summary-grid crypto-kpi-grid-8">
+                        <div class="metric-card">
+                            <span class="metric-title">Market Cap</span>
+                            <span id="crypto-metric-market-cap" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">24h Volume</span>
+                            <span id="crypto-metric-volume" class="metric-value">--</span>
+                        </div>
                         <div class="metric-card">
                             <span class="metric-title">24h High</span>
                             <span id="crypto-metric-24h-high" class="metric-value">--</span>
@@ -125,15 +142,100 @@
                             <span id="crypto-metric-24h-low" class="metric-value">--</span>
                         </div>
                         <div class="metric-card">
-                            <span class="metric-title">Market Cap</span>
-                            <span id="crypto-metric-market-cap" class="metric-value">--</span>
+                            <span class="metric-title">Fully Diluted Val.</span>
+                            <span id="crypto-metric-fdv" class="metric-value">--</span>
                         </div>
                         <div class="metric-card">
-                            <span class="metric-title">24h Volume</span>
-                            <span id="crypto-metric-volume" class="metric-value">--</span>
+                            <span class="metric-title">Vol / Market Cap</span>
+                            <span id="crypto-metric-vol-mcap" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">MCap Change (24h)</span>
+                            <span id="crypto-metric-mcap-change" class="metric-value">--</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">MCap Dominance (MCap/FDV)</span>
+                            <span id="crypto-metric-mcap-dominance" class="metric-value">--</span>
                         </div>
                     </div>
 
+                    <!-- Section 4: ATH/ATL Distance Cards -->
+                    <div class="crypto-ath-atl-grid">
+                        <div class="crypto-distance-card ath">
+                            <div class="distance-header">
+                                <span class="distance-label"><i class="fa-solid fa-arrow-trend-up"></i> All-Time High</span>
+                                <span id="crypto-ath-price" class="distance-price">--</span>
+                            </div>
+                            <div class="distance-meta">
+                                <span id="crypto-ath-date-val" class="distance-date">--</span>
+                                <span id="crypto-ath-distance" class="distance-pct">--</span>
+                            </div>
+                            <div class="distance-bar-track">
+                                <div id="crypto-ath-bar" class="distance-bar-fill ath-fill"></div>
+                            </div>
+                        </div>
+                        <div class="crypto-distance-card atl">
+                            <div class="distance-header">
+                                <span class="distance-label"><i class="fa-solid fa-arrow-trend-down"></i> All-Time Low</span>
+                                <span id="crypto-atl-price" class="distance-price">--</span>
+                            </div>
+                            <div class="distance-meta">
+                                <span id="crypto-atl-date-val" class="distance-date">--</span>
+                                <span id="crypto-atl-distance" class="distance-pct">--</span>
+                            </div>
+                            <div class="distance-bar-track">
+                                <div id="crypto-atl-bar" class="distance-bar-fill atl-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Supply Breakdown Card -->
+                    <div class="crypto-supply-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <h3>Supply Breakdown</h3>
+                        </div>
+                        <div class="supply-visual">
+                            <div class="supply-bar-track">
+                                <div id="crypto-supply-bar" class="supply-bar-fill"></div>
+                            </div>
+                            <div class="supply-labels">
+                                <div>
+                                    <span class="supply-label">Circulating</span>
+                                    <span id="crypto-supply-circ-val" class="supply-val font-mono">--</span>
+                                </div>
+                                <div>
+                                    <span class="supply-label">Total Supply</span>
+                                    <span id="crypto-supply-total-val" class="supply-val font-mono">--</span>
+                                </div>
+                                <div>
+                                    <span class="supply-label">Max Supply</span>
+                                    <span id="crypto-supply-max-val" class="supply-val font-mono">--</span>
+                                </div>
+                            </div>
+                            <div id="crypto-supply-pct" class="supply-pct-label">--% in circulation</div>
+                        </div>
+                    </div>
+
+                    <!-- Section 6: Community Sentiment Bar -->
+                    <div class="crypto-sentiment-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-users"></i>
+                            <h3>Community Sentiment</h3>
+                        </div>
+                        <div class="sentiment-visual">
+                            <div class="sentiment-bar-track">
+                                <div id="crypto-sentiment-bull" class="sentiment-bar-bull"></div>
+                            </div>
+                            <div class="sentiment-labels">
+                                <span id="crypto-sentiment-bull-pct" class="sentiment-bull-label">--% Bullish</span>
+                                <span id="crypto-sentiment-bear-pct" class="sentiment-bear-label">--% Bearish</span>
+                            </div>
+                            <div id="crypto-watchlist-count" class="watchlist-count">-- users watching</div>
+                        </div>
+                    </div>
+
+                    <!-- Section 7: Intel Cards -->
                     <div class="crypto-intel-grid">
                         <div class="crypto-intel-card">
                             <span class="intel-title">Momentum Bias</span>
@@ -157,6 +259,7 @@
                         </div>
                     </div>
 
+                    <!-- Section 8: Institutional Briefing -->
                     <div class="crypto-briefing-card">
                         <div class="briefing-header">
                             <h3>Institutional Briefing</h3>
@@ -165,25 +268,7 @@
                         <p id="crypto-briefing-text">Market context will appear here once the asset load completes.</p>
                     </div>
 
-                    <div class="metric-summary-grid">
-                        <div class="metric-card">
-                            <span class="metric-title">Circulating Supply</span>
-                            <span id="crypto-metric-supply" class="metric-value">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">Total Supply</span>
-                            <span id="crypto-metric-total-supply" class="metric-value">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">All-Time High</span>
-                            <span id="crypto-metric-ath" class="metric-value">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">ATH Date</span>
-                            <span id="crypto-metric-ath-date" class="metric-value">--</span>
-                        </div>
-                    </div>
-
+                    <!-- Section 9: Historical Price Trajectory -->
                     <div class="chart-container-card">
                         <div class="chart-header">
                             <h3>Historical Price Trajectory</h3>
@@ -199,10 +284,13 @@
                         </div>
                     </div>
 
+                    <!-- Section 10: Tabbed Section (4 tabs) -->
                     <div class="tabs-container-card">
                         <div class="tab-selectors-strip">
                             <button class="panel-tab-btn active" data-tab="tab-crypto-overview">Market Overview</button>
-                            <button class="panel-tab-btn" data-tab="tab-crypto-stats">Advanced Statistics</button>
+                            <button class="panel-tab-btn" data-tab="tab-crypto-supply">Supply & Valuation</button>
+                            <button class="panel-tab-btn" data-tab="tab-crypto-records">ATH / ATL Records</button>
+                            <button class="panel-tab-btn" data-tab="tab-crypto-profile">Coin Profile</button>
                         </div>
                         <div class="tab-panels-viewport">
                             <div id="tab-crypto-overview" class="tab-panel active-panel">
@@ -212,25 +300,81 @@
                                             <tr><th>Metric</th><th>Value</th></tr>
                                         </thead>
                                         <tbody id="crypto-overview-table-body">
-                                            <tr><td colspan="2" class="table-empty-state">Select a cryptocurrency to view details.</td></tr>
+                                            <tr><td colspan="2" class="table-empty-state">Loading...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                            <div id="tab-crypto-stats" class="tab-panel">
+                            <div id="tab-crypto-supply" class="tab-panel">
                                 <div class="financial-table-wrapper">
                                     <table class="financial-data-table">
                                         <thead>
-                                            <tr><th>Statistic</th><th>Value</th></tr>
+                                            <tr><th>Metric</th><th>Value</th></tr>
                                         </thead>
-                                        <tbody id="crypto-stats-table-body">
-                                            <tr><td colspan="2" class="table-empty-state">Select a cryptocurrency to view statistics.</td></tr>
+                                        <tbody id="crypto-supply-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">Loading...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="tab-crypto-records" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Record</th><th>Value</th></tr>
+                                        </thead>
+                                        <tbody id="crypto-records-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">Loading...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="tab-crypto-profile" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Detail</th><th>Value</th></tr>
+                                        </thead>
+                                        <tbody id="crypto-profile-table-body">
+                                            <tr><td colspan="2" class="table-empty-state">Loading...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Section 11: About Section -->
+                    <div class="crypto-about-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <h3>About</h3>
+                            <button id="crypto-about-toggle" class="about-toggle-btn" aria-label="Toggle description text">
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div id="crypto-about-text" class="crypto-about-content collapsed">No description available.</div>
+                    </div>
+
+                    <!-- Section 12: Converter Widget -->
+                    <div class="crypto-converter-card">
+                        <div class="card-section-header">
+                            <i class="fa-solid fa-right-left"></i>
+                            <h3>Converter</h3>
+                        </div>
+                        <div class="converter-row">
+                            <div class="converter-field">
+                                <label for="crypto-converter-usd">USD</label>
+                                <input type="number" id="crypto-converter-usd" value="1000" min="0" step="any">
+                            </div>
+                            <span class="converter-equals"><i class="fa-solid fa-arrows-left-right"></i></span>
+                            <div class="converter-field">
+                                <label id="crypto-converter-symbol" for="crypto-converter-coin">COIN</label>
+                                <input type="number" id="crypto-converter-coin" value="0" min="0" step="any">
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
         </main>
