@@ -2674,7 +2674,9 @@ select {
         position: fixed;
         top: 0; left: 0; right: 0;
         height: 64px;
-        background-color: #000000;
+        background: linear-gradient(135deg, rgba(13, 19, 38, 0.98), rgba(9, 14, 28, 0.98));
+        background-image: linear-gradient(90deg, rgba(37, 99, 235, 0.15), transparent 70%), linear-gradient(180deg, rgba(2, 6, 23, 0.98), rgba(3, 7, 18, 0.98));
+        backdrop-filter: blur(20px);
         border-bottom: 1px solid rgba(37, 99, 235, 0.35);
         z-index: 99;
         align-items: center;
@@ -2683,7 +2685,12 @@ select {
         padding: 0 20px;
     }
     
-    .mobile-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+    .mobile-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: #ffffff; }
+    .mobile-logo span {
+        background: linear-gradient(90deg, #f8fafc 0%, #60a5fa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
     .brand-logo-sticker-mobile { max-height: 34px; width: auto; object-fit: contain; }
     .mobile-toggle-btn { 
         background: none; 
@@ -2900,32 +2907,51 @@ select {
     }
 
     .search-bar-container {
-        display: grid;
-        grid-template-columns: 22px minmax(0, 1fr);
+        display: flex;
+        flex-direction: row;
         align-items: center;
-        gap: 8px 10px;
-        padding: 10px;
+        padding: 6px 6px 6px 14px;
+        gap: 8px;
     }
 
     .search-bar-container .primary-btn {
-        grid-column: 1 / -1;
-        width: 100%;
-        padding: 11px 14px;
+        grid-column: auto;
+        width: auto;
+        padding: 8px 16px;
+        min-height: 38px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        white-space: nowrap;
     }
 
     .search-bar-container input {
         font-size: 0.95rem;
+        min-height: 38px;
+        flex-grow: 1;
     }
 
     .index-summary-strip {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
         gap: 10px;
+        margin-top: 14px;
+        padding-bottom: 6px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .index-summary-strip::-webkit-scrollbar {
+        display: none;
     }
 
     .index-value-card {
-        min-width: 0;
-        padding: 12px;
+        flex: 0 0 160px;
+        min-width: 160px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        gap: 4px;
     }
 
     .index-price {
@@ -2935,6 +2961,7 @@ select {
     .index-source,
     .index-change {
         overflow-wrap: anywhere;
+        font-size: 0.75rem;
     }
 
     .commodities-widget,
