@@ -240,7 +240,7 @@ async function displayMacroDetails(code, name, flag, bank) {
         const analysisDisplay = document.getElementById('macro-analysis-display');
         analysisDisplay.innerHTML = '<span class="pulse-text" style="color: var(--neon-cyan-vibrant);">Generating macroeconomic insights...</span>';
         
-        fetch(`${BACKEND_URL}/api/macro/analysis?country=${encodeURIComponent(name)}&cpi=${latestCpi?.value?.toFixed(2) || ''}&rate=${latestRate?.value?.toFixed(2) || ''}&gdp=${latestGdp?.value?.toFixed(2) || ''}&unemployment=${latestUnemploy?.value?.toFixed(2) || ''}`)
+        fetch(`${BACKEND_URL}/api/analysis?country=${encodeURIComponent(name)}&cpi=${latestCpi?.value?.toFixed(2) || ''}&rate=${latestRate?.value?.toFixed(2) || ''}&gdp=${latestGdp?.value?.toFixed(2) || ''}&unemployment=${latestUnemploy?.value?.toFixed(2) || ''}`)
             .then(res => res.json())
             .then(data => {
                 if (data.analysis) {
@@ -257,6 +257,7 @@ async function displayMacroDetails(code, name, flag, bank) {
         console.error("Macro Fetch Error:", err);
         showToast(err.message || "Failed to load macro data.");
         if(loader) loader.classList.add('hidden-element');
+        const landing = document.getElementById('macro-landing-view');
         if(landing) landing.classList.remove('hidden-element');
     }
 }

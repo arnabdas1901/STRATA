@@ -3,15 +3,54 @@ const router = express.Router();
 const { requireTicker } = require('../utils/api');
 const { AI_FRAME_INSTRUCTIONS, buildAiPrompt, getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
 
+const AI_ANALYSIS_CACHE = {};
+const AI_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 15;
+const rateLimitStore = new Map();
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const record = rateLimitStore.get(ip);
+    if (!record || now - record.windowStart > RATE_LIMIT_WINDOW) {
+        rateLimitStore.set(ip, { windowStart: now, count: 1 });
+        return true;
+    }
+    record.count++;
+    if (record.count > RATE_LIMIT_MAX) return false;
+    return true;
+}
+
+// Clean up stale entries every 5 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of rateLimitStore) {
+        if (now - record.windowStart > RATE_LIMIT_WINDOW * 2) rateLimitStore.delete(ip);
+    }
+}, 5 * 60 * 1000).unref();
+
 router.post('/analyze', async (req, res) => {
+    const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp)) {
+        return res.status(429).json({ error: 'Rate limit reached. Please wait a moment before running another scan.', errorType: 'RATE_LIMITED' });
+    }
+
     const { frame } = req.body || {};
     const symbol = requireTicker(req, res);
     if (!symbol) return;
     const frameKey = AI_FRAME_INSTRUCTIONS[frame] ? frame : 'dupont';
 
+    const cacheKey = `${symbol}_${frameKey}`;
+    const cached = AI_ANALYSIS_CACHE[cacheKey];
+    if (cached && Date.now() - cached.lastFetched < AI_CACHE_TTL) {
+        return res.json({ ...cached.data, cached: true });
+    }
+
     if (!getAiProvider()) {
         return res.status(503).json({
             error: 'No AI API key configured. Add GROQ_API_KEY (free at console.groq.com) to .env',
+            errorType: 'AI_PROVIDER_ERROR'
         });
     }
 
@@ -28,7 +67,7 @@ router.post('/analyze', async (req, res) => {
         const metricsPayload = await metricsRes.json();
 
         if (!profile?.name || typeof quote?.c !== 'number') {
-            return res.status(404).json({ error: 'Ticker not found or market data unavailable.' });
+            return res.status(404).json({ error: 'Ticker not found or market data unavailable.', errorType: 'TICKER_NOT_FOUND' });
         }
 
         // Fetch extra technical signals for momentum frame
@@ -69,7 +108,7 @@ router.post('/analyze', async (req, res) => {
         const prompt = buildAiPrompt(symbol, frameKey, profile, quote, metricsPayload, technicalData, financials);
         const { analysis, provider } = await generateAiAnalysis(prompt);
 
-        res.json({
+        const payload = {
             analysis,
             symbol,
             frame: frameKey,
@@ -77,13 +116,16 @@ router.post('/analyze', async (req, res) => {
             model: provider === 'groq'
                 ? (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile')
                 : (process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
-        });
+        };
+
+        AI_ANALYSIS_CACHE[cacheKey] = { lastFetched: Date.now(), data: payload };
+        res.json(payload);
     } catch (error) {
         console.error('AI Analyze Error:', error);
         const status = error.statusCode || 500;
         const message =
             status === 500 ? 'Failed to generate AI analysis.' : error.message;
-        res.status(status).json({ error: message });
+        res.status(status).json({ error: message, errorType: status === 404 ? 'TICKER_NOT_FOUND' : 'AI_PROVIDER_ERROR' });
     }
 });
 

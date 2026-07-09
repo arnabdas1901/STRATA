@@ -134,6 +134,8 @@ RULES:
 - Use only the JSON data below; if a field is null or missing, write "data unavailable".
 - Do not invent exact price targets or fabricated financial statement line items.
 - Show your reasoning step by step as instructed.
+- Use markdown tables (| col | col |) when presenting comparative data.
+- Never fabricate numbers, percentages, or financial figures not present in the DATA payload.
 
 TASK: ${AI_FRAME_INSTRUCTIONS[frameKey]}
 
@@ -149,6 +151,20 @@ const getAiProvider = () => {
     return null;
 };
 
+async function retryWithBackoff(fn, maxRetries = 2) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            const isTransient = [429, 500, 502, 503].includes(err.statusCode);
+            if (!isTransient || attempt === maxRetries) throw err;
+            const delayMs = 1000 * Math.pow(2, attempt);
+            console.warn(`AI retry ${attempt + 1}/${maxRetries} after ${delayMs}ms: ${err.message}`);
+            await new Promise(r => setTimeout(r, delayMs));
+        }
+    }
+}
+
 async function generateWithGroq(prompt) {
     const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -159,7 +175,10 @@ async function generateWithGroq(prompt) {
         },
         body: JSON.stringify({
             model,
-            messages: [{ role: 'user', content: prompt }],
+            messages: [
+                { role: 'system', content: prompt },
+                { role: 'user', content: 'Execute the analysis as instructed above.' }
+            ],
             temperature: 0.6,
             max_tokens: 1024,
         }),
@@ -229,8 +248,8 @@ async function generateWithGemini(prompt) {
 
 async function generateAiAnalysis(prompt) {
     const provider = getAiProvider();
-    if (provider === 'groq') return { analysis: await generateWithGroq(prompt), provider: 'groq' };
-    if (provider === 'gemini') return { analysis: await generateWithGemini(prompt), provider: 'gemini' };
+    if (provider === 'groq') return { analysis: await retryWithBackoff(() => generateWithGroq(prompt)), provider: 'groq' };
+    if (provider === 'gemini') return { analysis: await retryWithBackoff(() => generateWithGemini(prompt)), provider: 'gemini' };
     const err = new Error(
         'No AI API key configured. Add GROQ_API_KEY (free at console.groq.com, no credit card) or GEMINI_API_KEY to .env'
     );
