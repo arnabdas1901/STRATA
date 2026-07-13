@@ -3,6 +3,81 @@ import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast } from '../util
 let macroChartInstance = null;
 let globalCountryMap = [];
 
+// ── Country Metadata Registry ──────────────────────────────────────────────────
+// Maps ISO 3166-1 alpha-2 codes to emoji flags and central bank names.
+// Used by the search handler to resolve proper metadata for any country.
+const COUNTRY_META = {
+    US: { flag: '🇺🇸', bank: 'Federal Reserve' },
+    GB: { flag: '🇬🇧', bank: 'Bank of England' },
+    DE: { flag: '🇩🇪', bank: 'Bundesbank / ECB' },
+    FR: { flag: '🇫🇷', bank: 'Banque de France / ECB' },
+    JP: { flag: '🇯🇵', bank: 'Bank of Japan' },
+    CN: { flag: '🇨🇳', bank: "People's Bank of China" },
+    IN: { flag: '🇮🇳', bank: 'Reserve Bank of India' },
+    BR: { flag: '🇧🇷', bank: 'Banco Central do Brasil' },
+    CA: { flag: '🇨🇦', bank: 'Bank of Canada' },
+    AU: { flag: '🇦🇺', bank: 'Reserve Bank of Australia' },
+    KR: { flag: '🇰🇷', bank: 'Bank of Korea' },
+    MX: { flag: '🇲🇽', bank: 'Banco de México' },
+    ID: { flag: '🇮🇩', bank: 'Bank Indonesia' },
+    TR: { flag: '🇹🇷', bank: 'Central Bank of Türkiye' },
+    SA: { flag: '🇸🇦', bank: 'Saudi Central Bank' },
+    CH: { flag: '🇨🇭', bank: 'Swiss National Bank' },
+    AR: { flag: '🇦🇷', bank: 'Banco Central de Argentina' },
+    ZA: { flag: '🇿🇦', bank: 'South African Reserve Bank' },
+    RU: { flag: '🇷🇺', bank: 'Central Bank of Russia' },
+    IT: { flag: '🇮🇹', bank: "Banca d'Italia / ECB" },
+    ES: { flag: '🇪🇸', bank: 'Banco de España / ECB' },
+    NG: { flag: '🇳🇬', bank: 'Central Bank of Nigeria' },
+    EG: { flag: '🇪🇬', bank: 'Central Bank of Egypt' },
+    PK: { flag: '🇵🇰', bank: 'State Bank of Pakistan' },
+    BD: { flag: '🇧🇩', bank: 'Bangladesh Bank' },
+    TH: { flag: '🇹🇭', bank: 'Bank of Thailand' },
+    VN: { flag: '🇻🇳', bank: 'State Bank of Vietnam' },
+    PH: { flag: '🇵🇭', bank: 'Bangko Sentral ng Pilipinas' },
+    MY: { flag: '🇲🇾', bank: 'Bank Negara Malaysia' },
+    SG: { flag: '🇸🇬', bank: 'Monetary Authority of Singapore' },
+    NZ: { flag: '🇳🇿', bank: 'Reserve Bank of New Zealand' },
+    SE: { flag: '🇸🇪', bank: 'Sveriges Riksbank' },
+    NO: { flag: '🇳🇴', bank: 'Norges Bank' },
+    DK: { flag: '🇩🇰', bank: 'Danmarks Nationalbank' },
+    PL: { flag: '🇵🇱', bank: 'National Bank of Poland' },
+    CL: { flag: '🇨🇱', bank: 'Banco Central de Chile' },
+    CO: { flag: '🇨🇴', bank: 'Banco de la República' },
+    PE: { flag: '🇵🇪', bank: 'Banco Central de Reserva del Perú' },
+    IL: { flag: '🇮🇱', bank: 'Bank of Israel' },
+    AE: { flag: '🇦🇪', bank: 'Central Bank of the UAE' },
+    IE: { flag: '🇮🇪', bank: 'Central Bank of Ireland / ECB' },
+    AT: { flag: '🇦🇹', bank: 'Oesterreichische Nationalbank / ECB' },
+    BE: { flag: '🇧🇪', bank: 'National Bank of Belgium / ECB' },
+    NL: { flag: '🇳🇱', bank: 'De Nederlandsche Bank / ECB' },
+    PT: { flag: '🇵🇹', bank: 'Banco de Portugal / ECB' },
+    GR: { flag: '🇬🇷', bank: 'Bank of Greece / ECB' },
+    FI: { flag: '🇫🇮', bank: 'Bank of Finland / ECB' },
+    CZ: { flag: '🇨🇿', bank: 'Czech National Bank' },
+    HU: { flag: '🇭🇺', bank: 'Magyar Nemzeti Bank' },
+    RO: { flag: '🇷🇴', bank: 'National Bank of Romania' },
+    KE: { flag: '🇰🇪', bank: 'Central Bank of Kenya' },
+    GH: { flag: '🇬🇭', bank: 'Bank of Ghana' },
+    LK: { flag: '🇱🇰', bank: 'Central Bank of Sri Lanka' },
+    TW: { flag: '🇹🇼', bank: 'Central Bank of the ROC' },
+    CK: { flag: '🇨🇰', bank: 'Central Bank' },
+};
+
+/**
+ * Resolves the flag emoji and central bank name for a World Bank country object.
+ * Falls back to a generic globe emoji and "Central Bank" label.
+ */
+function resolveCountryMeta(countryObj) {
+    const iso2 = countryObj?.iso2Code || '';
+    const meta = COUNTRY_META[iso2];
+    return {
+        flag: meta?.flag || '🌍',
+        bank: meta?.bank || 'Central Bank',
+    };
+}
+
+// ── Entry Point ────────────────────────────────────────────────────────────────
 export async function setupInflationTracker() {
     const isDetailsPage = window.location.pathname.includes('macro-details.html');
 
@@ -10,61 +85,61 @@ export async function setupInflationTracker() {
         const res = await fetch('https://api.worldbank.org/v2/country?format=json&per_page=300');
         const data = await safeJsonParse(res);
         if (data && data[1]) {
-            globalCountryMap = data[1].filter(c => c.region.id !== 'NA'); 
+            globalCountryMap = data[1].filter(c => c.region.id !== 'NA');
         }
     } catch (e) {
-        console.warn('Could not load WB country map', e);
+        console.warn('Could not load World Bank country map', e);
     }
 
+    setupSearch();
+
     if (isDetailsPage) {
-        setupDetailsSearch();
-        
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         const name = params.get('name');
         const flag = params.get('flag') || '🌍';
         const bank = params.get('bank') || 'Central Bank';
-        
+
         if (code && name) {
             displayMacroDetails(code, name, flag, bank);
         } else {
             window.location.href = 'macro.html';
         }
     } else {
-        setupLandingSearch();
         loadMajorEconomies();
     }
 }
 
-function setupLandingSearch() {
+// ── Unified Search Handler ─────────────────────────────────────────────────────
+// Shared by both the landing page and details page.
+function setupSearch() {
     const searchBtn = document.getElementById('inflation-search-btn');
     const searchInput = document.getElementById('inflation-search-input');
-    
+
     const handleSearch = () => {
         if (!searchInput) return;
         const query = searchInput.value.trim().toLowerCase();
         if (!query) {
-            showToast("Enter a country name (e.g., Brazil, Canada).");
+            showToast('Enter a country name (e.g., Brazil, Canada).');
             return;
         }
 
-        let country = globalCountryMap.find(c => 
-            c.name.toLowerCase().includes(query) || 
-            c.id.toLowerCase() === query || 
+        const country = globalCountryMap.find(c =>
+            c.name.toLowerCase().includes(query) ||
+            c.id.toLowerCase() === query ||
             c.iso2Code.toLowerCase() === query
         );
 
         if (!country) {
-            showToast("Country not found in database. Try another name.");
+            showToast('Country not found in database. Try another name.');
             return;
         }
 
-        window.location.href = `macro-details.html?code=${country.id}&name=${encodeURIComponent(country.name)}&flag=🌍&bank=Central%20Bank`;
+        const meta = resolveCountryMeta(country);
+        window.location.href = `macro-details.html?code=${country.id}&name=${encodeURIComponent(country.name)}&flag=${encodeURIComponent(meta.flag)}&bank=${encodeURIComponent(meta.bank)}`;
     };
 
-    if (searchBtn) {
-        searchBtn.addEventListener('click', handleSearch);
-    }
+    if (searchBtn) searchBtn.addEventListener('click', handleSearch);
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleSearch();
@@ -72,42 +147,7 @@ function setupLandingSearch() {
     }
 }
 
-function setupDetailsSearch() {
-    const searchBtn = document.getElementById('inflation-search-btn');
-    const searchInput = document.getElementById('inflation-search-input');
-    
-    const handleSearch = () => {
-        if (!searchInput) return;
-        const query = searchInput.value.trim().toLowerCase();
-        if (!query) {
-            showToast("Enter a country name (e.g., Brazil, Canada).");
-            return;
-        }
-
-        let country = globalCountryMap.find(c => 
-            c.name.toLowerCase().includes(query) || 
-            c.id.toLowerCase() === query || 
-            c.iso2Code.toLowerCase() === query
-        );
-
-        if (!country) {
-            showToast("Country not found in database. Try another name.");
-            return;
-        }
-
-        window.location.href = `macro-details.html?code=${country.id}&name=${encodeURIComponent(country.name)}&flag=🌍&bank=Central%20Bank`;
-    };
-
-    if (searchBtn) {
-        searchBtn.addEventListener('click', handleSearch);
-    }
-    if (searchInput) {
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleSearch();
-        });
-    }
-}
-
+// ── World Bank Data Fetcher ────────────────────────────────────────────────────
 async function fetchWorldBankIndicator(countryCode, indicator) {
     const url = `https://api.worldbank.org/v2/country/${countryCode}/indicator/${indicator}?format=json&per_page=20`;
     const res = await fetch(url);
@@ -116,10 +156,11 @@ async function fetchWorldBankIndicator(countryCode, indicator) {
     return data[1];
 }
 
+// ── Landing Page: Major Economy Cards ──────────────────────────────────────────
 async function loadMajorEconomies() {
     const grid = document.getElementById('macro-brackets-grid');
     if (!grid) return;
-    
+
     const economies = [
         { code: 'US', name: 'United States', flag: '🇺🇸', bank: 'Federal Reserve' },
         { code: 'DE', name: 'Germany', flag: '🇩🇪', bank: 'Bundesbank / ECB' },
@@ -134,46 +175,59 @@ async function loadMajorEconomies() {
         const bracket = document.createElement('div');
         bracket.className = 'crypto-bracket-card';
         bracket.role = 'button';
-        bracket.tabindex = '0';
+        bracket.tabIndex = 0;
         bracket.innerHTML = `
             <div class="bracket-icon"><span style="font-size: 32px;">${eco.flag}</span></div>
             <div class="bracket-name">${eco.name}</div>
             <div class="bracket-symbol">${eco.bank}</div>
-            <div class="bracket-price">--%</div>
+            <div class="bracket-price"><span class="pulse-text" style="color: var(--text-secondary-muted); font-size: 0.85rem;">Loading…</span></div>
             <div class="bracket-change">CPI (YoY)</div>
         `;
         grid.appendChild(bracket);
-        
-        bracket.addEventListener('click', () => {
+
+        const navigateToDetails = () => {
             window.location.href = `macro-details.html?code=${eco.code}&name=${encodeURIComponent(eco.name)}&flag=${encodeURIComponent(eco.flag)}&bank=${encodeURIComponent(eco.bank)}`;
-        });
+        };
+        bracket.addEventListener('click', navigateToDetails);
         bracket.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                window.location.href = `macro-details.html?code=${eco.code}&name=${encodeURIComponent(eco.name)}&flag=${encodeURIComponent(eco.flag)}&bank=${encodeURIComponent(eco.bank)}`;
-            }
+            if (e.key === 'Enter' || e.key === ' ') navigateToDetails();
         });
 
-        fetchWorldBankIndicator(eco.code, 'FP.CPI.TOTL.ZG').then(data => {
-            if (data) {
-                const latest = data.find(d => d.value !== null);
-                if (latest) {
-                    const priceEl = bracket.querySelector('.bracket-price');
-                    const changeEl = bracket.querySelector('.bracket-change');
-                    priceEl.innerText = `${latest.value.toFixed(2)}%`;
-                    changeEl.style.color = latest.value > 3.0 ? '#ef4444' : '#10b981';
-                    changeEl.innerText = `CPI (YoY, ${latest.date})`;
+        fetchWorldBankIndicator(eco.code, 'FP.CPI.TOTL.ZG')
+            .then(data => {
+                const priceEl = bracket.querySelector('.bracket-price');
+                const changeEl = bracket.querySelector('.bracket-change');
+                if (data) {
+                    const latest = data.find(d => d.value !== null);
+                    if (latest) {
+                        priceEl.innerText = `${latest.value.toFixed(2)}%`;
+                        changeEl.style.color = latest.value > 3.0 ? '#ef4444' : '#10b981';
+                        changeEl.innerText = `CPI (YoY, ${latest.date})`;
+                        return;
+                    }
                 }
-            }
-        });
+                priceEl.innerText = 'N/A';
+                changeEl.innerText = 'Data unavailable';
+                changeEl.style.color = 'var(--text-secondary-muted)';
+            })
+            .catch(err => {
+                console.warn(`Failed to fetch CPI for ${eco.name}:`, err.message);
+                const priceEl = bracket.querySelector('.bracket-price');
+                const changeEl = bracket.querySelector('.bracket-change');
+                priceEl.innerText = '—';
+                changeEl.innerText = 'Fetch failed';
+                changeEl.style.color = '#ef4444';
+            });
     }
 }
 
+// ── Details Page: Full Macro Dashboard ─────────────────────────────────────────
 async function displayMacroDetails(code, name, flag, bank) {
     const loader = document.getElementById('inflation-loader');
     const results = document.getElementById('inflation-results-container');
 
-    if(loader) loader.classList.remove('hidden-element');
-    if(results) results.classList.add('hidden-element');
+    if (loader) loader.classList.remove('hidden-element');
+    if (results) results.classList.add('hidden-element');
 
     document.getElementById('country-name-display').innerText = name;
     document.getElementById('country-flag-display').innerText = flag;
@@ -192,12 +246,12 @@ async function displayMacroDetails(code, name, flag, bank) {
             throw new Error("No macroeconomic data available for this country.");
         }
 
-        const validCpi = cpiData.filter(d => d.value !== null).sort((a,b) => parseInt(a.date) - parseInt(b.date));
+        const validCpi = cpiData.filter(d => d.value !== null).sort((a, b) => parseInt(a.date) - parseInt(b.date));
         const latestCpi = validCpi.length > 0 ? validCpi[validCpi.length - 1] : null;
-        
+
         const extractLatest = (arr) => {
             if (!arr) return null;
-            const valid = arr.filter(d => d.value !== null).sort((a,b) => parseInt(b.date) - parseInt(a.date));
+            const valid = arr.filter(d => d.value !== null).sort((a, b) => parseInt(b.date) - parseInt(a.date));
             return valid.length > 0 ? valid[0] : null;
         };
 
@@ -217,14 +271,14 @@ async function displayMacroDetails(code, name, flag, bank) {
         document.getElementById('metric-gdp-growth').innerText = latestGdp ? `${latestGdp.value.toFixed(2)}%` : 'N/A';
         document.getElementById('metric-unemployment').innerText = latestUnemploy ? `${latestUnemploy.value.toFixed(2)}%` : 'N/A';
         document.getElementById('metric-current-account').innerText = latestCurrentAcct ? `${latestCurrentAcct.value.toFixed(2)}%` : 'N/A';
-        
+
         const countryObj = globalCountryMap.find(c => c.id === code || c.iso2Code === code);
         document.getElementById('currency-badge').innerText = countryObj && countryObj.capitalCity ? `Capital: ${countryObj.capitalCity}` : 'Sovereign Macro';
 
-        // Prepare chart data (Align to CPI dates)
+        // Prepare chart data (Align interest rate series to CPI date labels)
         const labels = validCpi.map(d => d.date);
         const cpiValues = validCpi.map(d => d.value);
-        
+
         const rateMap = {};
         if (rateData) {
             rateData.forEach(d => { if (d.value !== null) rateMap[d.date] = d.value; });
@@ -233,13 +287,13 @@ async function displayMacroDetails(code, name, flag, bank) {
 
         renderMacroChart(labels, cpiValues, rateValues);
 
-        if(loader) loader.classList.add('hidden-element');
-        if(results) results.classList.remove('hidden-element');
+        if (loader) loader.classList.add('hidden-element');
+        if (results) results.classList.remove('hidden-element');
 
-        // Fetch AI Analysis asynchronously
+        // Fetch AI Analysis asynchronously (non-blocking)
         const analysisDisplay = document.getElementById('macro-analysis-display');
         analysisDisplay.innerHTML = '<span class="pulse-text" style="color: var(--neon-cyan-vibrant);">Generating macroeconomic insights...</span>';
-        
+
         fetch(`${BACKEND_URL}/api/analysis?country=${encodeURIComponent(name)}&cpi=${latestCpi?.value?.toFixed(2) || ''}&rate=${latestRate?.value?.toFixed(2) || ''}&gdp=${latestGdp?.value?.toFixed(2) || ''}&unemployment=${latestUnemploy?.value?.toFixed(2) || ''}`)
             .then(res => res.json())
             .then(data => {
@@ -256,23 +310,23 @@ async function displayMacroDetails(code, name, flag, bank) {
     } catch (err) {
         console.error("Macro Fetch Error:", err);
         showToast(err.message || "Failed to load macro data.");
-        if(loader) loader.classList.add('hidden-element');
+        if (loader) loader.classList.add('hidden-element');
         const landing = document.getElementById('macro-landing-view');
-        if(landing) landing.classList.remove('hidden-element');
+        if (landing) landing.classList.remove('hidden-element');
     }
 }
 
+// ── Chart Rendering ────────────────────────────────────────────────────────────
 function renderMacroChart(labels, cpiData, rateData) {
     const canvas = document.getElementById('inflationHistoricalChart');
     if (!canvas) return;
 
     const latestValue = cpiData.length > 0 ? cpiData[cpiData.length - 1] : 0;
     const isRunningHot = latestValue > 2.5;
-    const cpiLineColor = isRunningHot ? '#ef4444' : '#10b981'; // Red or Green
+    const cpiLineColor = isRunningHot ? '#ef4444' : '#10b981';
     const cpiFillColor = isRunningHot ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
 
-    const rateLineColor = '#3b82f6'; // Blue for Interest Rate
-    const rateFillColor = 'rgba(59, 130, 246, 0.1)';
+    const rateLineColor = '#3b82f6';
 
     if (macroChartInstance) {
         macroChartInstance.destroy();
@@ -292,7 +346,8 @@ function renderMacroChart(labels, cpiData, rateData) {
                     tension: 0.3,
                     fill: true,
                     pointRadius: 4,
-                    borderWidth: 2,
+                    pointHoverRadius: 6,
+                    borderWidth: 2.5,
                 },
                 {
                     label: 'Lending Interest Rate (%)',
@@ -304,6 +359,7 @@ function renderMacroChart(labels, cpiData, rateData) {
                     fill: false,
                     borderDash: [5, 5],
                     pointRadius: 3,
+                    pointHoverRadius: 5,
                     borderWidth: 2,
                 }
             ]
@@ -317,41 +373,44 @@ function renderMacroChart(labels, cpiData, rateData) {
                 intersect: false,
             },
             plugins: {
-                legend: { 
+                legend: {
                     display: true,
-                    labels: { color: '#8f9bb3' }
+                    labels: { color: '#8f9bb3', usePointStyle: true, pointStyle: 'circle', padding: 16 }
                 },
                 tooltip: {
-                    backgroundColor: '#1a1f2e',
-                    titleColor: '#8f9bb3',
-                    bodyColor: '#ffffff',
-                    borderColor: '#2e3852',
+                    backgroundColor: 'rgba(13, 19, 38, 0.95)',
+                    titleColor: '#94a3b8',
+                    bodyColor: '#f8fafc',
+                    borderColor: 'rgba(37, 99, 235, 0.3)',
                     borderWidth: 1,
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: true,
                     callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) + '%' : 'N/A'}`
                     }
                 }
             },
             scales: {
                 x: {
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#8f9bb3' }
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: { color: '#64748b', font: { size: 11 } }
                 },
                 y: {
                     type: 'linear',
                     display: true,
                     position: 'left',
-                    title: { display: true, text: 'Inflation (%)', color: '#8f9bb3' },
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#8f9bb3', callback: (val) => val + '%' }
+                    title: { display: true, text: 'Inflation (%)', color: '#64748b', font: { weight: '500' } },
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: { color: '#64748b', callback: (val) => val + '%' }
                 },
                 y1: {
                     type: 'linear',
                     display: true,
                     position: 'right',
-                    title: { display: true, text: 'Interest Rate (%)', color: '#8f9bb3' },
+                    title: { display: true, text: 'Interest Rate (%)', color: '#64748b', font: { weight: '500' } },
                     grid: { drawOnChartArea: false },
-                    ticks: { color: '#8f9bb3', callback: (val) => val + '%' }
+                    ticks: { color: '#64748b', callback: (val) => val + '%' }
                 }
             }
         }

@@ -85,16 +85,16 @@
 
                 <div class="forex-kpi-bar">
                     <div class="forex-kpi-item">
-                        <span class="kpi-label">Global Forex Volume</span>
+                        <span class="kpi-label">Daily Volume (BIS Est.)</span>
                         <span class="kpi-value font-mono">$7.5T / Day</span>
                     </div>
                     <div class="forex-kpi-item">
-                        <span class="kpi-label">USD Index (DXY)</span>
-                        <span class="kpi-value font-mono" style="color: var(--neon-cyan-vibrant);">104.25 <i class="fa-solid fa-caret-up"></i></span>
+                        <span class="kpi-label">EUR / USD</span>
+                        <span id="kpi-eur-usd-value" class="kpi-value font-mono" style="color: var(--neon-cyan-vibrant);"><span class="pulse-text" style="font-size: 0.85rem;">Loading…</span></span>
                     </div>
                     <div class="forex-kpi-item">
-                        <span class="kpi-label">Market Status</span>
-                        <span class="kpi-value font-mono" style="color: #10b981;">Open <i class="fa-solid fa-globe"></i></span>
+                        <span class="kpi-label">Data Source</span>
+                        <span id="kpi-data-source" class="kpi-value font-mono" style="color: #10b981;"><span class="pulse-text" style="font-size: 0.85rem;">Connecting…</span></span>
                     </div>
                 </div>
 
@@ -115,6 +115,7 @@
                                     <th>Pair</th>
                                     <th>Currency</th>
                                     <th>Price (Live)</th>
+                                    <th>24h Change (%)</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -124,6 +125,7 @@
                                     <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/CAD</td>
                                     <td>Canadian Dollar <i class="fa-solid fa-dollar-sign"></i></td>
                                     <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
                                     <td><button class="secondary-btn small-btn">Analyze</button></td>
                                 </tr>
                                 <!-- Euro -->
@@ -131,6 +133,7 @@
                                     <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">EUR/USD</td>
                                     <td>Euro <i class="fa-solid fa-euro-sign"></i></td>
                                     <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
                                     <td><button class="secondary-btn small-btn">Analyze</button></td>
                                 </tr>
                                 <!-- British Pound -->
@@ -138,6 +141,7 @@
                                     <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">GBP/USD</td>
                                     <td>British Pound <i class="fa-solid fa-sterling-sign"></i></td>
                                     <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
                                     <td><button class="secondary-btn small-btn">Analyze</button></td>
                                 </tr>
                                 <!-- Japanese Yen -->
@@ -145,6 +149,7 @@
                                     <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/JPY</td>
                                     <td>Japanese Yen <i class="fa-solid fa-yen-sign"></i></td>
                                     <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
                                     <td><button class="secondary-btn small-btn">Analyze</button></td>
                                 </tr>
                                 <!-- Chinese Yuan -->
@@ -152,6 +157,7 @@
                                     <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/CNY</td>
                                     <td>Chinese Yuan <i class="fa-solid fa-yen-sign"></i></td>
                                     <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
                                     <td><button class="secondary-btn small-btn">Analyze</button></td>
                                 </tr>
                                 <!-- Indian Rupee -->
@@ -159,6 +165,47 @@
                                     <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/INR</td>
                                     <td>Indian Rupee <i class="fa-solid fa-rupee-sign"></i></td>
                                     <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
+                                    <td><button class="secondary-btn small-btn">Analyze</button></td>
+                                </tr>
+                                <!-- Swiss Franc -->
+                                <tr class="forex-table-row crypto-bracket-card" role="button" tabindex="0">
+                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/CHF</td>
+                                    <td>Swiss Franc <i class="fa-solid fa-money-bill-1-wave"></i></td>
+                                    <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
+                                    <td><button class="secondary-btn small-btn">Analyze</button></td>
+                                </tr>
+                                <!-- Australian Dollar -->
+                                <tr class="forex-table-row crypto-bracket-card" role="button" tabindex="0">
+                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">AUD/USD</td>
+                                    <td>Australian Dollar <i class="fa-solid fa-dollar-sign"></i></td>
+                                    <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
+                                    <td><button class="secondary-btn small-btn">Analyze</button></td>
+                                </tr>
+                                <!-- New Zealand Dollar -->
+                                <tr class="forex-table-row crypto-bracket-card" role="button" tabindex="0">
+                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">NZD/USD</td>
+                                    <td>New Zealand Dollar <i class="fa-solid fa-dollar-sign"></i></td>
+                                    <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
+                                    <td><button class="secondary-btn small-btn">Analyze</button></td>
+                                </tr>
+                                <!-- Singapore Dollar -->
+                                <tr class="forex-table-row crypto-bracket-card" role="button" tabindex="0">
+                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/SGD</td>
+                                    <td>Singapore Dollar <i class="fa-solid fa-dollar-sign"></i></td>
+                                    <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
+                                    <td><button class="secondary-btn small-btn">Analyze</button></td>
+                                </tr>
+                                <!-- South African Rand -->
+                                <tr class="forex-table-row crypto-bracket-card" role="button" tabindex="0">
+                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/ZAR</td>
+                                    <td>South African Rand <i class="fa-solid fa-coins"></i></td>
+                                    <td class="bracket-price font-mono">--</td>
+                                    <td class="bracket-change font-mono">--</td>
                                     <td><button class="secondary-btn small-btn">Analyze</button></td>
                                 </tr>
                             </tbody>

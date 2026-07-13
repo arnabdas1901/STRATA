@@ -145,14 +145,16 @@ router.get('/indices', async (req, res) => {
 });
 
 const MACRO_ANALYSIS_CACHE = {};
+const MACRO_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 router.get('/analysis', async (req, res) => {
     const { country, cpi, rate, gdp, unemployment } = req.query;
     if (!country) return res.status(400).json({ error: 'Country required' });
 
     const cacheKey = `${country}_${cpi}_${rate}`;
-    if (MACRO_ANALYSIS_CACHE[cacheKey]) {
-        return res.json({ analysis: MACRO_ANALYSIS_CACHE[cacheKey] });
+    const cached = MACRO_ANALYSIS_CACHE[cacheKey];
+    if (cached && Date.now() - cached.timestamp < MACRO_CACHE_TTL) {
+        return res.json({ analysis: cached.analysis });
     }
 
     try {
@@ -171,7 +173,7 @@ Current Data Context:
 Assess their central bank's current stance (Hawkish, Dovish, or Neutral) and the general economic health based on this data. Do not include disclaimers or conversational filler. Make it sound like a premium Bloomberg terminal insight.`;
 
         const { analysis } = await generateAiAnalysis(prompt);
-        MACRO_ANALYSIS_CACHE[cacheKey] = analysis;
+        MACRO_ANALYSIS_CACHE[cacheKey] = { analysis, timestamp: Date.now() };
         res.json({ analysis });
     } catch (error) {
         console.error('AI Macro Analysis Error:', error.message);
