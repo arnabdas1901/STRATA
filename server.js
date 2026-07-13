@@ -11,8 +11,15 @@ if (!process.execArgv.includes('--use-system-ca')) {
 
 const app = express();
 
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000').split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(cors({
-    origin: '*', // Allow all origins for Vercel/Render preview environments
+    origin: (origin, callback) => {
+        if (!origin || CORS_ORIGINS.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback({ message: 'CORS origin not allowed', statusCode: 403 });
+        }
+    },
 }));
 app.use(express.json());
 
@@ -45,6 +52,14 @@ app.use('/api/commodities', commoditiesRoutes);
 app.use('/api/forex', forexRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/stress', stressRoutes);
+
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', service: 'forex-api', timestamp: new Date().toISOString() });
+});
 
 // Error Handling Middleware
 app.use((error, req, res, next) => {

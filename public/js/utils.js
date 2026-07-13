@@ -77,6 +77,23 @@ export async function safeJsonParse(response) {
     }
 }
 
+export function normalizeForexPair(value) {
+    const raw = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+    const slashMatch = raw.match(/^([A-Z]{3})\/([A-Z]{3})$/);
+    if (slashMatch) {
+        const [_, from, to] = slashMatch;
+        if (from === to) return null;
+        return `${from}/${to}`;
+    }
+    if (/^[A-Z]{6}$/.test(raw)) {
+        const from = raw.slice(0, 3);
+        const to = raw.slice(3, 6);
+        if (from === to) return null;
+        return `${from}/${to}`;
+    }
+    return null;
+}
+
 export function escapeHtml(text) {
     return String(text)
         .replace(/&/g, '&amp;')

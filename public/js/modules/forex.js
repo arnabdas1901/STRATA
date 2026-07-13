@@ -1,4 +1,4 @@
-import { BACKEND_URL, safeJsonParse, showToast } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, normalizeForexPair } from '../utils.js';
 
 let forexChartInstance = null;
 let currentForexPair = null;
@@ -17,9 +17,10 @@ export async function setupForexTracker() {
         
         const params = new URLSearchParams(window.location.search);
         const symbol = params.get('symbol');
-        if (symbol) {
-            activeSymbol = symbol;
-            executeForexSearch(symbol, activeDays);
+        const normalized = normalizeForexPair(symbol);
+        if (normalized) {
+            activeSymbol = normalized;
+            executeForexSearch(normalized, activeDays);
         } else {
             window.location.href = 'forex.html';
         }
@@ -36,17 +37,8 @@ function setupSearch() {
 
     const handleSearch = () => {
         if (!searchInput) return;
-        const raw = searchInput.value.trim();
-        if (!raw) {
-            showToast('Please enter a currency pair (e.g. GBP/USD)');
-            return;
-        }
-
-        const normalized = raw.toUpperCase().replace(/\s+/g, '');
-        const slashMatch = normalized.match(/^([A-Z]{3})\/([A-Z]{3})$/);
-        const concatMatch = normalized.match(/^([A-Z]{6})$/);
-
-        if (!slashMatch && !concatMatch) {
+        const normalized = normalizeForexPair(searchInput.value);
+        if (!normalized) {
             showToast('Invalid format. Use XXX/YYY (e.g. EUR/USD) or XXXYYY (e.g. EURUSD).');
             return;
         }
@@ -104,9 +96,11 @@ function setupLandingGridClicks() {
 
 async function loadLatestForexRates() {
     try {
-        const res = await fetch(`${BACKEND_URL}/api/forex/latest`);
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/forex/latest`, { timeout: 8000 });
         const data = await safeJsonParse(res);
-        if (!data || !data.rates) return;
+        if (!res.ok || !data || !data.rates) {
+            throw new Error(data?.error || 'No forex rate data returned');
+        }
 
         const cards = document.querySelectorAll('#forex-brackets-grid .forex-table-row');
         cards.forEach(card => {
@@ -135,7 +129,6 @@ async function loadLatestForexRates() {
                     changePercent = metric.changePercent;
                 }
             } else if (toCurrency === 'USD') {
-                // Inverted pair (e.g. EUR/USD)
                 const metric = data.changes[fromCurrency];
                 if (metric && metric.rate > 0) {
                     const yesterdayRate = metric.rate - metric.change;
@@ -155,21 +148,22 @@ async function loadLatestForexRates() {
             }
         });
 
-        // Populate EUR/USD live rate inside KPI bar
+        const providerLabel = data.provider || 'Frankfurter (ECB)';
+        const providerText = `${providerLabel}${data.lastRefreshed ? ` · ${new Date(data.lastRefreshed).toLocaleTimeString()}` : ''}`;
+        const kpiSource = document.getElementById('kpi-data-source');
+        if (kpiSource) {
+            kpiSource.innerHTML = `${providerText} <i class="fa-solid fa-check-circle" style="font-size: 0.8em;"></i>`;
+        }
+
         const eurMetric = data.changes['EUR'];
         const kpiEurUsd = document.getElementById('kpi-eur-usd-value');
         if (kpiEurUsd && eurMetric && eurMetric.rate > 0) {
             const eurUsdRate = 1 / eurMetric.rate;
             kpiEurUsd.innerHTML = `${eurUsdRate.toFixed(4)} <i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 0.7em;"></i>`;
         }
-
-        const kpiSource = document.getElementById('kpi-data-source');
-        if (kpiSource && data.date) {
-            kpiSource.innerHTML = `ECB ${data.date} <i class="fa-solid fa-check-circle" style="font-size: 0.8em;"></i>`;
-        }
-
     } catch (err) {
         console.warn('Could not load latest forex rates', err);
+        showToast('Unable to refresh forex benchmarks. Showing the latest available data.');
     }
 }
 
@@ -184,11 +178,10 @@ async function executeForexSearch(pairQuery, days = 365) {
     if (errorContainer) errorContainer.classList.add('hidden-element');
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/forex/search?pair=${encodeURIComponent(pairQuery)}&days=${days}`);
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/forex/search?pair=${encodeURIComponent(pairQuery)}&days=${days}`, { timeout: 10000 });
         const data = await safeJsonParse(res);
-
-        if (data.error) {
-            throw new Error(data.error);
+        if (!res.ok || data?.error) {
+            throw new Error(data?.error || 'Failed to retrieve forex data');
         }
 
         const isPositive = data.change >= 0;

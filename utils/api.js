@@ -8,6 +8,24 @@ const normalizeCryptoQuery = (value) => {
     return /^[A-Za-z0-9 ._-]{1,64}$/.test(query) ? query : null;
 };
 
+const normalizeForexPair = (value) => {
+    const raw = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!raw) return null;
+    const slashMatch = raw.match(/^([A-Z]{3})\/([A-Z]{3})$/);
+    if (slashMatch) {
+        const [_, from, to] = slashMatch;
+        if (from === to) return null;
+        return `${from}/${to}`;
+    }
+    if (/^[A-Z]{6}$/.test(raw)) {
+        const from = raw.slice(0, 3);
+        const to = raw.slice(3, 6);
+        if (from === to) return null;
+        return `${from}/${to}`;
+    }
+    return null;
+};
+
 const requireTicker = (req, res) => {
     const symbol = normalizeTicker(req.query.symbol ?? req.body?.ticker ?? req.body?.symbol);
     if (!symbol) {
@@ -36,7 +54,8 @@ async function fetchJson(url, options = {}) {
 module.exports = {
     normalizeTicker,
     normalizeCryptoQuery,
+    normalizeForexPair,
     requireTicker,
     parseMarketNumber,
     fetchJson
-};
+}
