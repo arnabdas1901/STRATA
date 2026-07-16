@@ -6,27 +6,35 @@ let activeEquityTicker = null;
 let rawNewsArticles = []; // Global store for loaded news articles
 
 export function loadDashboard() {
-    setupTabs('#dashboard-equity');
-    
-    const isDetailsPage = window.location.pathname.includes('equity-details.html');
-    
-    if (isDetailsPage) {
-        setupSearch();
-        setupTimeframeSelectors();
+    const init = () => {
+        setupTabs('#dashboard-equity');
         
-        const params = new URLSearchParams(window.location.search);
-        const symbol = params.get('symbol');
-        if (symbol) {
-            executeEquityAnalysis(symbol);
+        const isDetailsPage = window.location.pathname.includes('equity-details.html');
+        
+        if (isDetailsPage) {
+            setupSearch();
+            setupTimeframeSelectors();
+            
+            const params = new URLSearchParams(window.location.search);
+            const symbol = params.get('symbol');
+            if (symbol) {
+                executeEquityAnalysis(symbol);
+            } else {
+                window.location.href = 'index.html';
+            }
         } else {
-            window.location.href = 'index.html';
+            setupSearch();
+            setupWatchlist();
+            fetchLiveIndexValues();
+            setupMarketNews();
+            setupNewsFilters();
         }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        setupSearch();
-        setupWatchlist();
-        fetchLiveIndexValues();
-        setupMarketNews();
-        setupNewsFilters();
+        init();
     }
 }
 

@@ -1,9 +1,15 @@
-document.addEventListener('DOMContentLoaded', () => {
+function init() {
     setupMobileMenu();
     enhancePageShell();
     animateMetricValues();
     setupPageReveal();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
 function setupMobileMenu() {
     const toggleBtn = document.getElementById('mobile-menu-toggle');
@@ -63,4 +69,3 @@ function setupPageReveal() {
     if (!content) return;
     content.classList.add('page-revealed');
 }
-

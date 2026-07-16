@@ -78,35 +78,43 @@ function resolveCountryMeta(countryObj) {
 }
 
 // ── Entry Point ────────────────────────────────────────────────────────────────
-export async function setupInflationTracker() {
-    const isDetailsPage = window.location.pathname.includes('macro-details.html');
+export function setupInflationTracker() {
+    const init = async () => {
+        const isDetailsPage = window.location.pathname.includes('macro-details.html');
 
-    try {
-        const res = await fetch('https://api.worldbank.org/v2/country?format=json&per_page=300');
-        const data = await safeJsonParse(res);
-        if (data && data[1]) {
-            globalCountryMap = data[1].filter(c => c.region.id !== 'NA');
+        try {
+            const res = await fetch('https://api.worldbank.org/v2/country?format=json&per_page=300');
+            const data = await safeJsonParse(res);
+            if (data && data[1]) {
+                globalCountryMap = data[1].filter(c => c.region.id !== 'NA');
+            }
+        } catch (e) {
+            console.warn('Could not load World Bank country map', e);
         }
-    } catch (e) {
-        console.warn('Could not load World Bank country map', e);
-    }
 
-    setupSearch();
+        setupSearch();
 
-    if (isDetailsPage) {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
-        const name = params.get('name');
-        const flag = params.get('flag') || '🌍';
-        const bank = params.get('bank') || 'Central Bank';
+        if (isDetailsPage) {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const name = params.get('name');
+            const flag = params.get('flag') || '🌍';
+            const bank = params.get('bank') || 'Central Bank';
 
-        if (code && name) {
-            displayMacroDetails(code, name, flag, bank);
+            if (code && name) {
+                displayMacroDetails(code, name, flag, bank);
+            } else {
+                window.location.href = 'macro.html';
+            }
         } else {
-            window.location.href = 'macro.html';
+            loadMajorEconomies();
         }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        loadMajorEconomies();
+        init();
     }
 }
 

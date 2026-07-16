@@ -7,26 +7,34 @@ let activeDays = 365;
 let isSwapped = false;
 
 // ── Entry Point ────────────────────────────────────────────────────────────────
-export async function setupForexTracker() {
-    const isDetailsPage = window.location.pathname.includes('forex-details.html');
+export function setupForexTracker() {
+    const init = async () => {
+        const isDetailsPage = window.location.pathname.includes('forex-details.html');
 
-    setupSearch();
+        setupSearch();
 
-    if (isDetailsPage) {
-        setupDetailsPageHandlers();
-        
-        const params = new URLSearchParams(window.location.search);
-        const symbol = params.get('symbol');
-        const normalized = normalizeForexPair(symbol);
-        if (normalized) {
-            activeSymbol = normalized;
-            executeForexSearch(normalized, activeDays);
+        if (isDetailsPage) {
+            setupDetailsPageHandlers();
+            
+            const params = new URLSearchParams(window.location.search);
+            const symbol = params.get('symbol');
+            const normalized = normalizeForexPair(symbol);
+            if (normalized) {
+                activeSymbol = normalized;
+                executeForexSearch(normalized, activeDays);
+            } else {
+                window.location.href = 'forex.html';
+            }
         } else {
-            window.location.href = 'forex.html';
+            setupLandingGridClicks();
+            loadLatestForexRates();
         }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        setupLandingGridClicks();
-        loadLatestForexRates();
+        init();
     }
 }
 
