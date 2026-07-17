@@ -11,6 +11,13 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        if (window.location.protocol === 'file:') {
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0e1a;color:#e2e8f0;font-family:Inter,sans-serif;text-align:center;padding:2rem;"><div><h1 style="color:#38bdf8;margin-bottom:1rem;">⚠️ STRATA Server Required</h1><p style="max-width:500px;line-height:1.7;color:#94a3b8;">This app cannot run from a local file. Please start the backend server by running <code style="background:#1e293b;padding:2px 8px;border-radius:4px;color:#38bdf8;">npm start</code> in your terminal, then open <a href="http://localhost:3000" style="color:#38bdf8;">http://localhost:3000</a> in your browser.</p></div></div>';
+            });
+        }
+    </script>
 </head>
 <body>
 

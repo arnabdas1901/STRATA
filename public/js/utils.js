@@ -1,4 +1,17 @@
-export const BACKEND_URL = window.location.origin;
+export const BACKEND_URL = (() => {
+    const origin = window.location.origin;
+    // If opened via file:// protocol, always target localhost:3000
+    if (window.location.protocol === 'file:' || origin === 'null') {
+        return 'http://localhost:3000';
+    }
+    // If on localhost/127.0.0.1 but NOT on the backend port, redirect API calls to port 3000
+    const host = window.location.hostname;
+    if ((host === 'localhost' || host === '127.0.0.1') && window.location.port !== '3000') {
+        return 'http://localhost:3000';
+    }
+    // Production or same-port: use the current origin
+    return origin;
+})();
 
 const requestCache = new Map();
 const inFlightRequests = new Map();

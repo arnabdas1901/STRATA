@@ -11,14 +11,31 @@ if (!process.execArgv.includes('--use-system-ca')) {
 
 const app = express();
 
-const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000').split(',').map((origin) => origin.trim()).filter(Boolean);
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || CORS_ORIGINS.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback({ message: 'CORS origin not allowed', statusCode: 403 });
+        // Allow requests with no origin (same-origin, server-to-server, curl, etc.)
+        if (!origin) {
+            return callback(null, true);
         }
+        // Allow explicitly configured origins
+        if (CORS_ORIGINS.length > 0 && CORS_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+        // Allow any port on localhost / 127.0.0.1 for local development
+        try {
+            const url = new URL(origin);
+            if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+                return callback(null, true);
+            }
+        } catch (e) {
+            // invalid origin URL
+        }
+        // If no CORS_ORIGINS are configured (pure local dev mode), allow all
+        if (CORS_ORIGINS.length === 0) {
+            return callback(null, true);
+        }
+        callback({ message: 'CORS origin not allowed', statusCode: 403 });
     },
 }));
 app.use(express.json());
