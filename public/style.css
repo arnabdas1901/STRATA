@@ -302,22 +302,22 @@ select {
 }
 
 .dashboard-header-block {
-    margin-bottom: 32px;
+    margin-bottom: 18px;
 }
 
 .dashboard-header-block h1 {
-    font-size: 2rem;
+    font-size: 1.95rem;
     font-weight: 700;
     letter-spacing: -0.5px;
-    margin-bottom: 6px;
-    background: linear-gradient(90deg, #f8fafc 0%, #7dd3fc 45%, #60a5fa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+    color: #f8fafc;
 }
 
 .subtitle {
     color: var(--text-secondary-muted);
-    font-size: 1rem;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    opacity: 0.88;
 }
 
 /* Universal Card & Layout UI Mechanics */
@@ -2893,19 +2893,19 @@ select {
     }
 
     .dashboard-header-block {
-        margin-bottom: 20px;
+        margin-bottom: 10px;
     }
 
     .dashboard-header-block h1 {
         font-size: 1.45rem;
         line-height: 1.2;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
         letter-spacing: 0;
     }
 
     .subtitle {
-        font-size: 0.9rem;
-        line-height: 1.45;
+        font-size: 0.78rem;
+        line-height: 1.35;
     }
 
     .search-wrapper {
@@ -4175,9 +4175,109 @@ select {
         align-items: flex-start;
         gap: 16px;
     }
-    .forex-data-table th:nth-child(2),
+}
+
+@media (max-width: 600px) {
+    .forex-data-table-container {
+        overflow-x: visible;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+
+    .forex-data-table {
+        display: block;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+    }
+
+    .forex-data-table thead {
+        display: none;
+    }
+
+    .forex-data-table tbody {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 4px 0;
+    }
+
+    .forex-table-row {
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.95));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        padding: 16px 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .forex-table-row:hover {
+        transform: translateY(-2px);
+        border-color: var(--neon-cyan-vibrant);
+        background: linear-gradient(180deg, rgba(6, 182, 212, 0.12), rgba(15, 23, 42, 0.95));
+        box-shadow: 0 12px 30px rgba(6, 182, 212, 0.15);
+    }
+
+    .forex-data-table td {
+        display: block;
+        border: none;
+        padding: 3px 0;
+        width: 100%;
+        text-align: center;
+    }
+
+    .forex-data-table td.bracket-symbol {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: -0.2px;
+        color: var(--neon-cyan-vibrant);
+        margin-bottom: 2px;
+    }
+
     .forex-data-table td:nth-child(2) {
-        display: none; /* Hide currency full name on mobile */
+        display: block !important;
+        font-size: 0.78rem;
+        color: var(--text-secondary-muted);
+        line-height: 1.3;
+        margin-bottom: 8px;
+        padding: 0 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .forex-data-table td.bracket-price {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary-white) !important;
+        margin-top: 4px;
+    }
+
+    .forex-data-table td.bracket-change {
+        font-size: 0.8rem;
+        margin-bottom: 12px;
+    }
+
+    .forex-data-table td.action-cell {
+        margin-top: auto;
+        padding-top: 8px;
+    }
+
+    .forex-data-table td.action-cell .action-button {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .forex-data-table tbody {
+        grid-template-columns: 1fr;
     }
 }
 /* ==========================================================================
@@ -5108,5 +5208,255 @@ select {
     }
     .crypto-intel-grid {
         grid-template-columns: 1fr !important;
+    }
+}
+
+/* ==========================================================================
+   STRESS TESTER ENGINE PRODUCTION UPGRADE STYLING
+   ========================================================================== */
+
+/* 1. Custom Sliders and Live Values */
+.shock-value-display {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--neon-cyan-vibrant);
+}
+.shock-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, #ef4444 0%, #1e293b 50%, #10b981 100%);
+    outline: none;
+    margin: 8px 0;
+}
+.shock-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-primary-white);
+    border: 2px solid var(--neon-cyan-vibrant);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--neon-cyan-vibrant);
+    transition: transform 0.1s ease;
+}
+.shock-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* Presets Panel */
+.stress-presets-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.preset-badge {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary-muted);
+    font-size: 0.78rem;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.preset-badge:hover {
+    border-color: var(--neon-cyan-vibrant);
+    color: var(--text-primary-white);
+    background: rgba(6, 182, 212, 0.1);
+}
+
+/* 2. Loading Progress & Stepper */
+.stress-progress-bar-wrap {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    margin: 16px 0;
+    overflow: hidden;
+}
+.stress-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-blue-accent), var(--neon-cyan-vibrant));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+.stress-stepper {
+    display: flex;
+    justify-content: space-between;
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0 0;
+    width: 100%;
+    gap: 12px;
+}
+.stepper-item {
+    flex: 1;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-secondary-muted);
+    padding: 8px 4px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+.stepper-item.active {
+    color: var(--neon-cyan-vibrant);
+    border-bottom-color: var(--neon-cyan-vibrant);
+    font-weight: 600;
+    text-shadow: 0 0 8px rgba(6, 182, 212, 0.3);
+}
+.stepper-item.completed {
+    color: #10b981;
+    border-bottom-color: #10b981;
+}
+
+/* 3. Portfolio Efficiency Hero */
+.stress-efficiency-hero {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+.efficiency-hero-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+.efficiency-score-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.efficiency-ring-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+.progress-ring {
+    transform: rotate(-90deg);
+}
+.progress-ring__circle {
+    transition: stroke-dashoffset 0.35s;
+    transform-origin: 50% 50%;
+}
+.efficiency-score-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-mono);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary-white);
+}
+.efficiency-score-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.efficiency-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary-muted);
+}
+.efficiency-verdict {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+.efficiency-score-right {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    flex-grow: 1;
+    max-width: 480px;
+}
+.efficiency-metric-pill {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+}
+.pill-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.pill-name {
+    color: var(--text-secondary-muted);
+}
+.pill-value {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary-white);
+    margin-left: auto;
+}
+
+/* 4. Heatmap Matrix styling */
+.heatmap-cell {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center !important;
+    padding: 12px !important;
+    transition: background-color 0.2s;
+}
+
+/* Table refinements */
+#correlation-card table,
+#stress-tail-risk-card table,
+#stress-comparison-card table {
+    width: 100%;
+}
+
+/* 5. PDF Watermark styling */
+.pdf-watermark-header {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--neon-cyan-vibrant);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+}
+.pdf-watermark-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary-white);
+    letter-spacing: 1px;
+}
+.pdf-watermark-timestamp {
+    font-size: 0.8rem;
+    color: var(--text-secondary-muted);
+}
+
+@media (max-width: 768px) {
+    .efficiency-hero-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .efficiency-score-right {
+        max-width: 100%;
+        grid-template-columns: 1fr 1fr;
+    }
+    .stress-stepper {
+        flex-wrap: wrap;
+    }
+    .stepper-item {
+        flex-basis: 45%;
     }
 }

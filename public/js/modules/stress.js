@@ -3,6 +3,8 @@ import { BACKEND_URL, safeJsonParse, showToast } from '../utils.js';
 // ─── Chart Instances ────────────────────────────────────────────────
 let drawdownChartInstance = null;
 let monteCarloChartInstance = null;
+let comparisonChartInstance = null;
+let tailRiskChartInstance = null;
 
 // ─── Asset Classes (mirrored from portfolio.js for independence) ────
 const ASSET_CLASSES = {
@@ -244,7 +246,7 @@ function runCustomStressTest(allocations, capital) {
 
 // ─── Monte Carlo Simulation ─────────────────────────────────────────
 
-function runMonteCarloSimulation(allocations, capital, years, numPaths) {
+async function runMonteCarloSimulation(allocations, capital, years, numPaths, onProgress) {
     const months = years * 12;
     const weights = ASSET_KEYS.map(key => (allocations[key] || 0) / 100);
     const paths = [];
@@ -269,6 +271,12 @@ function runMonteCarloSimulation(allocations, capital, years, numPaths) {
             path.push(value);
         }
         paths.push(path);
+
+        if (p > 0 && p % 100 === 0) {
+            if (onProgress) onProgress(p);
+            // Yield execution to the browser main thread
+            await new Promise(r => setTimeout(r, 0));
+        }
     }
 
     // Calculate percentiles at each time step
@@ -468,7 +476,7 @@ function renderDrawdownWaterfall(stressResult) {
 
 // ─── Rendering: Monte Carlo Fan Chart ───────────────────────────────
 
-function renderMonteCarloFanChart(percentileData, months) {
+function renderMonteCarloFanChart(percentileData, months, capital) {
     const canvas = document.getElementById('stressMonteCarloChart');
     if (!canvas) return;
 
@@ -481,13 +489,20 @@ function renderMonteCarloFanChart(percentileData, months) {
         return '';
     });
 
+    // Extract final value of each percentile for legend tagging
+    const val5 = percentileData[5][months];
+    const val25 = percentileData[25][months];
+    const val50 = percentileData[50][months];
+    const val75 = percentileData[75][months];
+    const val95 = percentileData[95][months];
+
     monteCarloChartInstance = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
             labels,
             datasets: [
                 {
-                    label: '5th Pctl (Worst Case)',
+                    label: `Worst Case (5th Pctl): ${fmtCurrency(val5)}`,
                     data: percentileData[5],
                     borderColor: '#ef4444',
                     borderWidth: 1,
@@ -497,45 +512,55 @@ function renderMonteCarloFanChart(percentileData, months) {
                     tension: 0.2
                 },
                 {
-                    label: '25th Percentile',
+                    label: `Downside (25th Pctl): ${fmtCurrency(val25)}`,
                     data: percentileData[25],
-                    borderColor: 'rgba(251, 146, 60, 0.5)',
-                    backgroundColor: 'rgba(251, 146, 60, 0.06)',
+                    borderColor: 'rgba(239, 68, 68, 0.4)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
                     borderWidth: 1.5,
                     pointRadius: 0,
                     fill: '-1',
                     tension: 0.2
                 },
                 {
-                    label: 'Median (50th)',
+                    label: `Median (50th Pctl): ${fmtCurrency(val50)}`,
                     data: percentileData[50],
                     borderColor: '#06b6d4',
-                    backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                    backgroundColor: 'rgba(6, 182, 212, 0.06)',
                     borderWidth: 2.5,
                     pointRadius: 0,
                     fill: '-1',
                     tension: 0.2
                 },
                 {
-                    label: '75th Percentile',
+                    label: `Upside (75th Pctl): ${fmtCurrency(val75)}`,
                     data: percentileData[75],
-                    borderColor: 'rgba(16, 185, 129, 0.5)',
-                    backgroundColor: 'rgba(16, 185, 129, 0.06)',
+                    borderColor: 'rgba(6, 182, 212, 0.5)',
+                    backgroundColor: 'rgba(6, 182, 212, 0.06)',
                     borderWidth: 1.5,
                     pointRadius: 0,
                     fill: '-1',
                     tension: 0.2
                 },
                 {
-                    label: '95th Pctl (Best Case)',
+                    label: `Best Case (95th Pctl): ${fmtCurrency(val95)}`,
                     data: percentileData[95],
                     borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.04)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.08)',
                     borderWidth: 1,
                     borderDash: [5, 5],
                     pointRadius: 0,
                     fill: '-1',
                     tension: 0.2
+                },
+                {
+                    label: `Initial Capital: ${fmtCurrency(capital)}`,
+                    data: new Array(months + 1).fill(capital),
+                    borderColor: 'rgba(255, 255, 255, 0.35)',
+                    borderWidth: 1.5,
+                    borderDash: [6, 6],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0
                 }
             ]
         },
@@ -563,7 +588,7 @@ function renderMonteCarloFanChart(percentileData, months) {
                     bodyColor: '#e2e8f0',
                     padding: 12,
                     callbacks: {
-                        label: (ctx) => ` ${ctx.dataset.label}: ${fmtCurrency(ctx.parsed.y)}`
+                        label: (ctx) => ` ${ctx.dataset.label.split(':')[0]}: ${fmtCurrency(ctx.parsed.y)}`
                     }
                 }
             },
@@ -740,6 +765,25 @@ function formatAiText(text) {
 
 // ─── Custom Shock Inputs Generator ──────────────────────────────────
 
+function updateCustomShockDisplay() {
+    const capital = parseFloat(document.getElementById('stress-capital-input')?.value) || 100000;
+    const age = parseInt(document.getElementById('stress-age-input')?.value) || 30;
+    const risk = document.getElementById('stress-risk-input')?.value || 'moderate';
+    const allocations = calculateAllocations(age, risk);
+
+    ASSET_KEYS.forEach(key => {
+        const slider = document.getElementById(`shock-${key}`);
+        const display = document.getElementById(`shock-${key}-val`);
+        if (slider && display) {
+            const shock = parseFloat(slider.value);
+            const weight = (allocations[key] || 0) / 100;
+            const dollarImpact = capital * weight * (shock / 100);
+            const sign = dollarImpact >= 0 ? '+' : '';
+            display.innerHTML = `${shock}% <span class="shock-value-display" style="color: ${dollarImpact >= 0 ? '#10b981' : '#ef4444'}">(${sign}${fmtCurrency(dollarImpact)})</span>`;
+        }
+    });
+}
+
 function generateCustomShockInputs() {
     const container = document.getElementById('custom-shock-inputs');
     if (!container) return;
@@ -763,15 +807,589 @@ function generateCustomShockInputs() {
         `;
     }).join('');
 
+    // Append presets row
+    const presetsDiv = document.createElement('div');
+    presetsDiv.className = 'stress-presets-row';
+    presetsDiv.innerHTML = `
+        <span style="font-size: 0.8rem; color: var(--text-secondary-muted); width: 100%; display: block; margin-bottom: 4px;">Presets:</span>
+        <button class="preset-badge" type="button" data-preset="mild">Mild Recession</button>
+        <button class="preset-badge" type="button" data-preset="severe">Severe Crash</button>
+        <button class="preset-badge" type="button" data-preset="stagflation">Stagflation</button>
+    `;
+    container.appendChild(presetsDiv);
+
+    // Bind presets events
+    const presetValues = {
+        mild: { usLargeCap: -15, intlDev: -15, emerging: -15, govBonds: 5, corpBonds: 5, gold: 0 },
+        severe: { usLargeCap: -50, intlDev: -50, emerging: -50, govBonds: -10, corpBonds: -10, gold: 0 },
+        stagflation: { usLargeCap: -20, intlDev: -20, emerging: -20, govBonds: -15, corpBonds: -15, gold: 15 }
+    };
+
+    presetsDiv.querySelectorAll('.preset-badge').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const p = presetValues[btn.getAttribute('data-preset')];
+            if (p) {
+                ASSET_KEYS.forEach(key => {
+                    const slider = document.getElementById(`shock-${key}`);
+                    if (slider) {
+                        slider.value = p[key];
+                    }
+                });
+                updateCustomShockDisplay();
+            }
+        });
+    });
+
     // Wire change listeners
     ASSET_KEYS.forEach(key => {
         const slider = document.getElementById(`shock-${key}`);
-        const display = document.getElementById(`shock-${key}-val`);
-        if (slider && display) {
-            slider.addEventListener('input', () => {
-                display.textContent = `${slider.value}%`;
-            });
+        if (slider) {
+            slider.addEventListener('input', updateCustomShockDisplay);
         }
+    });
+
+    // Initial update
+    updateCustomShockDisplay();
+}
+
+// ─── Loader State & Stepper Helper ───────────────────────────────────
+
+function updateLoaderState(percent, activeStepId, text) {
+    const progressBar = document.getElementById('stress-progress-bar');
+    const loaderText = document.getElementById('stress-loader-text');
+    if (progressBar) progressBar.style.width = `${percent}%`;
+    if (loaderText) loaderText.textContent = text;
+
+    const steps = ['step-alloc', 'step-stress', 'step-mc', 'step-risk'];
+    steps.forEach(stepId => {
+        const el = document.getElementById(stepId);
+        if (el) {
+            if (stepId === activeStepId) {
+                el.className = 'stepper-item active';
+            } else if (steps.indexOf(stepId) < steps.indexOf(activeStepId)) {
+                el.className = 'stepper-item completed';
+            } else {
+                el.className = 'stepper-item';
+            }
+        }
+    });
+}
+
+// ─── Portfolio Efficiency Score Helpers ──────────────────────────────
+
+function calculateEfficiencyScore(metrics) {
+    const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+    const normalize = (val, min, max) => clamp((val - min) / (max - min), 0, 1);
+
+    const sharpeScore = normalize(metrics.sharpe, -0.5, 2.0);
+    const sortinoScore = normalize(metrics.sortino, -0.5, 3.0);
+    const varScore = 1 - normalize(metrics.var95, 0, 50);
+    const lossScore = 1 - normalize(metrics.probLoss, 0, 100);
+
+    const score = Math.round(100 * (0.25 * sharpeScore + 0.25 * sortinoScore + 0.25 * varScore + 0.25 * lossScore));
+    return clamp(score, 0, 100);
+}
+
+function renderEfficiencyScore(score, metrics) {
+    const progressCircle = document.getElementById('efficiency-progress-circle');
+    const scoreVal = document.getElementById('efficiency-score-value');
+    const verdictEl = document.getElementById('efficiency-score-verdict');
+
+    if (scoreVal) scoreVal.textContent = score;
+
+    if (progressCircle) {
+        const offset = 314.159 * (1 - score / 100);
+        progressCircle.style.strokeDashoffset = offset;
+
+        // Set color thresholds
+        let ringColor = 'var(--neon-cyan-vibrant)';
+        if (score >= 70) {
+            ringColor = '#10b981'; // Green
+        } else if (score >= 40) {
+            ringColor = '#f59e0b'; // Amber
+        } else {
+            ringColor = '#ef4444'; // Red
+        }
+        progressCircle.style.stroke = ringColor;
+    }
+
+    if (verdictEl) {
+        let verdict = 'Critical';
+        let color = '#ef4444';
+        if (score >= 80) {
+            verdict = 'Excellent';
+            color = '#10b981';
+        } else if (score >= 60) {
+            verdict = 'Good';
+            color = '#06b6d4';
+        } else if (score >= 40) {
+            verdict = 'Moderate';
+            color = '#f59e0b';
+        } else if (score >= 20) {
+            verdict = 'Poor';
+            color = '#f97316';
+        }
+        verdictEl.textContent = verdict;
+        verdictEl.style.color = color;
+    }
+
+    // Set mini metric pills color-coded dots
+    const thresholds = {
+        sharpe: { val: metrics.sharpe, green: 0.5, red: 0 },
+        sortino: { val: metrics.sortino, green: 0.8, red: 0 },
+        var: { val: metrics.var95, green: 15, red: 30, invert: true },
+        loss: { val: metrics.probLoss, green: 30, red: 50, invert: true }
+    };
+
+    const fmtMapping = {
+        sharpe: metrics.sharpe.toFixed(3),
+        sortino: metrics.sortino.toFixed(3),
+        var: `${metrics.var95.toFixed(2)}%`,
+        loss: `${metrics.probLoss.toFixed(1)}%`
+    };
+
+    Object.keys(thresholds).forEach(key => {
+        const pill = document.querySelector(`.efficiency-metric-pill[data-metric="${key}"]`);
+        const valueEl = document.getElementById(`eff-${key}`);
+        if (valueEl) valueEl.textContent = fmtMapping[key];
+
+        if (pill) {
+            const dot = pill.querySelector('.pill-dot');
+            if (dot) {
+                const t = thresholds[key];
+                let isGood = false;
+                let isBad = false;
+                if (t.invert) {
+                    isGood = t.val <= t.green;
+                    isBad = t.val >= t.red;
+                } else {
+                    isGood = t.val >= t.green;
+                    isBad = t.val <= t.red;
+                }
+
+                if (isGood) {
+                    dot.style.backgroundColor = '#10b981';
+                } else if (isBad) {
+                    dot.style.backgroundColor = '#ef4444';
+                } else {
+                    dot.style.backgroundColor = '#f59e0b';
+                }
+            }
+        }
+    });
+}
+
+// ─── Tail Risk Analysis Helpers ──────────────────────────────────────
+
+function calculateTailMetrics(paths, capital) {
+    const finalValues = paths.map(p => p[p.length - 1]);
+    const n = finalValues.length;
+    const mean = finalValues.reduce((a, b) => a + b, 0) / n;
+    const variance = finalValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / n;
+    const stdDev = Math.sqrt(variance);
+
+    let skewness = 0;
+    if (stdDev > 0) {
+        skewness = finalValues.reduce((sum, v) => sum + Math.pow((v - mean) / stdDev, 3), 0) / n;
+    }
+
+    let kurtosis = 0;
+    if (variance > 0) {
+        kurtosis = (finalValues.reduce((sum, v) => sum + Math.pow(v - mean, 4), 0) / n) / Math.pow(variance, 2) - 3;
+    }
+
+    const leftTailCount = finalValues.filter(v => v < capital * 0.5).length;
+    const leftTailWeight = (leftTailCount / n) * 100;
+    const worstLoss = Math.min(...finalValues);
+
+    return { skewness, kurtosis, leftTailWeight, worstLoss };
+}
+
+function renderTailRiskAnalysis(tailMetrics, paths, capital) {
+    const leftWeightEl = document.getElementById('tail-left-weight');
+    const skewnessEl = document.getElementById('tail-skewness');
+    const kurtosisEl = document.getElementById('tail-kurtosis');
+    const worstLossEl = document.getElementById('tail-worst-loss');
+
+    if (leftWeightEl) leftWeightEl.textContent = `${tailMetrics.leftTailWeight.toFixed(1)}%`;
+    if (skewnessEl) {
+        skewnessEl.textContent = tailMetrics.skewness.toFixed(3);
+        skewnessEl.style.color = tailMetrics.skewness < 0 ? '#ef4444' : '#10b981';
+    }
+    if (kurtosisEl) {
+        kurtosisEl.textContent = tailMetrics.kurtosis.toFixed(3);
+        kurtosisEl.style.color = tailMetrics.kurtosis > 0 ? '#10b981' : '#94a3b8';
+    }
+    if (worstLossEl) worstLossEl.textContent = fmtCurrency(tailMetrics.worstLoss);
+
+    renderTailRiskHistogram(paths, capital);
+    renderWorstPathsTable(paths, capital);
+}
+
+function renderTailRiskHistogram(paths, capital) {
+    const canvas = document.getElementById('stressTailRiskChart');
+    if (!canvas) return;
+
+    const finalValues = paths.map(p => p[p.length - 1]);
+    const n = finalValues.length;
+    const maxRange = capital * 2.5;
+    const numBins = 15;
+    const binWidth = maxRange / numBins;
+    const binCounts = new Array(numBins).fill(0);
+
+    finalValues.forEach(v => {
+        const binIdx = Math.min(numBins - 1, Math.floor(v / binWidth));
+        binCounts[binIdx]++;
+    });
+
+    const labels = binCounts.map((_, i) => {
+        const low = i * binWidth;
+        const high = (i + 1) * binWidth;
+        return `${fmtCurrency(low)}-${fmtCurrency(high)}`;
+    });
+
+    const sortedValues = [...finalValues].sort((a, b) => a - b);
+    const p5 = sortedValues[Math.max(0, Math.floor(0.05 * n))];
+    const p95 = sortedValues[Math.max(0, Math.min(n - 1, Math.floor(0.95 * n)))];
+
+    const colors = [];
+    const borderColors = [];
+    for (let i = 0; i < numBins; i++) {
+        const binCenter = (i + 0.5) * binWidth;
+        if (binCenter < p5) {
+            colors.push('rgba(239, 68, 68, 0.75)');
+            borderColors.push('#ef4444');
+        } else if (binCenter > p95) {
+            colors.push('rgba(16, 185, 129, 0.75)');
+            borderColors.push('#10b981');
+        } else {
+            colors.push('rgba(6, 182, 212, 0.75)');
+            borderColors.push('#06b6d4');
+        }
+    }
+
+    if (tailRiskChartInstance) tailRiskChartInstance.destroy();
+
+    tailRiskChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Frequency',
+                data: binCounts,
+                backgroundColor: colors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(13, 19, 38, 0.95)',
+                    borderColor: '#1e2d54',
+                    borderWidth: 1,
+                    titleColor: '#f8fafc',
+                    bodyColor: '#e2e8f0',
+                    callbacks: {
+                        label: (ctx) => ` Frequency: ${ctx.parsed.y} paths (${((ctx.parsed.y / n) * 100).toFixed(1)}%)`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8', font: { size: 10 } }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8', font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
+function getWorstPathsAnalysis(paths, capital) {
+    const worstPaths = paths
+        .map((p, idx) => ({ path: p, index: idx }))
+        .sort((a, b) => a.path[a.path.length - 1] - b.path[b.path.length - 1])
+        .slice(0, 5);
+
+    return worstPaths.map((wp, rank) => {
+        const p = wp.path;
+        const finalVal = p[p.length - 1];
+        const totalReturn = ((finalVal - capital) / capital) * 100;
+
+        let maxDD = 0;
+        let peak = p[0];
+        let worstMonth = 0;
+
+        for (let m = 1; m < p.length; m++) {
+            if (p[m] > peak) peak = p[m];
+            const dd = peak > 0 ? (peak - p[m]) / peak : 0;
+            if (dd > maxDD) maxDD = dd;
+
+            const mRet = (p[m] - p[m - 1]) / p[m - 1];
+            if (mRet < worstMonth) worstMonth = mRet;
+        }
+
+        return {
+            rank: rank + 1,
+            finalVal,
+            totalReturn,
+            maxDrawdown: maxDD * 100,
+            worstMonth: worstMonth * 100
+        };
+    });
+}
+
+function renderWorstPathsTable(paths, capital) {
+    const tbody = document.getElementById('stress-worst-paths-tbody');
+    if (!tbody) return;
+
+    const worstPaths = getWorstPathsAnalysis(paths, capital);
+    tbody.innerHTML = worstPaths.map(wp => {
+        return `
+            <tr>
+                <td style="font-weight: 600; color: #ef4444;">Rank #${wp.rank}</td>
+                <td class="font-mono" style="color: #ef4444; font-weight: 600;">${fmtCurrency(wp.finalVal)}</td>
+                <td class="font-mono" style="color: #ef4444;">${wp.totalReturn.toFixed(2)}%</td>
+                <td class="font-mono" style="color: #ef4444;">-${wp.maxDrawdown.toFixed(2)}%</td>
+                <td class="font-mono" style="color: #ef4444;">-${Math.abs(wp.worstMonth).toFixed(2)}%</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ─── Heatmap Correlation Grid Helper ─────────────────────────────────
+
+function renderCorrelationHeatmap() {
+    const headerRow = document.getElementById('correlation-header-row');
+    const tbody = document.getElementById('correlation-matrix-tbody');
+    if (!tbody || !headerRow) return;
+
+    headerRow.innerHTML = '<th>Asset Class</th>';
+    ASSET_KEYS.forEach(key => {
+        headerRow.innerHTML += `<th class="font-mono" style="font-size: 0.75rem; text-align: center;">${ASSET_CLASSES[key].ticker}</th>`;
+    });
+
+    tbody.innerHTML = '';
+    for (let i = 0; i < ASSET_KEYS.length; i++) {
+        const rowKey = ASSET_KEYS[i];
+        const rowAsset = ASSET_CLASSES[rowKey];
+        let rowHtml = `<tr><td style="font-size: 0.85rem; font-weight: 600;">${rowAsset.name} (${rowAsset.ticker})</td>`;
+
+        for (let j = 0; j < ASSET_KEYS.length; j++) {
+            const val = CORRELATION_MATRIX[i][j];
+            let bg = '';
+            let textColor = '#f8fafc';
+            if (val > 0) {
+                bg = `rgba(16, 185, 129, ${val * 0.45})`;
+            } else if (val < 0) {
+                bg = `rgba(239, 68, 68, ${Math.abs(val) * 0.45})`;
+            } else {
+                bg = 'rgba(255, 255, 255, 0.02)';
+            }
+            rowHtml += `<td class="heatmap-cell" style="background-color: ${bg}; color: ${textColor};">${val >= 0 ? '+' : ''}${val.toFixed(2)}</td>`;
+        }
+        rowHtml += '</tr>';
+        tbody.innerHTML += rowHtml;
+    }
+}
+
+// ─── Multi-Scenario Comparison Mode ──────────────────────────────────
+
+async function executeComparisonMode() {
+    const capital = parseFloat(document.getElementById('stress-capital-input')?.value) || 100000;
+    const age = parseInt(document.getElementById('stress-age-input')?.value) || 30;
+    const risk = document.getElementById('stress-risk-input')?.value || 'moderate';
+
+    if (capital <= 0) {
+        showToast('Please enter a valid capital amount.');
+        return;
+    }
+
+    const loader = document.getElementById('stress-loader');
+    const results = document.getElementById('stress-results-container');
+    const compCard = document.getElementById('stress-comparison-card');
+
+    if (loader) loader.classList.remove('hidden-element');
+    if (results) results.classList.add('hidden-element');
+    if (compCard) compCard.classList.add('hidden-element');
+
+    updateLoaderState(25, 'step-stress', 'Running portfolio comparison under multiple historical crisis scenarios...');
+    await new Promise(r => setTimeout(r, 60));
+
+    try {
+        const allocations = calculateAllocations(age, risk);
+        const scenarioResults = Object.keys(HISTORICAL_SCENARIOS).map(key => {
+            const res = runHistoricalStressTest(allocations, capital, key);
+            return { key, ...res };
+        });
+
+        const tbody = document.getElementById('stress-comparison-tbody');
+        if (tbody) {
+            tbody.innerHTML = scenarioResults.map(r => {
+                const drawdownVal = r.totalDrawdown;
+                const isLoss = drawdownVal < 0;
+                let severity = 'LOW';
+                let severityColor = '#10b981';
+                const absDD = Math.abs(drawdownVal);
+                if (absDD > 40) {
+                    severity = 'SEVERE';
+                    severityColor = '#ef4444';
+                } else if (absDD > 25) {
+                    severity = 'HIGH';
+                    severityColor = '#f97316';
+                } else if (absDD > 15) {
+                    severity = 'MODERATE';
+                    severityColor = '#f59e0b';
+                }
+
+                return `
+                    <tr>
+                        <td style="font-weight: 600;">${r.scenario.icon} ${r.scenario.name}</td>
+                        <td class="font-mono" style="color: ${isLoss ? '#ef4444' : '#10b981'}; font-weight: 600;">${drawdownVal >= 0 ? '+' : ''}${drawdownVal.toFixed(2)}%</td>
+                        <td class="font-mono" style="color: ${r.totalImpact >= 0 ? '#10b981' : '#ef4444'}">${r.totalImpact >= 0 ? '+' : ''}${fmtCurrency(r.totalImpact)}</td>
+                        <td class="font-mono">${fmtCurrency(r.stressedValue)}</td>
+                        <td>${r.scenario.recoveryMonths ? `${r.scenario.recoveryMonths} months` : 'N/A'}</td>
+                        <td><span style="background: ${severityColor}15; color: ${severityColor}; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${severity}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        renderComparisonBarChart(scenarioResults);
+
+        updateLoaderState(60, 'step-mc', 'Running Monte Carlo projections to compile portfolio efficiency scores...');
+        const mcResult = await runMonteCarloSimulation(allocations, capital, 5, 1000, (p) => {
+            updateLoaderState(60 + Math.floor((p / 1000) * 20), 'step-mc', `Projecting assets: path ${p} / 1,000...`);
+        });
+
+        updateLoaderState(90, 'step-risk', 'Computing Sharpe ratios, Tail VaR and multi-asset risk indicators...');
+        const riskMetrics = calculateRiskMetrics(mcResult.paths, capital, 5, mcResult.percentileData);
+
+        renderAllocationChips(allocations);
+        renderMonteCarloFanChart(mcResult.percentileData, mcResult.months, capital);
+        renderRiskMetrics(riskMetrics);
+
+        const efficiencyScore = calculateEfficiencyScore(riskMetrics);
+        renderEfficiencyScore(efficiencyScore, riskMetrics);
+
+        const tailMetrics = calculateTailMetrics(mcResult.paths, capital);
+        renderTailRiskAnalysis(tailMetrics, mcResult.paths, capital);
+
+        if (loader) loader.classList.add('hidden-element');
+        if (results) results.classList.remove('hidden-element');
+        if (compCard) compCard.classList.remove('hidden-element');
+
+        const commentaryEl = document.getElementById('stress-ai-commentary');
+        if (commentaryEl) commentaryEl.innerHTML = '<span class="terminal-prompt">Scenario comparison complete. Click "Execute Stress Test" to fetch commentary for a specific scenario.</span>';
+
+    } catch (err) {
+        console.error('Scenario comparison error:', err);
+        showToast('Comparison failed: ' + err.message);
+        if (loader) loader.classList.add('hidden-element');
+    }
+}
+
+function renderComparisonBarChart(results) {
+    const canvas = document.getElementById('stressComparisonChart');
+    if (!canvas) return;
+
+    if (comparisonChartInstance) comparisonChartInstance.destroy();
+
+    const labels = results.map(r => r.scenario.name);
+    const drawdowns = results.map(r => r.totalDrawdown);
+    const colors = drawdowns.map(dd => dd < 0 ? 'rgba(239, 68, 68, 0.75)' : 'rgba(16, 185, 129, 0.75)');
+    const borderColors = drawdowns.map(dd => dd < 0 ? '#ef4444' : '#10b981');
+
+    comparisonChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Drawdown (%)',
+                data: drawdowns,
+                backgroundColor: colors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(13, 19, 38, 0.95)',
+                    borderColor: '#1e2d54',
+                    borderWidth: 1,
+                    titleColor: '#f8fafc',
+                    bodyColor: '#e2e8f0',
+                    callbacks: {
+                        label: (ctx) => ` Drawdown: ${ctx.parsed.y.toFixed(2)}%`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8', font: { size: 10 } }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        color: '#94a3b8',
+                        font: { size: 10 },
+                        callback: (val) => `${val}%`
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ─── Export and Report Generator Flow ────────────────────────────────
+
+function downloadPdfReport() {
+    const element = document.getElementById('stress-results-container');
+    if (!element) return;
+
+    const watermark = document.createElement('div');
+    watermark.className = 'pdf-watermark-header';
+    watermark.style.display = 'flex';
+    watermark.innerHTML = `
+        <span class="pdf-watermark-title">STRATA PORTFOLIO RISK REPORT</span>
+        <span class="pdf-watermark-timestamp">Generated on ${new Date().toLocaleDateString()}</span>
+    `;
+    element.insertBefore(watermark, element.firstChild);
+
+    const btnPanel = document.querySelector('.stress-action-panel');
+    if (btnPanel) btnPanel.style.display = 'none';
+
+    const opt = {
+        margin: 10,
+        filename: `STRATA_StressReport_${new Date().toISOString().slice(0, 10)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0a0e1a' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        if (watermark) watermark.remove();
+        if (btnPanel) btnPanel.style.display = 'flex';
+        showToast('PDF report downloaded successfully.');
+    }).catch(err => {
+        console.error('PDF generation error:', err);
+        showToast('Failed to export PDF: ' + err.message);
+        if (watermark) watermark.remove();
+        if (btnPanel) btnPanel.style.display = 'flex';
     });
 }
 
@@ -811,11 +1429,14 @@ async function executeStressTest() {
 
     const loader = document.getElementById('stress-loader');
     const results = document.getElementById('stress-results-container');
+    const compCard = document.getElementById('stress-comparison-card');
 
     if (loader) loader.classList.remove('hidden-element');
     if (results) results.classList.add('hidden-element');
+    if (compCard) compCard.classList.add('hidden-element');
 
     // Yield to UI so loader renders before heavy computation
+    updateLoaderState(10, 'step-alloc', 'Configuring allocation structure based on investor age & risk profile...');
     await new Promise(r => setTimeout(r, 60));
 
     try {
@@ -824,6 +1445,9 @@ async function executeStressTest() {
         renderAllocationChips(allocations);
 
         // 2. Historical / Custom stress test
+        updateLoaderState(30, 'step-stress', 'Simulating portfolio performance under historical crisis shocks...');
+        await new Promise(r => setTimeout(r, 60));
+        
         const stressResult = scenarioKey === 'custom'
             ? runCustomStressTest(allocations, capital)
             : runHistoricalStressTest(allocations, capital, scenarioKey);
@@ -834,18 +1458,34 @@ async function executeStressTest() {
         renderScenarioMetrics(stressResult);
 
         // 3. Monte Carlo simulation
-        const mcResult = runMonteCarloSimulation(allocations, capital, mcYears, numPaths);
-        renderMonteCarloFanChart(mcResult.percentileData, mcResult.months);
+        updateLoaderState(50, 'step-mc', 'Running Monte Carlo paths using Cholesky factor matrix...');
+        const mcResult = await runMonteCarloSimulation(allocations, capital, mcYears, numPaths, (p) => {
+            updateLoaderState(50 + Math.floor((p / numPaths) * 35), 'step-mc', `Simulating path ${p} / ${numPaths}...`);
+        });
+        
+        renderMonteCarloFanChart(mcResult.percentileData, mcResult.months, capital);
 
         // 4. Risk metrics
+        updateLoaderState(90, 'step-risk', 'Computing Sharpe ratios, Value at Risk (VaR), and expected shortfall...');
         const riskMetrics = calculateRiskMetrics(mcResult.paths, capital, mcYears, mcResult.percentileData);
         renderRiskMetrics(riskMetrics);
 
-        // 5. Show results
+        // 5. Portfolio Efficiency Score
+        const efficiencyScore = calculateEfficiencyScore(riskMetrics);
+        renderEfficiencyScore(efficiencyScore, riskMetrics);
+
+        // 6. Tail Risk & Extreme Event Analysis
+        const tailMetrics = calculateTailMetrics(mcResult.paths, capital);
+        renderTailRiskAnalysis(tailMetrics, mcResult.paths, capital);
+
+        // 7. Correlation Heatmap
+        renderCorrelationHeatmap();
+
+        // 8. Show results
         if (loader) loader.classList.add('hidden-element');
         if (results) results.classList.remove('hidden-element');
 
-        // 6. AI commentary (non-blocking)
+        // 9. AI commentary (non-blocking)
         fetchAiRiskCommentary(stressResult, riskMetrics, allocations, capital);
 
     } catch (err) {
@@ -859,12 +1499,19 @@ async function executeStressTest() {
 
 export function setupStressTester() {
     const runBtn = document.getElementById('stress-run-btn');
+    const compareBtn = document.getElementById('stress-compare-btn');
+    const pdfBtn = document.getElementById('stress-pdf-btn');
     const importBtn = document.getElementById('stress-import-btn');
     const backBtn = document.getElementById('stress-to-portfolio-btn');
     const scenarioSelect = document.getElementById('stress-scenario-select');
 
     if (runBtn) runBtn.addEventListener('click', executeStressTest);
-    if (importBtn) importBtn.addEventListener('click', importFromPortfolio);
+    if (compareBtn) compareBtn.addEventListener('click', executeComparisonMode);
+    if (pdfBtn) pdfBtn.addEventListener('click', downloadPdfReport);
+    if (importBtn) importBtn.addEventListener('click', () => {
+        importFromPortfolio();
+        updateCustomShockDisplay();
+    });
     if (backBtn) backBtn.addEventListener('click', navigateToPortfolio);
 
     if (scenarioSelect) {
@@ -872,11 +1519,21 @@ export function setupStressTester() {
             const customInputs = document.getElementById('custom-shock-inputs');
             if (scenarioSelect.value === 'custom') {
                 customInputs?.classList.remove('hidden-element');
+                updateCustomShockDisplay();
             } else {
                 customInputs?.classList.add('hidden-element');
             }
         });
     }
+
+    // Attach listeners to config inputs to update custom shock display live
+    const capitalInput = document.getElementById('stress-capital-input');
+    const ageInput = document.getElementById('stress-age-input');
+    const riskInput = document.getElementById('stress-risk-input');
+
+    if (capitalInput) capitalInput.addEventListener('input', updateCustomShockDisplay);
+    if (ageInput) ageInput.addEventListener('input', updateCustomShockDisplay);
+    if (riskInput) riskInput.addEventListener('change', updateCustomShockDisplay);
 
     // Generate custom shock slider inputs
     generateCustomShockInputs();
@@ -902,6 +1559,9 @@ export function setupStressTester() {
         if (input) input.value = savedRisk;
         sessionStorage.removeItem('stress_param_risk');
     }
+
+    // Update Custom Shock Display values initially
+    updateCustomShockDisplay();
 
     if (runOnLoad === 'true') {
         sessionStorage.removeItem('stress_param_autorun');
