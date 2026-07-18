@@ -1354,45 +1354,6 @@ function renderComparisonBarChart(results) {
         }
     });
 }
-
-// ─── Export and Report Generator Flow ────────────────────────────────
-
-function downloadPdfReport() {
-    const element = document.getElementById('stress-results-container');
-    if (!element) return;
-
-    const watermark = document.createElement('div');
-    watermark.className = 'pdf-watermark-header';
-    watermark.style.display = 'flex';
-    watermark.innerHTML = `
-        <span class="pdf-watermark-title">STRATA PORTFOLIO RISK REPORT</span>
-        <span class="pdf-watermark-timestamp">Generated on ${new Date().toLocaleDateString()}</span>
-    `;
-    element.insertBefore(watermark, element.firstChild);
-
-    const btnPanel = document.querySelector('.stress-action-panel');
-    if (btnPanel) btnPanel.style.display = 'none';
-
-    const opt = {
-        margin: 10,
-        filename: `STRATA_StressReport_${new Date().toISOString().slice(0, 10)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0a0e1a' },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save().then(() => {
-        if (watermark) watermark.remove();
-        if (btnPanel) btnPanel.style.display = 'flex';
-        showToast('PDF report downloaded successfully.');
-    }).catch(err => {
-        console.error('PDF generation error:', err);
-        showToast('Failed to export PDF: ' + err.message);
-        if (watermark) watermark.remove();
-        if (btnPanel) btnPanel.style.display = 'flex';
-    });
-}
-
 // ─── Import from Portfolio Builder ──────────────────────────────────
 
 function importFromPortfolio() {
@@ -1500,14 +1461,12 @@ async function executeStressTest() {
 export function setupStressTester() {
     const runBtn = document.getElementById('stress-run-btn');
     const compareBtn = document.getElementById('stress-compare-btn');
-    const pdfBtn = document.getElementById('stress-pdf-btn');
     const importBtn = document.getElementById('stress-import-btn');
     const backBtn = document.getElementById('stress-to-portfolio-btn');
     const scenarioSelect = document.getElementById('stress-scenario-select');
 
     if (runBtn) runBtn.addEventListener('click', executeStressTest);
     if (compareBtn) compareBtn.addEventListener('click', executeComparisonMode);
-    if (pdfBtn) pdfBtn.addEventListener('click', downloadPdfReport);
     if (importBtn) importBtn.addEventListener('click', () => {
         importFromPortfolio();
         updateCustomShockDisplay();

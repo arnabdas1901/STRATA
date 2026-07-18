@@ -177,11 +177,7 @@ export function setupAiAdvisor() {
             if (e.key === 'Enter') executeAiAnalysis();
         });
     }
-    
-    const pdfBtn = document.getElementById('ai-pdf-btn');
-    if (pdfBtn) {
-        pdfBtn.addEventListener('click', exportAiPdf);
-    }
+
 
     // Run All Frames button
     const runAllBtn = document.getElementById('run-all-frames-btn');
@@ -300,8 +296,6 @@ function renderHistoryStrip() {
                 `;
             }
             window.currentAiReport = { ticker: entry.ticker, frameLabel: entry.frameLabel, modelName: entry.modelName, analysisHtml: entry.analysisHtml };
-            const pdfBtn = document.getElementById('ai-pdf-btn');
-            if (pdfBtn) pdfBtn.style.display = 'inline-flex';
             showFollowupBar();
             updateWordCount(entry.analysisHtml);
             // Hide multi-frame tabs
@@ -505,8 +499,6 @@ async function executeAiAnalysis() {
     isAiRunning = true;
     if (btn) btn.disabled = true;
     
-    const pdfBtn = document.getElementById('ai-pdf-btn');
-    if (pdfBtn) pdfBtn.style.display = 'none';
     hideFollowupBar();
     hideTabBar();
 
@@ -581,7 +573,6 @@ async function executeAiAnalysis() {
             updateTimestamp();
         }
         
-        if (pdfBtn) pdfBtn.style.display = 'inline-flex';
         showFollowupBar();
         
         showToast(`AI analysis ready for ${ticker}.`);
@@ -630,9 +621,6 @@ async function executeAllFrames() {
     if (runAllBtn) runAllBtn.disabled = true;
     hideFollowupBar();
     
-    const pdfBtn = document.getElementById('ai-pdf-btn');
-    if (pdfBtn) pdfBtn.style.display = 'none';
-
     // Initialize multi-frame state
     currentMultiFrameResults = {};
     activeMultiFrameTab = null;
@@ -738,7 +726,6 @@ async function executeAllFrames() {
                 modelName: escapeHtml(activeResult.modelName),
                 analysisHtml: activeResult.analysisHtml,
             };
-            if (pdfBtn) pdfBtn.style.display = 'inline-flex';
         }
     } else {
         if (output) {
@@ -874,365 +861,4 @@ async function sendFollowup() {
     }
 }
 
-// ──────────────────────────────────────────
-//  PDF EXPORT
-// ──────────────────────────────────────────
 
-async function exportAiPdf() {
-    const btn = document.getElementById('ai-pdf-btn');
-
-    if (!window.html2pdf) {
-        showToast('PDF library is still loading...');
-        return;
-    }
-    const report = window.currentAiReport;
-    if (!report) {
-        showToast('No report data found. Please run analysis first.');
-        return;
-    }
-
-    const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const reportTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const reportId = `STR-${report.ticker}-${Date.now().toString(36).toUpperCase()}`;
-
-    const opt = {
-        margin:       [12, 10, 18, 10],
-        filename:     `STRATA_${report.ticker}_${report.frameLabel.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
-    };
-
-    const sourceHtml = `
-        <div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.65; background: #ffffff;">
-            <style>
-                * { box-sizing: border-box; }
-
-                /* ── HEADER BAR ── */
-                .sr-header {
-                    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-                    color: #ffffff;
-                    padding: 28px 36px 24px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-end;
-                    border-bottom: 3px solid #3b82f6;
-                }
-                .sr-brand h1 {
-                    margin: 0;
-                    font-size: 32px;
-                    font-weight: 800;
-                    letter-spacing: 3px;
-                    color: #ffffff;
-                }
-                .sr-brand p {
-                    margin: 4px 0 0;
-                    font-size: 9px;
-                    text-transform: uppercase;
-                    letter-spacing: 2px;
-                    color: #94a3b8;
-                }
-                .sr-header-right {
-                    text-align: right;
-                }
-                .sr-header-right .sr-doc-type {
-                    margin: 0;
-                    font-size: 11px;
-                    font-weight: 700;
-                    letter-spacing: 1.5px;
-                    text-transform: uppercase;
-                    color: #60a5fa;
-                }
-                .sr-header-right .sr-doc-date {
-                    margin: 4px 0 0;
-                    font-size: 9px;
-                    color: #94a3b8;
-                }
-
-                /* ── CLASSIFICATION BADGE ── */
-                .sr-classification {
-                    background: #eff6ff;
-                    border: 1px solid #bfdbfe;
-                    padding: 6px 16px;
-                    text-align: center;
-                    font-size: 8px;
-                    font-weight: 700;
-                    letter-spacing: 2px;
-                    text-transform: uppercase;
-                    color: #3b82f6;
-                }
-
-                /* ── CONTENT WRAPPER ── */
-                .sr-content { padding: 28px 36px; }
-
-                /* ── METADATA STRIP ── */
-                .sr-meta-strip {
-                    display: flex;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 8px;
-                    overflow: hidden;
-                    margin-bottom: 24px;
-                }
-                .sr-meta-item {
-                    flex: 1;
-                    padding: 14px 16px;
-                    border-right: 1px solid #e2e8f0;
-                }
-                .sr-meta-item:last-child { border-right: none; }
-                .sr-meta-label {
-                    font-size: 8px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 1.5px;
-                    color: #64748b;
-                    margin: 0 0 4px;
-                }
-                .sr-meta-value {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #0f172a;
-                    margin: 0;
-                    font-family: 'Segoe UI', monospace;
-                }
-
-                /* ── EXECUTIVE SUMMARY BAR ── */
-                .sr-exec-bar {
-                    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-                    border-left: 4px solid #3b82f6;
-                    border-radius: 0 8px 8px 0;
-                    padding: 14px 20px;
-                    margin-bottom: 28px;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                }
-                .sr-exec-bar .badge {
-                    background: #3b82f6;
-                    color: white;
-                    font-size: 8px;
-                    font-weight: 700;
-                    letter-spacing: 1px;
-                    padding: 3px 10px;
-                    border-radius: 4px;
-                    text-transform: uppercase;
-                    white-space: nowrap;
-                }
-                .sr-exec-bar .text {
-                    font-size: 11px;
-                    color: #334155;
-                    line-height: 1.4;
-                }
-
-                /* ── SECTION DIVIDER ── */
-                .sr-section-divider {
-                    border: none;
-                    border-top: 1px solid #e2e8f0;
-                    margin: 24px 0;
-                }
-
-                /* ── ANALYSIS BODY ── */
-                .sr-body {
-                    font-size: 12px;
-                    color: #334155;
-                    line-height: 1.75;
-                }
-                .sr-body strong { color: #0f172a; }
-                .sr-body strong.terminal-heading {
-                    display: block;
-                    font-size: 14px;
-                    font-weight: 700;
-                    color: #0f172a;
-                    margin: 22px 0 10px;
-                    padding: 8px 0 6px;
-                    border-bottom: 2px solid #3b82f6;
-                    letter-spacing: 0.3px;
-                }
-                .sr-body p { margin: 8px 0; }
-                .sr-body .terminal-bullet {
-                    display: block;
-                    margin: 5px 0 5px 16px;
-                    padding-left: 4px;
-                    position: relative;
-                }
-                .sr-body .terminal-bullet.nested {
-                    margin-left: 32px;
-                    color: #64748b;
-                }
-                .sr-body .terminal-bullet .bullet-num {
-                    color: #3b82f6;
-                    font-weight: 700;
-                }
-
-                /* Tables */
-                .sr-body .terminal-table-wrapper {
-                    border: 1px solid #cbd5e1;
-                    border-radius: 8px;
-                    margin: 18px 0;
-                    overflow: hidden;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-                }
-                .sr-body .terminal-parsed-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-size: 11px;
-                    color: #334155;
-                    font-family: 'Segoe UI', sans-serif;
-                }
-                .sr-body .terminal-parsed-table th {
-                    background: linear-gradient(180deg, #f8fafc, #f1f5f9);
-                    color: #0f172a;
-                    font-weight: 700;
-                    padding: 10px 14px;
-                    border-bottom: 2px solid #cbd5e1;
-                    text-align: left;
-                    font-size: 10px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                .sr-body .terminal-parsed-table td {
-                    padding: 9px 14px;
-                    border-bottom: 1px solid #e2e8f0;
-                }
-                .sr-body .terminal-parsed-table tr:last-child td { border-bottom: none; }
-                .sr-body .terminal-parsed-table tr:nth-child(even) { background: #f8fafc; }
-
-                /* Code blocks */
-                .sr-body .terminal-code-block {
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 6px;
-                    margin: 12px 0;
-                }
-                .sr-body .terminal-code-block pre {
-                    margin: 0;
-                    padding: 12px 16px;
-                    font-family: 'Consolas', 'Courier New', monospace;
-                    font-size: 10px;
-                    color: #334155;
-                    white-space: pre-wrap;
-                }
-
-                /* ── FOOTER ── */
-                .sr-footer {
-                    background: #f8fafc;
-                    border-top: 2px solid #e2e8f0;
-                    padding: 20px 36px;
-                    margin-top: 40px;
-                }
-                .sr-footer-grid {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                    margin-bottom: 14px;
-                }
-                .sr-footer-brand {
-                    font-size: 14px;
-                    font-weight: 800;
-                    letter-spacing: 2px;
-                    color: #94a3b8;
-                }
-                .sr-footer-id {
-                    font-size: 8px;
-                    color: #94a3b8;
-                    font-family: monospace;
-                    text-align: right;
-                }
-                .sr-disclaimer {
-                    font-size: 7.5px;
-                    color: #94a3b8;
-                    line-height: 1.5;
-                    text-align: justify;
-                    border-top: 1px solid #e2e8f0;
-                    padding-top: 12px;
-                }
-            </style>
-
-            <!-- ▌ HEADER BAR ▌ -->
-            <div class="sr-header">
-                <div class="sr-brand">
-                    <h1>STRATA</h1>
-                    <p>Algorithmic Equity Research Platform</p>
-                </div>
-                <div class="sr-header-right">
-                    <p class="sr-doc-type">Quantitative Analysis Report</p>
-                    <p class="sr-doc-date">${reportDate} · ${reportTime}</p>
-                </div>
-            </div>
-
-            <!-- ▌ CLASSIFICATION ▌ -->
-            <div class="sr-classification">
-                For Educational &amp; Informational Purposes Only — Not Investment Advice
-            </div>
-
-            <!-- ▌ CONTENT ▌ -->
-            <div class="sr-content">
-
-                <!-- Metadata Strip -->
-                <div class="sr-meta-strip">
-                    <div class="sr-meta-item">
-                        <p class="sr-meta-label">Asset Ticker</p>
-                        <p class="sr-meta-value">${report.ticker}</p>
-                    </div>
-                    <div class="sr-meta-item">
-                        <p class="sr-meta-label">Analytical Frame</p>
-                        <p class="sr-meta-value">${report.frameLabel}</p>
-                    </div>
-                    <div class="sr-meta-item">
-                        <p class="sr-meta-label">Quant Model</p>
-                        <p class="sr-meta-value">${report.modelName}</p>
-                    </div>
-                    <div class="sr-meta-item">
-                        <p class="sr-meta-label">Report ID</p>
-                        <p class="sr-meta-value" style="font-family: monospace; font-size: 10px;">${reportId}</p>
-                    </div>
-                </div>
-
-                <!-- Executive Summary Bar -->
-                <div class="sr-exec-bar">
-                    <span class="badge">Analysis</span>
-                    <span class="text">This report was generated by STRATA's quantitative engine using the <strong>${report.frameLabel}</strong> framework applied to <strong>${report.ticker}</strong>. All metrics are derived from publicly available financial data feeds.</span>
-                </div>
-
-                <hr class="sr-section-divider">
-
-                <!-- Analysis Body -->
-                <div class="sr-body">
-                    ${report.analysisHtml}
-                </div>
-
-            </div>
-
-            <!-- ▌ FOOTER ▌ -->
-            <div class="sr-footer">
-                <div class="sr-footer-grid">
-                    <span class="sr-footer-brand">STRATA</span>
-                    <span class="sr-footer-id">Report ID: ${reportId}<br>Generated: ${reportDate} ${reportTime}</span>
-                </div>
-                <div class="sr-disclaimer">
-                    <strong>DISCLAIMER:</strong> This report is generated by the STRATA Algorithmic Equity Research Platform for educational and informational purposes only. It does not constitute financial advice, investment recommendation, or an offer to buy or sell securities. All quantitative analyses, scores, and projections are mathematical approximations derived from publicly available financial data and should not be relied upon for investment decisions. Past performance does not guarantee future results. Users should consult with a qualified financial advisor before making any investment decisions. STRATA, its developers, and affiliates assume no liability for any financial losses incurred from use of this report. Data sources include Finnhub, TwelveData, and Financial Modeling Prep. Model outputs are generated via third-party AI inference providers and may contain inaccuracies.
-                </div>
-            </div>
-        </div>
-    `;
-
-    let originalText = '';
-    if (btn) {
-        originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...';
-        btn.disabled = true;
-    }
-    
-    try {
-        await window.html2pdf().set(opt).from(sourceHtml).save();
-        showToast('PDF downloaded successfully.');
-    } catch (err) {
-        console.error("PDF generation failed:", err);
-        showToast('PDF generation failed. Please try again.');
-    } finally {
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
-}
