@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireTicker } = require('../utils/api');
-const { AI_FRAME_INSTRUCTIONS, buildAiPrompt, getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
+const { AI_FRAME_INSTRUCTIONS, buildAiPrompt, getAiProvider, generateAiAnalysis, pickMetricsForAi } = require('../utils/aiProviders');
 
 const AI_ANALYSIS_CACHE = {};
 const AI_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -116,6 +116,16 @@ router.post('/analyze', async (req, res) => {
             model: provider === 'groq'
                 ? (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile')
                 : (process.env.GEMINI_MODEL || 'gemini-2.5-flash'),
+            companyName: profile.name,
+            industry: profile.finnhubIndustry,
+            exchange: profile.exchange,
+            marketCap: profile.marketCapitalization,
+            price: quote.c,
+            change: quote.d,
+            changePercent: quote.dp,
+            high52w: metricsPayload?.metric?.['52WeekHigh'],
+            low52w: metricsPayload?.metric?.['52WeekLow'],
+            metrics: pickMetricsForAi(metricsPayload?.metric)
         };
 
         AI_ANALYSIS_CACHE[cacheKey] = { lastFetched: Date.now(), data: payload };
@@ -205,5 +215,42 @@ async function fetchFmpStatements(symbol, financials) {
         console.warn('FMP statements fallback failed:', error.message);
     }
 }
+
+router.post('/followup', async (req, res) => {
+    const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp)) {
+        return res.status(429).json({ error: 'Rate limit reached. Please wait a moment before running another scan.', errorType: 'RATE_LIMITED' });
+    }
+
+    const { ticker, previousAnalysis, question } = req.body;
+    if (!ticker || !previousAnalysis || !question) {
+        return res.status(400).json({ error: 'Missing required fields: ticker, previousAnalysis, question' });
+    }
+
+    if (!getAiProvider()) {
+        return res.status(503).json({
+            error: 'No AI API key configured. Add GROQ_API_KEY (free at console.groq.com) to .env',
+            errorType: 'AI_PROVIDER_ERROR'
+        });
+    }
+
+    try {
+        const prompt = `You are STRATA, an educational equity research assistant.
+The user previously ran an analysis on ${ticker}. Here is the analysis:
+---
+${previousAnalysis}
+---
+The user has a follow-up question: ${question}
+Answer concisely (under 300 words). Use markdown formatting. Not financial advice.`;
+
+        const { analysis, provider } = await generateAiAnalysis(prompt);
+        res.json({ analysis, provider });
+    } catch (error) {
+        console.error('AI Followup Error:', error);
+        const status = error.statusCode || 500;
+        const message = status === 500 ? 'Failed to generate AI followup.' : error.message;
+        res.status(status).json({ error: message, errorType: 'AI_PROVIDER_ERROR' });
+    }
+});
 
 module.exports = router;

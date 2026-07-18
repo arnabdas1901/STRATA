@@ -261,5 +261,6 @@ module.exports = {
     AI_FRAME_INSTRUCTIONS,
     buildAiPrompt,
     getAiProvider,
-    generateAiAnalysis
+    generateAiAnalysis,
+    pickMetricsForAi
 };

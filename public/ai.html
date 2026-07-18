@@ -107,17 +107,59 @@
                             </select>
                         </div>
                         <button id="execute-ai-btn" class="primary-btn execution-btn"><i class="fa-solid fa-microchip"></i> Execute Deep Scan</button>
+                        <button id="run-all-frames-btn" class="secondary-btn run-all-btn" title="Run all 8 analytical frames sequentially"><i class="fa-solid fa-layer-group"></i> Run All Frames</button>
                         <button id="ai-pdf-btn" class="secondary-btn" style="display: none; white-space: nowrap;"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
                     </div>
                 </div>
 
+                <!-- Quick Ticker Strip -->
+                <div class="ai-quick-tickers" id="ai-quick-tickers">
+                    <span class="qt-label"><i class="fa-solid fa-bolt"></i> Quick:</span>
+                    <button class="qt-badge" data-ticker="AAPL">AAPL</button>
+                    <button class="qt-badge" data-ticker="NVDA">NVDA</button>
+                    <button class="qt-badge" data-ticker="MSFT">MSFT</button>
+                    <button class="qt-badge" data-ticker="GOOGL">GOOGL</button>
+                    <button class="qt-badge" data-ticker="AMZN">AMZN</button>
+                    <button class="qt-badge" data-ticker="TSLA">TSLA</button>
+                    <button class="qt-badge" data-ticker="META">META</button>
+                    <button class="qt-badge" data-ticker="JPM">JPM</button>
+                </div>
+
+                <!-- Data Context Panel (hidden until scan runs) -->
+                <div id="ai-data-context-card" class="ai-data-context-card hidden-element">
+                    <div class="ai-context-header" id="ai-context-header-toggle">
+                        <div class="ai-context-title"><i class="fa-solid fa-database"></i> Market Data Context</div>
+                        <i class="fa-solid fa-chevron-down ai-context-toggle" id="ai-context-chevron"></i>
+                    </div>
+                    <div class="ai-context-body" id="ai-context-body">
+                        <div class="ai-company-header" id="ai-company-header"></div>
+                        <div class="ai-price-row" id="ai-price-row"></div>
+                        <div class="ai-metrics-grid" id="ai-metrics-grid"></div>
+                    </div>
+                </div>
+
+                <!-- Terminal Card -->
                 <div class="ai-terminal-card">
                     <div class="terminal-header">
                         <div class="window-buttons"><span></span><span></span><span></span></div>
                         <div class="terminal-title">quant-engine-v4.0.1 // core_analysis_stream</div>
+                        <div class="terminal-actions">
+                            <button class="terminal-copy-btn" id="ai-copy-btn" title="Copy analysis to clipboard"><i class="fa-regular fa-copy"></i> Copy</button>
+                        </div>
                     </div>
+                    <!-- Tab bar for multi-frame mode (hidden until Run All Frames used) -->
+                    <div id="ai-tab-bar" class="ai-tab-bar hidden-element"></div>
                     <div id="ai-terminal-output" class="terminal-screen-body">
                         <span class="terminal-prompt">&gt; Groq AI analyst online. Enter a ticker and select an analysis frame.</span>
+                    </div>
+                    <!-- Follow-up Question Bar (hidden until analysis complete) -->
+                    <div id="ai-followup-bar" class="ai-followup-bar hidden-element">
+                        <input type="text" id="ai-followup-input" placeholder="Ask a follow-up question about this analysis…" autocomplete="off">
+                        <button id="ai-followup-btn" class="primary-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                    <div class="ai-terminal-footer" id="ai-terminal-footer">
+                        <span id="ai-word-count"></span>
+                        <span id="ai-scan-timestamp"></span>
                     </div>
                     <div class="gemini-integration-notice">
                         <i class="fa-solid fa-robot gemini-icon"></i>
