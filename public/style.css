@@ -132,38 +132,47 @@ select {
 .logo-container {
     padding: 20px 24px;
     display: flex;
-    align-items: center;
-    gap: 14px;
+    flex-direction: column;
+    gap: 4px;
     border-bottom: 1px solid rgba(37, 99, 235, 0.35);
     background: linear-gradient(90deg, rgba(37, 99, 235, 0.12), transparent 70%);
 }
 
+.logo-brand-block {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+}
+
+.logo-title-row {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
 .brand-logo-sticker {
-    height: 52px;
-    width: auto;
-    object-fit: contain;
-    flex-shrink: 0;
-    display: block;
+    height: 36px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
 }
 
 .brand-logo-sticker-mobile {
-    height: 36px;
-    width: auto;
-    object-fit: contain;
-    flex-shrink: 0;
-    display: block;
+    height: 28px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
 }
 
 .logo-icon-img {
-    height: 42px;
+    height: 36px;
     width: auto;
     object-fit: contain;
-}
-
-.logo-text-group {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
 }
 
 .logo-subtext {
@@ -172,7 +181,7 @@ select {
     letter-spacing: 0.5px;
     color: var(--neon-cyan-vibrant);
     text-transform: uppercase;
-    margin-top: -2px;
+    margin-top: 1px;
 }
 
 .logo-icon {
@@ -181,9 +190,15 @@ select {
 }
 
 .logo-text {
-    font-weight: 700;
-    font-size: 1.25rem;
-    letter-spacing: 1px;
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: 1.5px;
+    color: #ffffff;
+    background: linear-gradient(90deg, #ffffff 0%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block !important;
+    line-height: 1 !important;
 }
 
 .accent-text {
@@ -290,8 +305,7 @@ select {
     border-radius: 16px;
     backdrop-filter: blur(20px);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    position: sticky;
-    top: 16px;
+    position: relative;
     z-index: 95;
     gap: 16px;
 }
@@ -2943,21 +2957,15 @@ select {
 
     .main-content {
         padding: 16px;
-        padding-top: calc(72px + env(safe-area-inset-top));
+        padding-top: 16px;
     }
 
     .top-header-bar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        border-radius: 0;
-        margin-bottom: 0;
+        position: relative;
+        border-radius: 12px;
+        margin-bottom: 20px;
         padding: 10px 14px;
         z-index: 120;
-        border-left: none;
-        border-right: none;
-        border-top: none;
         gap: 10px;
     }
 
