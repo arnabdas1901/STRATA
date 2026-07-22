@@ -408,6 +408,18 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
     // Populate Ratios Grid
     const ratiosGrid = document.getElementById('ratios-grid-target');
     if (ratiosGrid) {
+        let deVal = metricData.debtToEquityAnnual ?? metricData['totalDebt/totalEquityAnnual'] ?? metricData['totalDebt/totalEquityQuarterly'] ?? metricData.totalDebtToEquity;
+        if (deVal == null && bs) {
+            const bsData = bs?.balance_sheet?.[0] || {};
+            const shortDebt = Number(bsData.short_term_debt || bsData.shortTermDebt || 0);
+            const longDebt = Number(bsData.long_term_debt || bsData.longTermDebt || 0);
+            const totalDebt = shortDebt + longDebt;
+            const equity = Number(bsData.total_shareholders_equity || bsData.totalEquity || bsData.totalShareholdersEquity || 0);
+            if (equity > 0 && totalDebt > 0) {
+                deVal = totalDebt / equity;
+            }
+        }
+
         const ratios = [
             { label: 'P/E Ratio', value: formatValue(metricData.peTTM), type: 'pe' },
             { label: 'P/B Ratio', value: formatValue(metricData.pbAnnual), type: 'pb' },
@@ -416,7 +428,7 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
             { label: 'ROA', value: formatValue(metricData.roaTTM) + '%', type: 'percentage_high' },
             { label: 'Net Margin', value: formatValue(metricData.netProfitMarginTTM) + '%', type: 'percentage_high' },
             { label: 'Current Ratio', value: formatValue(metricData.currentRatioAnnual), type: 'current_ratio' },
-            { label: 'Debt/Equity', value: formatValue(metricData.debtToEquityAnnual), type: 'debt_equity' },
+            { label: 'Debt/Equity', value: formatValue(deVal), type: 'debt_equity' },
             { label: 'Revenue Growth 5Y', value: formatValue(metricData.revenueGrowth5Y) + '%', type: 'percentage_high' },
             { label: 'EPS Growth 5Y', value: formatValue(metricData.epsGrowth5Y) + '%', type: 'percentage_high' },
             { label: 'Dividend Yield', value: formatValue(metricData.dividendYieldIndicatedAnnual) + '%', type: 'dividend' }

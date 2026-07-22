@@ -97,9 +97,23 @@ router.get('/finnhub/metrics', async (req, res) => {
         );
         const data = await response.json();
 
+        if (data?.metric) {
+            const de = data.metric['totalDebt/totalEquityAnnual'] ??
+                       data.metric['totalDebt/totalEquityQuarterly'] ??
+                       data.metric['longTermDebt/equityAnnual'] ??
+                       data.metric['longTermDebt/equityQuarterly'] ??
+                       data.metric.debtToEquityAnnual ??
+                       data.metric.totalDebtToEquity;
+            if (de != null) {
+                data.metric.debtToEquityAnnual = Number(de);
+                data.metric.totalDebtToEquity = Number(de);
+                data.metric.totalDebtTotalEquityAnnual = Number(de);
+            }
+        }
+
         const needsFallback = !data?.metric ||
             data.metric.returnOnEquityTTM == null ||
-            data.metric.totalDebtTotalEquityAnnual == null ||
+            data.metric.debtToEquityAnnual == null ||
             (data.metric.enterpriseValueTTM == null && data.metric.evToEbitda == null && data.metric.evEbitda == null);
 
         if (needsFallback && (process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY)) {
@@ -107,6 +121,14 @@ router.get('/finnhub/metrics', async (req, res) => {
                 const fallback = await fetchFmpMetrics(symbol);
                 if (!fallback.error) {
                     data.fmpMetrics = fallback;
+                    if (data.metric && data.metric.debtToEquityAnnual == null) {
+                        const fmpDe = fallback.debtEquityRatioTTM ?? fallback.debtEquityRatio ?? fallback.totalDebtToEquity;
+                        if (fmpDe != null) {
+                            data.metric.debtToEquityAnnual = Number(fmpDe);
+                            data.metric.totalDebtToEquity = Number(fmpDe);
+                            data.metric.totalDebtTotalEquityAnnual = Number(fmpDe);
+                        }
+                    }
                 }
             } catch (fallbackError) {
                 console.warn('FMP metrics fallback failed:', fallbackError);

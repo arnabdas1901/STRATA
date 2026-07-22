@@ -66,13 +66,60 @@
         </aside>
 
         <main class="main-content">
-            <header class="mobile-header">
-                <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <div class="mobile-logo">
-                    <span>STRATA</span>
-                    <img src="/images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile">
+            <header class="top-header-bar">
+                <div class="top-brand-group">
+                    <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <a href="index.html" class="top-app-brand">
+                        <div class="logo-text-group">
+                            <span class="top-app-logo-text">STRATA</span>
+                            <span class="top-app-tagline">REAL-TIME MARKET ANALYTICS</span>
+                        </div>
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile" onerror="this.style.display='none'">
+                    </a>
+                </div>
+                <nav class="top-menu-bar">
+                    <a class="top-menu-item" href="index.html">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i>
+                        <span>Equity Analysis</span>
+                    </a>
+                    <a class="top-menu-item" href="calculators.html">
+                        <i class="fa-solid fa-calculator"></i>
+                        <span>Calculators</span>
+                    </a>
+                    <a class="top-menu-item" href="portfolio.html">
+                        <i class="fa-solid fa-pie-chart"></i>
+                        <span>Portfolio</span>
+                    </a>
+                    <a class="top-menu-item" href="ai.html">
+                        <i class="fa-solid fa-brain"></i>
+                        <span>AI Analyst</span>
+                    </a>
+                    <a class="top-menu-item" href="crypto.html">
+                        <i class="fa-solid fa-coins"></i>
+                        <span>Crypto</span>
+                    </a>
+                    <a class="top-menu-item active" href="commodities.html">
+                        <i class="fa-solid fa-wheat-awn"></i>
+                        <span>Commodities</span>
+                    </a>
+                    <a class="top-menu-item" href="macro.html">
+                        <i class="fa-solid fa-earth-americas"></i>
+                        <span>Global Inflation</span>
+                    </a>
+                    <a class="top-menu-item" href="forex.html">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                        <span>Currencies</span>
+                    </a>
+                    <a class="top-menu-item" href="stress.html">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Stress Tester</span>
+                    </a>
+                </nav>
+                <div class="top-status-badge">
+                    <span class="status-indicator connected"></span>
+                    <span class="status-label">Operational</span>
                 </div>
             </header>
 

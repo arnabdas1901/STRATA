@@ -14,9 +14,9 @@ const pickMetricsForAi = (metric) => {
         // Leverage & Liquidity
         currentRatioAnnual: metric.currentRatioAnnual,
         quickRatioAnnual: metric.quickRatioAnnual,
-        debtToEquityAnnual: metric.debtToEquityAnnual,
-        longTermDebtToEquityAnnual: metric.longTermDebtToEquityAnnual,
-        totalDebtToTotalAssetAnnual: metric.totalDebtToTotalAssetAnnual,
+        debtToEquityAnnual: metric.debtToEquityAnnual ?? metric['totalDebt/totalEquityAnnual'] ?? metric['totalDebt/totalEquityQuarterly'] ?? metric.totalDebtToEquity,
+        longTermDebtToEquityAnnual: metric.longTermDebtToEquityAnnual ?? metric['longTermDebt/equityAnnual'] ?? metric['longTermDebt/equityQuarterly'],
+        totalDebtToTotalAssetAnnual: metric.totalDebtToTotalAssetAnnual ?? metric['totalDebt/totalAssetAnnual'] ?? metric['totalDebt/totalAssetQuarterly'],
         // Efficiency
         assetTurnoverTTM: metric.assetTurnoverTTM,
         inventoryTurnoverTTM: metric.inventoryTurnoverTTM,

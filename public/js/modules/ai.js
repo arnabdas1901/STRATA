@@ -374,6 +374,7 @@ function renderDataContext(data) {
     const metricsGrid = document.getElementById('ai-metrics-grid');
     if (metricsGrid && data.metrics) {
         const m = data.metrics;
+        const deVal = m.debtToEquityAnnual ?? m['totalDebt/totalEquityAnnual'] ?? m['totalDebt/totalEquityQuarterly'] ?? m.totalDebtToEquity;
         const metricDefs = [
             { label: 'P/E (TTM)', value: m.peTTM, good: [0, 25], warn: [25, 40] },
             { label: 'P/B', value: m.pbAnnual, good: [0, 3], warn: [3, 6] },
@@ -381,7 +382,7 @@ function renderDataContext(data) {
             { label: 'ROE (TTM)', value: m.roeTTM, suffix: '%', good: [15, 999], warn: [8, 15] },
             { label: 'ROA (TTM)', value: m.roaTTM, suffix: '%', good: [7, 999], warn: [3, 7] },
             { label: 'Gross Margin', value: m.grossMarginTTM, suffix: '%', good: [40, 999], warn: [20, 40] },
-            { label: 'D/E Ratio', value: m.debtToEquityAnnual, good: [0, 0.5], warn: [0.5, 2], invert: true },
+            { label: 'D/E Ratio', value: deVal, good: [0, 0.5], warn: [0.5, 2], invert: true },
             { label: 'Beta', value: m.beta, good: [0.8, 1.3], warn: [0.5, 1.8] },
         ];
 
