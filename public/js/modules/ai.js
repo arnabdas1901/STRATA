@@ -226,6 +226,19 @@ export function setupAiAdvisor() {
     }
 
     renderHistoryStrip();
+
+    // Check for autoRun parameter from US Equity redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryTicker = urlParams.get('symbol') || urlParams.get('ticker');
+    const autoRun = urlParams.get('autoRun') === 'true';
+    if (queryTicker && input) {
+        input.value = queryTicker.trim().toUpperCase();
+        if (autoRun) {
+            setTimeout(() => {
+                executeAllFrames();
+            }, 200);
+        }
+    }
 }
 
 // ──────────────────────────────────────────

@@ -135,6 +135,16 @@ async function executeEquityAnalysis(ticker) {
 
         updateUI(profile, quote, metrics, balanceSheet, cashFlow, incomeStatement, recommendations, peersDetailed);
         
+        const aiBtn = document.getElementById('equity-ai-btn');
+        if (aiBtn) {
+            aiBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (activeEquityTicker) {
+                    window.location.href = `ai.html?ticker=${activeEquityTicker}&autoRun=true`;
+                }
+            });
+        }
+        
         if (chartData && !chartData.error && chartData.values) {
             rawHistoricalData = [...chartData.values].reverse();
             renderEquityChart(rawHistoricalData);
