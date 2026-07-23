@@ -193,22 +193,6 @@
                             </div>
                         </div>
 
-                        <!-- Live Sector Performance Heatmap Section -->
-                        <div class="sector-heatmap-card">
-                            <div class="card-section-header sector-header-row">
-                                <div class="header-title-wrap">
-                                    <i class="fa-solid fa-chart-pie" style="color: var(--neon-cyan-vibrant);"></i>
-                                    <h3>S&P 500 Sector Performance</h3>
-                                </div>
-                                <div class="sector-status-tag">
-                                    <span class="pulse-dot"></span> LIVE REFRESH
-                                </div>
-                            </div>
-                            <div class="sector-grid" id="sector-heatmap-grid">
-                                <div class="sector-tile-skeleton">Loading sector analytics…</div>
-                            </div>
-                        </div>
-
                         <!-- Top Gainers & Top Losers Section -->
                         <div class="movers-tables-grid">
                             <!-- Top Gainers Card -->
@@ -221,48 +205,45 @@
                                     <table class="movers-data-table">
                                         <thead>
                                             <tr>
-                                                <th>Symbol</th>
                                                 <th>Company</th>
-                                                <th class="num-col">Price</th>
                                                 <th class="num-col">24h Change</th>
-                                                <th class="num-col">Volume</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">NVDA</td>
-                                                <td class="company-cell">NVIDIA Corporation</td>
-                                                <td class="num-col font-mono">$128.50</td>
+                                        <tbody id="top-gainers-tbody">
+                                            <tr class="movers-row" data-symbol="NVDA" title="Click to view full analysis for NVDA">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">NVDA</span>
+                                                    <span class="company-name-text">NVIDIA Corporation</span>
+                                                </td>
                                                 <td class="num-col font-mono positive-text">+5.42%</td>
-                                                <td class="num-col font-mono">48.2M</td>
                                             </tr>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">AMD</td>
-                                                <td class="company-cell">Advanced Micro Devices</td>
-                                                <td class="num-col font-mono">$162.10</td>
+                                            <tr class="movers-row" data-symbol="AMD" title="Click to view full analysis for AMD">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">AMD</span>
+                                                    <span class="company-name-text">Advanced Micro Devices</span>
+                                                </td>
                                                 <td class="num-col font-mono positive-text">+4.18%</td>
-                                                <td class="num-col font-mono">32.6M</td>
                                             </tr>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">AAPL</td>
-                                                <td class="company-cell">Apple Inc.</td>
-                                                <td class="num-col font-mono">$224.30</td>
+                                            <tr class="movers-row" data-symbol="AAPL" title="Click to view full analysis for AAPL">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">AAPL</span>
+                                                    <span class="company-name-text">Apple Inc.</span>
+                                                </td>
                                                 <td class="num-col font-mono positive-text">+3.15%</td>
-                                                <td class="num-col font-mono">55.1M</td>
                                             </tr>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">AVGO</td>
-                                                <td class="company-cell">Broadcom Inc.</td>
-                                                <td class="num-col font-mono">$172.80</td>
+                                            <tr class="movers-row" data-symbol="AVGO" title="Click to view full analysis for AVGO">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">AVGO</span>
+                                                    <span class="company-name-text">Broadcom Inc.</span>
+                                                </td>
                                                 <td class="num-col font-mono positive-text">+2.90%</td>
-                                                <td class="num-col font-mono">18.4M</td>
                                             </tr>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">MSFT</td>
-                                                <td class="company-cell">Microsoft Corporation</td>
-                                                <td class="num-col font-mono">$448.90</td>
+                                            <tr class="movers-row" data-symbol="MSFT" title="Click to view full analysis for MSFT">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">MSFT</span>
+                                                    <span class="company-name-text">Microsoft Corporation</span>
+                                                </td>
                                                 <td class="num-col font-mono positive-text">+2.64%</td>
-                                                <td class="num-col font-mono">24.8M</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -279,52 +260,70 @@
                                     <table class="movers-data-table">
                                         <thead>
                                             <tr>
-                                                <th>Symbol</th>
                                                 <th>Company</th>
-                                                <th class="num-col">Price</th>
                                                 <th class="num-col">24h Change</th>
-                                                <th class="num-col">Volume</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">INTC</td>
-                                                <td class="company-cell">Intel Corporation</td>
-                                                <td class="num-col font-mono">$31.20</td>
+                                        <tbody id="top-losers-tbody">
+                                            <tr class="movers-row" data-symbol="INTC" title="Click to view full analysis for INTC">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">INTC</span>
+                                                    <span class="company-name-text">Intel Corporation</span>
+                                                </td>
                                                 <td class="num-col font-mono negative-text">-4.85%</td>
-                                                <td class="num-col font-mono">41.0M</td>
                                             </tr>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">TSLA</td>
-                                                <td class="company-cell">Tesla Inc.</td>
-                                                <td class="num-col font-mono">$248.50</td>
+                                            <tr class="movers-row" data-symbol="TSLA" title="Click to view full analysis for TSLA">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">TSLA</span>
+                                                    <span class="company-name-text">Tesla Inc.</span>
+                                                </td>
                                                 <td class="num-col font-mono negative-text">-3.72%</td>
-                                                <td class="num-col font-mono">62.3M</td>
                                             </tr>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">PYPL</td>
-                                                <td class="company-cell">PayPal Holdings</td>
-                                                <td class="num-col font-mono">$58.40</td>
+                                            <tr class="movers-row" data-symbol="PYPL" title="Click to view full analysis for PYPL">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">PYPL</span>
+                                                    <span class="company-name-text">PayPal Holdings</span>
+                                                </td>
                                                 <td class="num-col font-mono negative-text">-2.95%</td>
-                                                <td class="num-col font-mono">15.7M</td>
                                             </tr>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">BA</td>
-                                                <td class="company-cell">Boeing Co.</td>
-                                                <td class="num-col font-mono">$178.60</td>
+                                            <tr class="movers-row" data-symbol="BA" title="Click to view full analysis for BA">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">BA</span>
+                                                    <span class="company-name-text">Boeing Co.</span>
+                                                </td>
                                                 <td class="num-col font-mono negative-text">-2.41%</td>
-                                                <td class="num-col font-mono">11.2M</td>
                                             </tr>
-                                            <tr>
-                                                <td class="symbol-cell font-mono">NKE</td>
-                                                <td class="company-cell">NIKE Inc.</td>
-                                                <td class="num-col font-mono">$75.10</td>
+                                            <tr class="movers-row" data-symbol="NKE" title="Click to view full analysis for NKE">
+                                                <td class="company-cell">
+                                                    <span class="symbol-tag font-mono">NKE</span>
+                                                    <span class="company-name-text">NIKE Inc.</span>
+                                                </td>
                                                 <td class="num-col font-mono negative-text">-2.10%</td>
-                                                <td class="num-col font-mono">14.5M</td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Sector Performance Heatmap Section -->
+                        <div class="sector-heatmap-card">
+                            <div class="card-section-header sector-header-row">
+                                <div class="header-title-wrap">
+                                    <i class="fa-solid fa-chart-pie" style="color: var(--neon-cyan-vibrant);"></i>
+                                    <h3>S&P 500 Sector Performance</h3>
+                                </div>
+                                <div class="sector-header-actions">
+                                    <div class="sector-status-tag">
+                                        <span class="pulse-dot"></span> LIVE REFRESH
+                                    </div>
+                                    <button id="toggle-sector-btn" class="sector-toggle-btn" aria-label="Toggle Sector Heatmap" title="Minimize / Expand Sector Heatmap">
+                                        <i class="fa-solid fa-chevron-up"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="sector-grid" id="sector-heatmap-grid">
+                                <div class="sector-tile-skeleton">Loading sector analytics…</div>
                             </div>
                         </div>
                     </div>

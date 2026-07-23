@@ -31,6 +31,7 @@ export function loadDashboard() {
             setupEquityDashboardTabs();
             fetchMarketMovers();
             fetchSectorPerformance();
+            setupSectorMinimizer();
         }
     };
 
@@ -965,30 +966,29 @@ async function fetchMarketMovers() {
             tbody.innerHTML = list.map((item) => {
                 const sym = item.symbol || '';
                 const name = item.name || sym;
-                const price = typeof item.price === 'number' ? `$${item.price.toFixed(2)}` : '$--';
                 const pct = typeof item.changesPercentage === 'number' ? item.changesPercentage : 0;
                 const pctStr = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
                 const textClass = isPositive ? 'positive-text' : (pct < 0 ? 'negative-text' : 'positive-text');
-                const volStr = formatVol(item.volume);
 
                 return `
                     <tr class="movers-row" data-symbol="${sym}" title="Click to view full analysis for ${sym}">
-                        <td class="symbol-cell font-mono">${sym}</td>
-                        <td class="company-cell">${name}</td>
-                        <td class="num-col font-mono">${price}</td>
+                        <td class="company-cell">
+                            <span class="symbol-tag font-mono">${sym}</span>
+                            <span class="company-name-text">${name}</span>
+                        </td>
                         <td class="num-col font-mono ${textClass}">${pctStr}</td>
-                        <td class="num-col font-mono">${volStr}</td>
                     </tr>
                 `;
             }).join('');
 
             tbody.querySelectorAll('.movers-row').forEach((row) => {
-                row.addEventListener('click', () => {
+                row.onclick = (e) => {
+                    e.preventDefault();
                     const symbol = row.getAttribute('data-symbol');
                     if (symbol) {
                         window.location.href = `equity-details.html?symbol=${encodeURIComponent(symbol)}`;
                     }
-                });
+                };
             });
         };
 
@@ -1055,5 +1055,21 @@ export async function fetchSectorPerformance() {
     } catch (err) {
         console.warn('Failed to fetch sector performance:', err);
     }
+}
+
+function setupSectorMinimizer() {
+    const btn = document.getElementById('toggle-sector-btn');
+    const grid = document.getElementById('sector-heatmap-grid');
+    if (!btn || !grid) return;
+
+    btn.onclick = (e) => {
+        e.preventDefault();
+        const isCollapsed = grid.classList.toggle('collapsed-sector-grid');
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.className = isCollapsed ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up';
+        }
+        btn.setAttribute('aria-expanded', !isCollapsed);
+    };
 }
 
