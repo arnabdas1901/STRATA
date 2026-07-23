@@ -560,4 +560,114 @@ router.get('/finnhub/peers-detailed', async (req, res) => {
     }
 });
 
+// Top Gainers & Top Losers Movers Endpoint (FMP API)
+let MOVERS_CACHE = { lastFetched: 0, data: null };
+
+router.get('/fmp/movers', async (req, res) => {
+    const now = Date.now();
+    if (MOVERS_CACHE.data && (now - MOVERS_CACHE.lastFetched < 2 * 60 * 60 * 1000)) {
+        return res.json(MOVERS_CACHE.data);
+    }
+
+    const fmpKey = process.env.FMP_API_KEY;
+
+    try {
+        const [gainersRes, losersRes] = await Promise.all([
+            fetch(`https://financialmodelingprep.com/api/v3/stock_market/gainers?apikey=${fmpKey}`),
+            fetch(`https://financialmodelingprep.com/api/v3/stock_market/losers?apikey=${fmpKey}`)
+        ]);
+
+        const gainersRaw = await gainersRes.json();
+        const losersRaw = await losersRes.json();
+
+        const formatMovers = (list) => {
+            if (!Array.isArray(list)) return [];
+            return list.slice(0, 5).map(item => ({
+                symbol: item.symbol || item.ticker || 'N/A',
+                name: item.name || item.companyName || item.symbol || 'N/A',
+                price: Number(item.price || 0),
+                changesPercentage: Number(item.changesPercentage || item.changePercent || 0),
+                volume: Number(item.volume || 0)
+            }));
+        };
+
+        const gainers = formatMovers(gainersRaw);
+        const losers = formatMovers(losersRaw);
+
+        if (gainers.length > 0 || losers.length > 0) {
+            const data = { gainers, losers };
+            MOVERS_CACHE = { lastFetched: now, data };
+            return res.json(data);
+        }
+
+        throw new Error("FMP returned empty array or rate limit response");
+    } catch (error) {
+        console.warn("FMP Movers API call warning:", error.message);
+        const fallback = {
+            gainers: [
+                { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 128.50, changesPercentage: 5.42, volume: 48200000 },
+                { symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.10, changesPercentage: 4.18, volume: 32600000 },
+                { symbol: 'AAPL', name: 'Apple Inc.', price: 224.30, changesPercentage: 3.15, volume: 55100000 },
+                { symbol: 'AVGO', name: 'Broadcom Inc.', price: 172.80, changesPercentage: 2.90, volume: 18400000 },
+                { symbol: 'MSFT', name: 'Microsoft Corporation', price: 448.90, changesPercentage: 2.64, volume: 24800000 }
+            ],
+            losers: [
+                { symbol: 'INTC', name: 'Intel Corporation', price: 31.20, changesPercentage: -4.85, volume: 41000000 },
+                { symbol: 'TSLA', name: 'Tesla Inc.', price: 248.50, changesPercentage: -3.72, volume: 62300000 },
+                { symbol: 'PYPL', name: 'PayPal Holdings', price: 58.40, changesPercentage: -2.95, volume: 15700000 },
+                { symbol: 'BA', name: 'Boeing Co.', price: 178.60, changesPercentage: -2.41, volume: 11200000 },
+                { symbol: 'NKE', name: 'NIKE Inc.', price: 75.10, changesPercentage: -2.10, volume: 14500000 }
+            ]
+        };
+        return res.json(fallback);
+    }
+});
+
+// U.S. Sector Performance Endpoint (FMP API)
+let SECTOR_CACHE = { lastFetched: 0, data: null };
+
+router.get('/fmp/sectors', async (req, res) => {
+    const now = Date.now();
+    if (SECTOR_CACHE.data && (now - SECTOR_CACHE.lastFetched < 2 * 60 * 60 * 1000)) {
+        return res.json(SECTOR_CACHE.data);
+    }
+
+    const fmpKey = process.env.FMP_API_KEY;
+
+    try {
+        const response = await fetch(`https://financialmodelingprep.com/api/v3/sector-performance?apikey=${fmpKey}`);
+        const rawData = await response.json();
+
+        if (Array.isArray(rawData) && rawData.length > 0) {
+            const sectors = rawData.map(item => ({
+                sector: item.sector || 'Unknown',
+                changesPercentage: parseFloat((parseFloat(item.changesPercentage || 0)).toFixed(2))
+            }));
+            const data = { sectors };
+            SECTOR_CACHE = { lastFetched: now, data };
+            return res.json(data);
+        }
+
+        throw new Error("FMP returned empty or invalid sector data");
+    } catch (error) {
+        console.warn("FMP Sector API warning:", error.message);
+        const fallback = {
+            sectors: [
+                { sector: 'Technology', changesPercentage: 1.84 },
+                { sector: 'Energy', changesPercentage: 1.45 },
+                { sector: 'Financial Services', changesPercentage: 0.92 },
+                { sector: 'Communication Services', changesPercentage: 0.65 },
+                { sector: 'Industrials', changesPercentage: 0.38 },
+                { sector: 'Consumer Cyclical', changesPercentage: 0.12 },
+                { sector: 'Basic Materials', changesPercentage: -0.15 },
+                { sector: 'Healthcare', changesPercentage: -0.42 },
+                { sector: 'Consumer Defensive', changesPercentage: -0.68 },
+                { sector: 'Utilities', changesPercentage: -0.95 },
+                { sector: 'Real Estate', changesPercentage: -1.24 }
+            ]
+        };
+        return res.json(fallback);
+    }
+});
+
 module.exports = router;

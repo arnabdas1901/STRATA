@@ -28,6 +28,9 @@ export function loadDashboard() {
             fetchLiveIndexValues();
             setupMarketNews();
             setupNewsFilters();
+            setupEquityDashboardTabs();
+            fetchMarketMovers();
+            fetchSectorPerformance();
         }
     };
 
@@ -899,5 +902,148 @@ function filterAndRenderNews(filterType) {
     }
     
     renderNewsGrid(filtered.slice(0, 6));
+}
+
+function setupEquityDashboardTabs() {
+    const tabBtns = document.querySelectorAll('.equity-tab-btn');
+    const panels = document.querySelectorAll('.equity-tab-panel');
+
+    if (!tabBtns.length) return;
+
+    tabBtns.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetTab = btn.getAttribute('data-tab');
+
+            tabBtns.forEach((b) => {
+                const isActive = b === btn;
+                b.classList.toggle('active', isActive);
+                b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            panels.forEach((panel) => {
+                const isTarget = panel.id === `tab-${targetTab}-content`;
+                panel.classList.toggle('active', isTarget);
+            });
+        });
+    });
+}
+
+async function fetchMarketMovers() {
+    const gainersTbody = document.querySelector('.gainers-card tbody');
+    const losersTbody = document.querySelector('.losers-card tbody');
+
+    if (!gainersTbody && !losersTbody) return;
+
+    try {
+        const response = await fetchWithTimeout(`${BACKEND_URL}/api/fmp/movers`);
+        const data = await safeJsonParse(response);
+
+        if (!data) return;
+
+        const formatVol = (num) => {
+            if (!num || isNaN(num)) return '--';
+            if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+            return num.toString();
+        };
+
+        const renderTableRows = (tbody, list, isPositive) => {
+            if (!tbody || !Array.isArray(list) || !list.length) return;
+            
+            tbody.innerHTML = list.map((item) => {
+                const sym = item.symbol || '';
+                const name = item.name || sym;
+                const price = typeof item.price === 'number' ? `$${item.price.toFixed(2)}` : '$--';
+                const pct = typeof item.changesPercentage === 'number' ? item.changesPercentage : 0;
+                const pctStr = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+                const textClass = isPositive ? 'positive-text' : (pct < 0 ? 'negative-text' : 'positive-text');
+                const volStr = formatVol(item.volume);
+
+                return `
+                    <tr class="movers-row" data-symbol="${sym}" title="Click to view full analysis for ${sym}">
+                        <td class="symbol-cell font-mono">${sym}</td>
+                        <td class="company-cell">${name}</td>
+                        <td class="num-col font-mono">${price}</td>
+                        <td class="num-col font-mono ${textClass}">${pctStr}</td>
+                        <td class="num-col font-mono">${volStr}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.querySelectorAll('.movers-row').forEach((row) => {
+                row.addEventListener('click', () => {
+                    const symbol = row.getAttribute('data-symbol');
+                    if (symbol) {
+                        window.location.href = `equity-details.html?symbol=${encodeURIComponent(symbol)}`;
+                    }
+                });
+            });
+        };
+
+        if (data.gainers && gainersTbody) {
+            renderTableRows(gainersTbody, data.gainers, true);
+        }
+        if (data.losers && losersTbody) {
+            renderTableRows(losersTbody, data.losers, false);
+        }
+    } catch (err) {
+        console.warn('Failed to fetch market movers:', err);
+    }
+}
+
+export async function fetchSectorPerformance() {
+    const gridEl = document.getElementById('sector-heatmap-grid');
+    if (!gridEl) return;
+
+    const sectorIcons = {
+        'Technology': 'fa-laptop-code',
+        'Energy': 'fa-bolt',
+        'Financial Services': 'fa-building-columns',
+        'Financials': 'fa-building-columns',
+        'Healthcare': 'fa-notes-medical',
+        'Consumer Cyclical': 'fa-bag-shopping',
+        'Industrials': 'fa-industry',
+        'Communication Services': 'fa-tower-cell',
+        'Utilities': 'fa-plug',
+        'Consumer Defensive': 'fa-cart-shopping',
+        'Real Estate': 'fa-city',
+        'Basic Materials': 'fa-gem'
+    };
+
+    try {
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/fmp/sectors`, { timeout: 8000 });
+        const data = await safeJsonParse(res);
+
+        if (!data || !Array.isArray(data.sectors) || !data.sectors.length) return;
+
+        gridEl.innerHTML = data.sectors.map(sec => {
+            const name = sec.sector || 'Other';
+            const pct = typeof sec.changesPercentage === 'number' ? sec.changesPercentage : 0;
+            const isPos = pct >= 0;
+            const pctStr = `${isPos ? '+' : ''}${pct.toFixed(2)}%`;
+            const iconClass = sectorIcons[name] || 'fa-chart-pie';
+            const badgeClass = isPos ? 'pos-badge' : 'neg-badge';
+            const barWidth = Math.min(Math.max(Math.abs(pct) * 25, 12), 100);
+
+            return `
+                <div class="sector-tile ${isPos ? 'sector-pos' : 'sector-neg'}">
+                    <div class="sector-tile-top">
+                        <span class="sector-icon"><i class="fa-solid ${iconClass}"></i></span>
+                        <span class="sector-name">${name}</span>
+                    </div>
+                    <div class="sector-tile-bottom">
+                        <span class="sector-change-badge ${badgeClass}">${pctStr}</span>
+                        <div class="sector-mini-track">
+                            <div class="sector-mini-fill ${isPos ? 'fill-pos' : 'fill-neg'}" style="width: ${barWidth}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.warn('Failed to fetch sector performance:', err);
+    }
 }
 
