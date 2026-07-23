@@ -72,13 +72,26 @@ router.get('/twelvedata/time_series', async (req, res) => {
         res.status(500).json({ error: "Failed to fetch historical data" });
     }
 });
+const PROFILE_CACHE = {};
+const METRICS_CACHE = {};
+const QUOTE_CACHE = {};
+
 router.get('/finnhub/profile', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
 
+    const cacheKey = symbol.toUpperCase();
+    const now = Date.now();
+    if (PROFILE_CACHE[cacheKey] && (now - PROFILE_CACHE[cacheKey].lastFetched < 24 * 60 * 60 * 1000)) {
+        return res.json(PROFILE_CACHE[cacheKey].data);
+    }
+
     try {
         const response = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
+        if (data && !data.error && data.name) {
+            PROFILE_CACHE[cacheKey] = { lastFetched: now, data };
+        }
         res.json(data);
     } catch (error) {
         console.error("Finnhub Profile Error:", error);
@@ -90,6 +103,12 @@ router.get('/finnhub/profile', async (req, res) => {
 router.get('/finnhub/metrics', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
+
+    const cacheKey = symbol.toUpperCase();
+    const now = Date.now();
+    if (METRICS_CACHE[cacheKey] && (now - METRICS_CACHE[cacheKey].lastFetched < 2 * 60 * 60 * 1000)) {
+        return res.json(METRICS_CACHE[cacheKey].data);
+    }
 
     try {
         const response = await fetch(
@@ -135,6 +154,9 @@ router.get('/finnhub/metrics', async (req, res) => {
             }
         }
 
+        if (data && !data.error) {
+            METRICS_CACHE[cacheKey] = { lastFetched: now, data };
+        }
         res.json(data);
     } catch (error) {
         console.error("Finnhub Metrics Error:", error);
@@ -147,9 +169,18 @@ router.get('/finnhub/quote', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
 
+    const cacheKey = symbol.toUpperCase();
+    const now = Date.now();
+    if (QUOTE_CACHE[cacheKey] && (now - QUOTE_CACHE[cacheKey].lastFetched < 60 * 1000)) {
+        return res.json(QUOTE_CACHE[cacheKey].data);
+    }
+
     try {
         const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
+        if (data && typeof data.c === 'number' && data.c > 0) {
+            QUOTE_CACHE[cacheKey] = { lastFetched: now, data };
+        }
         res.json(data);
     } catch (error) {
         console.error("Finnhub Quote Error:", error);

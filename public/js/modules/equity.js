@@ -110,42 +110,34 @@ async function executeEquityAnalysis(ticker) {
     if (resultsContainer) resultsContainer.classList.add('hidden-element');
 
     try {
-        const [profileRes, quoteRes, metricsRes, chartRes, bsRes, cfRes, incomeRes, recoRes, peersRes] = await Promise.all([
+        // Stage 1: Fast essential load (Profile, Quote, Metrics, Price Chart)
+        const [profileRes, quoteRes, metricsRes, chartRes] = await Promise.all([
             fetchWithTimeout(`${BACKEND_URL}/api/finnhub/profile?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
             fetchWithTimeout(`${BACKEND_URL}/api/finnhub/quote?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
             fetchWithTimeout(`${BACKEND_URL}/api/finnhub/metrics?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
-            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/time_series?symbol=${encodeURIComponent(ticker)}&timeframe=1Y`).catch(() => null),
-            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=balance_sheet`).catch(() => null),
-            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=cash_flow`).catch(() => null),
-            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=income_statement`).catch(() => null),
-            fetchWithTimeout(`${BACKEND_URL}/api/finnhub/recommendations?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
-            fetchWithTimeout(`${BACKEND_URL}/api/finnhub/peers-detailed?symbol=${encodeURIComponent(ticker)}`).catch(() => null)
+            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/time_series?symbol=${encodeURIComponent(ticker)}&timeframe=1Y`).catch(() => null)
         ]);
 
         const profile = await safeJsonParse(profileRes);
         const quote = await safeJsonParse(quoteRes);
         const metrics = await safeJsonParse(metricsRes);
         const chartData = await safeJsonParse(chartRes);
-        const balanceSheet = await safeJsonParse(bsRes);
-        const cashFlow = await safeJsonParse(cfRes);
-        const incomeStatement = await safeJsonParse(incomeRes);
-        const recommendations = await safeJsonParse(recoRes);
-        const peersDetailed = await safeJsonParse(peersRes);
 
         if (profile?.error || quote?.error || !profile?.name) {
             throw new Error(profile?.error || quote?.error || 'Invalid ticker symbol or data unavailable');
         }
 
-        updateUI(profile, quote, metrics, balanceSheet, cashFlow, incomeStatement, recommendations, peersDetailed);
+        // Immediately update Hero Card and Chart
+        updateUI(profile, quote, metrics, null, null, null, null, null);
         
         const aiBtn = document.getElementById('equity-ai-btn');
         if (aiBtn) {
-            aiBtn.addEventListener('click', (e) => {
+            aiBtn.onclick = (e) => {
                 e.preventDefault();
                 if (activeEquityTicker) {
                     window.location.href = `ai.html?ticker=${activeEquityTicker}&autoRun=true`;
                 }
-            });
+            };
         }
         
         if (chartData && !chartData.error && chartData.values) {
@@ -155,21 +147,39 @@ async function executeEquityAnalysis(ticker) {
             console.warn('Chart data unavailable:', chartData);
         }
 
+        // Unblock UI immediately — reveal hero card & chart instantly!
+        if (loader) loader.classList.add('hidden-element');
         if (resultsContainer) {
             resultsContainer.classList.remove('hidden-element');
             animateCardReveals();
         }
-        
+
+        // Stage 2 (Background non-blocking hydration): Analyst Reco, Peers, Financial Statements
+        Promise.all([
+            fetchWithTimeout(`${BACKEND_URL}/api/finnhub/recommendations?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
+            fetchWithTimeout(`${BACKEND_URL}/api/finnhub/peers-detailed?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
+            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=balance_sheet`).catch(() => null),
+            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=cash_flow`).catch(() => null),
+            fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/statements?symbol=${encodeURIComponent(ticker)}&type=income_statement`).catch(() => null)
+        ]).then(async ([recoRes, peersRes, bsRes, cfRes, incomeRes]) => {
+            const recommendations = await safeJsonParse(recoRes);
+            const peersDetailed = await safeJsonParse(peersRes);
+            const balanceSheet = await safeJsonParse(bsRes);
+            const cashFlow = await safeJsonParse(cfRes);
+            const incomeStatement = await safeJsonParse(incomeRes);
+
+            // Hydrate background components
+            updateUI(profile, quote, metrics, balanceSheet, cashFlow, incomeStatement, recommendations, peersDetailed);
+        });
+
     } catch (error) {
         console.error("Market Data Fetch Error:", error);
         showToast(error.message || "Failed to load market data");
-        // On error, restore the news, index area and trending cards so user can try again
         if (newsWidget) newsWidget.classList.remove('hidden-element');
         if (indexStrip) indexStrip.classList.remove('hidden-element');
         if (trendingStrip) trendingStrip.classList.remove('hidden-element');
-    } finally {
         if (loader) loader.classList.add('hidden-element');
-        // Restore button state
+    } finally {
         if (searchBtn) {
             searchBtn.disabled = false;
             searchBtn.textContent = originalBtnText;

@@ -140,6 +140,22 @@
                         </div>
                     </div>
 
+                    <!-- Price Chart -->
+                    <div class="chart-container-card equity-reveal-card">
+                        <div class="chart-header">
+                            <h3>Historical Price Trajectory</h3>
+                            <div class="chart-timeframe-selectors">
+                                <button class="tf-btn" data-tf="1M">1M</button>
+                                <button class="tf-btn active" data-tf="1Y">1Y</button>
+                                <button class="tf-btn" data-tf="5Y">5Y</button>
+                                <button class="tf-btn" data-tf="MAX">MAX</button>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box">
+                            <canvas id="equityHistoricalChart"></canvas>
+                        </div>
+                    </div>
+
                     <!-- Expanded Metric Cards: 8 cards in two rows -->
                     <div class="metric-summary-grid equity-reveal-card">
                         <div class="metric-card">
@@ -228,22 +244,6 @@
                                     <tr><td colspan="5" class="table-empty-state">Loading sector peers comparison...</td></tr>
                                 </tbody>
                              </table>
-                        </div>
-                    </div>
-
-                    <!-- Price Chart -->
-                    <div class="chart-container-card equity-reveal-card">
-                        <div class="chart-header">
-                            <h3>Historical Price Trajectory</h3>
-                            <div class="chart-timeframe-selectors">
-                                <button class="tf-btn" data-tf="1M">1M</button>
-                                <button class="tf-btn active" data-tf="1Y">1Y</button>
-                                <button class="tf-btn" data-tf="5Y">5Y</button>
-                                <button class="tf-btn" data-tf="MAX">MAX</button>
-                            </div>
-                        </div>
-                        <div class="chart-wrapper-box">
-                            <canvas id="equityHistoricalChart"></canvas>
                         </div>
                     </div>
 
