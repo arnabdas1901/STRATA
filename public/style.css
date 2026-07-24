@@ -2967,8 +2967,8 @@ select {
     }
 
     .main-content {
-        padding: 16px;
-        padding-top: 16px;
+        padding: 12px 16px;
+        padding-top: 8px;
     }
 
     .top-header-bar {
@@ -2977,11 +2977,15 @@ select {
         background: transparent;
         box-shadow: none;
         border-radius: 0;
-        margin-bottom: 20px;
-        padding: 10px 0;
+        margin-bottom: 8px;
+        padding: 2px 0;
         z-index: 120;
         gap: 10px;
         width: 100%;
+    }
+
+    .top-app-tagline {
+        display: none !important;
     }
 
     .top-status-badge {
@@ -2989,8 +2993,8 @@ select {
     }
 
     .mobile-toggle-btn {
-        min-width: 44px;
-        min-height: 44px;
+        min-width: 40px;
+        min-height: 40px;
     }
 
     .dashboard-header-block {
@@ -4608,9 +4612,9 @@ select {
 .ticker-logo-box {
     width: 48px;
     height: 48px;
-    background: var(--bg-input-slate);
-    border: 1px solid var(--border-cyan-glow);
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4618,11 +4622,10 @@ select {
 }
 
 .ticker-logo-box img {
-    width: 100%;
-    height: 100%;
+    width: 36px;
+    height: 36px;
     object-fit: contain;
-    background: #ffffff; /* White background for logos to pop */
-    padding: 2px;
+    border-radius: 6px;
 }
 
 .ticker-logo-box i {

@@ -85,7 +85,7 @@ function setupDetailsPageHandlers() {
 
 // ── Landing Page: Grid Clicks & Live Rates ─────────────────────────────────────
 function setupLandingGridClicks() {
-    const cards = document.querySelectorAll('#forex-brackets-grid .forex-table-row');
+    const cards = document.querySelectorAll('#forex-brackets-grid .crypto-bracket-card');
     cards.forEach(card => {
         const getSymbolAndRedirect = () => {
             const symbol = card.querySelector('.bracket-symbol').innerText;
@@ -110,7 +110,7 @@ async function loadLatestForexRates() {
             throw new Error(data?.error || 'No forex rate data returned');
         }
 
-        const cards = document.querySelectorAll('#forex-brackets-grid .forex-table-row');
+        const cards = document.querySelectorAll('#forex-brackets-grid .crypto-bracket-card');
         cards.forEach(card => {
             const symbolEl = card.querySelector('.bracket-symbol');
             const priceEl = card.querySelector('.bracket-price');

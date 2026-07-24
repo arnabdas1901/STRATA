@@ -93,7 +93,6 @@
             <section id="dashboard-forex" class="dashboard-viewport active">
                 <div class="dashboard-header-block">
                     <h1>Global Currencies & Forex</h1>
-                    <p class="subtitle">Monitor real-time exchange rates, major pairs, and macroeconomic currency movements.</p>
                 </div>
 
                 <div class="forex-kpi-bar">
@@ -120,109 +119,96 @@
                 </div>
 
                 <div class="forex-landing-container" id="forex-landing-view">
-                    <h3 style="margin-bottom: 16px;"><i class="fa-solid fa-table-list"></i> Major Exchange Rates</h3>
-                    <div class="forex-data-table-container">
-                        <table class="forex-data-table">
-                            <thead>
-                                <tr>
-                                    <th>Pair</th>
-                                    <th>Currency</th>
-                                    <th>Price (Live)</th>
-                                    <th>24h Change (%)</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="forex-brackets-grid">
-                                <!-- Canadian Dollar -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/CAD</td>
-                                    <td>Canadian Dollar <i class="fa-solid fa-dollar-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- Euro -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">EUR/USD</td>
-                                    <td>Euro <i class="fa-solid fa-euro-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- British Pound -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">GBP/USD</td>
-                                    <td>British Pound <i class="fa-solid fa-sterling-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- Japanese Yen -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/JPY</td>
-                                    <td>Japanese Yen <i class="fa-solid fa-yen-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- Chinese Yuan -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/CNY</td>
-                                    <td>Chinese Yuan <i class="fa-solid fa-yen-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- Indian Rupee -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/INR</td>
-                                    <td>Indian Rupee <i class="fa-solid fa-rupee-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- Swiss Franc -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/CHF</td>
-                                    <td>Swiss Franc <i class="fa-solid fa-money-bill-1-wave"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- Australian Dollar -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">AUD/USD</td>
-                                    <td>Australian Dollar <i class="fa-solid fa-dollar-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- New Zealand Dollar -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">NZD/USD</td>
-                                    <td>New Zealand Dollar <i class="fa-solid fa-dollar-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- Singapore Dollar -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/SGD</td>
-                                    <td>Singapore Dollar <i class="fa-solid fa-dollar-sign"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                                <!-- South African Rand -->
-                                <tr class="forex-table-row">
-                                    <td class="font-mono bracket-symbol" style="color: var(--neon-cyan-vibrant);">USD/ZAR</td>
-                                    <td>South African Rand <i class="fa-solid fa-coins"></i></td>
-                                    <td class="bracket-price font-mono">--</td>
-                                    <td class="bracket-change font-mono">--</td>
-                                    <td class="action-cell"><button type="button" class="secondary-btn action-button">View</button></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <h3 style="margin-bottom: 20px;"><i class="fa-solid fa-money-bill-transfer"></i> Major Currency Pairs</h3>
+                    <div class="crypto-brackets-grid" id="forex-brackets-grid" role="list">
+                        <!-- Canadian Dollar -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇨🇦</span></div>
+                            <div class="bracket-name">Canadian Dollar</div>
+                            <div class="bracket-symbol font-mono">USD/CAD</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- Euro -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇪🇺</span></div>
+                            <div class="bracket-name">Euro</div>
+                            <div class="bracket-symbol font-mono">EUR/USD</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- British Pound -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇬🇧</span></div>
+                            <div class="bracket-name">British Pound</div>
+                            <div class="bracket-symbol font-mono">GBP/USD</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- Japanese Yen -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇯🇵</span></div>
+                            <div class="bracket-name">Japanese Yen</div>
+                            <div class="bracket-symbol font-mono">USD/JPY</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- Chinese Yuan -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇨🇳</span></div>
+                            <div class="bracket-name">Chinese Yuan</div>
+                            <div class="bracket-symbol font-mono">USD/CNY</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- Indian Rupee -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇮🇳</span></div>
+                            <div class="bracket-name">Indian Rupee</div>
+                            <div class="bracket-symbol font-mono">USD/INR</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- Swiss Franc -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇨🇭</span></div>
+                            <div class="bracket-name">Swiss Franc</div>
+                            <div class="bracket-symbol font-mono">USD/CHF</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- Australian Dollar -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇦🇺</span></div>
+                            <div class="bracket-name">Australian Dollar</div>
+                            <div class="bracket-symbol font-mono">AUD/USD</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- New Zealand Dollar -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇳🇿</span></div>
+                            <div class="bracket-name">New Zealand Dollar</div>
+                            <div class="bracket-symbol font-mono">NZD/USD</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- Singapore Dollar -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇸🇬</span></div>
+                            <div class="bracket-name">Singapore Dollar</div>
+                            <div class="bracket-symbol font-mono">USD/SGD</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
+                        <!-- South African Rand -->
+                        <div class="crypto-bracket-card" role="button" tabindex="0">
+                            <div class="bracket-icon"><span style="font-size: 32px;">🇿🇦</span></div>
+                            <div class="bracket-name">South African Rand</div>
+                            <div class="bracket-symbol font-mono">USD/ZAR</div>
+                            <div class="bracket-price font-mono">--</div>
+                            <div class="bracket-change font-mono">--</div>
+                        </div>
                     </div>
                 </div>
 
