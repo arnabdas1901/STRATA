@@ -5333,6 +5333,7 @@ select {
 }
 .shock-slider {
     -webkit-appearance: none;
+    appearance: none;
     width: 100%;
     height: 6px;
     border-radius: 3px;
@@ -5558,6 +5559,8 @@ select {
     .efficiency-hero-content {
         flex-direction: column;
         align-items: stretch;
+    }
+}
 
 /* Data Context Panel */
 .ai-data-context-card {
