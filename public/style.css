@@ -6500,6 +6500,170 @@ select {
 }
 
 /* ============================================================
+   MARKET SENTIMENT GAUGE
+   ============================================================ */
+.sentiment-gauge-card {
+    background: rgba(13, 19, 38, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    margin-bottom: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transition: border-color 0.25s ease;
+}
+
+.sentiment-gauge-card:hover {
+    border-color: rgba(37, 99, 235, 0.2);
+}
+
+.sentiment-gauge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.sentiment-gauge-header .header-title-wrap h3 {
+    font-size: 0.92rem;
+}
+
+.sentiment-status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(6, 182, 212, 0.06);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    color: var(--neon-cyan-vibrant);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.sentiment-gauge-body {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+/* Arc & Needle */
+.sentiment-arc-wrap {
+    flex-shrink: 0;
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.sentiment-arc-svg {
+    width: 200px;
+    height: 115px;
+    display: block;
+}
+
+.sentiment-score-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: -20px;
+}
+
+.sentiment-score-value {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: 800;
+    color: rgba(248, 250, 252, 0.95);
+    line-height: 1;
+}
+
+.sentiment-score-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+.sentiment-score-label.extreme-fear {
+    color: #ef4444;
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+.sentiment-score-label.fear {
+    color: #f97316;
+    text-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
+}
+.sentiment-score-label.neutral {
+    color: #eab308;
+    text-shadow: 0 0 8px rgba(234, 179, 8, 0.3);
+}
+.sentiment-score-label.greed {
+    color: #22c55e;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+}
+.sentiment-score-label.extreme-greed {
+    color: #10b981;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Factor Breakdown */
+.sentiment-factors {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sentiment-factor-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.15s ease;
+}
+
+.sentiment-factor-row:hover {
+    background: rgba(6, 182, 212, 0.04);
+}
+
+.sf-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(248, 250, 252, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sf-name i {
+    font-size: 0.72rem;
+    color: var(--neon-cyan-vibrant);
+    opacity: 0.7;
+    width: 14px;
+    text-align: center;
+}
+
+.sf-value {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: rgba(148, 163, 184, 0.8);
+}
+
+.sf-value.sf-positive {
+    color: var(--neon-green-positive);
+}
+
+.sf-value.sf-negative {
+    color: var(--neon-red-negative);
+}
+
+/* ============================================================
    SECTOR PERFORMANCE HEATMAP
    ============================================================ */
 .sector-heatmap-card {
@@ -6588,115 +6752,158 @@ select {
 }
 
 .sector-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 12px;
     transition: opacity 0.2s ease;
 }
 
 .sector-tile-skeleton {
-    grid-column: 1 / -1;
     padding: 20px;
     text-align: center;
     color: var(--text-secondary-muted);
     font-size: 0.85rem;
 }
 
-.sector-tile {
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: rgba(13, 19, 38, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 10px;
-    transition: all 0.2s ease;
-    cursor: default;
+/* ── Professional Sector Table ─────────────────────────────────── */
+.sector-pro-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.85rem;
 }
 
-.sector-tile:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+.sector-pro-table thead tr {
+    background: rgba(255, 255, 255, 0.03);
 }
 
-.sector-tile.sector-pos {
-    border-left: 3px solid rgba(16, 185, 129, 0.5);
+.sector-pro-table th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-secondary-muted);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
 }
 
-.sector-tile.sector-neg {
-    border-left: 3px solid rgba(239, 68, 68, 0.5);
+.spt-th-rank {
+    width: 40px;
+    text-align: center !important;
 }
 
-.sector-tile-top {
+.spt-th-change {
+    width: 100px;
+    text-align: right !important;
+}
+
+.spt-th-bar {
+    width: 30%;
+    min-width: 140px;
+}
+
+/* Rows */
+.spt-row {
+    transition: background 0.15s ease;
+}
+
+.spt-row:nth-child(odd) {
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.spt-row:hover {
+    background: rgba(6, 182, 212, 0.04);
+}
+
+.spt-row td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+}
+
+.spt-row:last-child td {
+    border-bottom: none;
+}
+
+/* Rank Column */
+.spt-rank {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(148, 163, 184, 0.6);
+    width: 40px;
+}
+
+/* Sector Cell */
+.spt-sector-cell {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 
-.sector-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
-    background: rgba(255, 255, 255, 0.04);
-    display: grid;
+.spt-icon-box {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.15);
+    display: inline-grid;
     place-items: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--neon-cyan-vibrant);
     flex-shrink: 0;
 }
 
-.sector-name {
-    font-size: 0.78rem;
+.spt-sector-name {
     font-weight: 600;
-    color: rgba(248, 250, 252, 0.85);
+    color: rgba(248, 250, 252, 0.9);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-.sector-tile-bottom {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.sector-change-badge {
+/* Change Column */
+.spt-change {
+    text-align: right;
     font-family: var(--font-mono);
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     font-weight: 700;
+    white-space: nowrap;
 }
 
-.sector-change-badge.pos-badge {
+.spt-change.spt-positive {
     color: var(--neon-green-positive);
 }
 
-.sector-change-badge.neg-badge {
+.spt-change.spt-negative {
     color: var(--neon-red-negative);
 }
 
-.sector-mini-track {
-    height: 3px;
+/* Bar Column */
+.spt-bar-cell {
+    padding-right: 20px !important;
+}
+
+.spt-bar-track {
+    height: 7px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.04);
     overflow: hidden;
+    min-width: 60px;
 }
 
-.sector-mini-fill {
+.spt-bar-fill {
     height: 100%;
     border-radius: 999px;
-    transition: width 0.4s ease;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.sector-mini-fill.fill-pos {
-    background: linear-gradient(90deg, #10b981, #059669);
-    box-shadow: 0 0 4px rgba(16, 185, 129, 0.3);
+.spt-bar-fill.spt-positive {
+    background: linear-gradient(90deg, #10b981, #34d399);
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
 }
 
-.sector-mini-fill.fill-neg {
-    background: linear-gradient(90deg, #ef4444, #dc2626);
-    box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);
+.spt-bar-fill.spt-negative {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.3);
 }
 
 /* ============================================================
@@ -6737,25 +6944,71 @@ select {
         font-size: 0.78rem;
     }
 
+    .sentiment-gauge-card {
+        padding: 16px;
+    }
+
+    .sentiment-gauge-body {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .sentiment-arc-wrap {
+        width: 160px;
+    }
+
+    .sentiment-arc-svg {
+        width: 160px;
+        height: 92px;
+    }
+
+    .sentiment-score-value {
+        font-size: 1.6rem;
+    }
+
+    .sentiment-score-label {
+        font-size: 0.7rem;
+    }
+
+    .sentiment-factor-row {
+        padding: 8px 12px;
+    }
+
+    .sf-name {
+        font-size: 0.75rem;
+    }
+
+    .sf-value {
+        font-size: 0.75rem;
+    }
+
     .sector-heatmap-card {
         padding: 16px;
     }
 
-    .sector-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 8px;
+    .sector-pro-table th,
+    .spt-row td {
+        padding: 9px 12px;
+        font-size: 0.78rem;
     }
 
-    .sector-tile {
-        padding: 10px 12px;
+    .spt-th-bar,
+    .spt-bar-cell {
+        display: none;
     }
 
-    .sector-name {
-        font-size: 0.72rem;
+    .spt-icon-box {
+        width: 26px;
+        height: 26px;
+        font-size: 0.68rem;
     }
 
-    .sector-change-badge {
-        font-size: 0.8rem;
+    .spt-sector-name {
+        font-size: 0.78rem;
+    }
+
+    .spt-change {
+        font-size: 0.78rem;
     }
 }
 

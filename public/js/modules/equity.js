@@ -32,6 +32,7 @@ export function loadDashboard() {
             fetchMarketMovers();
             fetchSectorPerformance();
             setupSectorMinimizer();
+            computeMarketSentiment();
         }
     };
 
@@ -1028,30 +1029,55 @@ export async function fetchSectorPerformance() {
 
         if (!data || !Array.isArray(data.sectors) || !data.sectors.length) return;
 
-        gridEl.innerHTML = data.sectors.map(sec => {
+        // Sort by performance descending (best first)
+        const sorted = [...data.sectors].sort((a, b) => {
+            const aP = typeof a.changesPercentage === 'number' ? a.changesPercentage : 0;
+            const bP = typeof b.changesPercentage === 'number' ? b.changesPercentage : 0;
+            return bP - aP;
+        });
+
+        // Find max absolute change for bar scaling
+        const maxAbs = Math.max(...sorted.map(s => Math.abs(typeof s.changesPercentage === 'number' ? s.changesPercentage : 0)), 1);
+
+        const rows = sorted.map((sec, idx) => {
             const name = sec.sector || 'Other';
             const pct = typeof sec.changesPercentage === 'number' ? sec.changesPercentage : 0;
             const isPos = pct >= 0;
             const pctStr = `${isPos ? '+' : ''}${pct.toFixed(2)}%`;
             const iconClass = sectorIcons[name] || 'fa-chart-pie';
-            const badgeClass = isPos ? 'pos-badge' : 'neg-badge';
-            const barWidth = Math.min(Math.max(Math.abs(pct) * 25, 12), 100);
+            const barWidth = Math.min((Math.abs(pct) / maxAbs) * 100, 100);
+            const colorClass = isPos ? 'spt-positive' : 'spt-negative';
 
             return `
-                <div class="sector-tile ${isPos ? 'sector-pos' : 'sector-neg'}">
-                    <div class="sector-tile-top">
-                        <span class="sector-icon"><i class="fa-solid ${iconClass}"></i></span>
-                        <span class="sector-name">${name}</span>
-                    </div>
-                    <div class="sector-tile-bottom">
-                        <span class="sector-change-badge ${badgeClass}">${pctStr}</span>
-                        <div class="sector-mini-track">
-                            <div class="sector-mini-fill ${isPos ? 'fill-pos' : 'fill-neg'}" style="width: ${barWidth}%"></div>
+                <tr class="spt-row">
+                    <td class="spt-rank">${idx + 1}</td>
+                    <td class="spt-sector-cell">
+                        <span class="spt-icon-box"><i class="fa-solid ${iconClass}"></i></span>
+                        <span class="spt-sector-name">${name}</span>
+                    </td>
+                    <td class="spt-change ${colorClass}">${pctStr}</td>
+                    <td class="spt-bar-cell">
+                        <div class="spt-bar-track">
+                            <div class="spt-bar-fill ${colorClass}" style="width: ${barWidth}%"></div>
                         </div>
-                    </div>
-                </div>
+                    </td>
+                </tr>
             `;
         }).join('');
+
+        gridEl.innerHTML = `
+            <table class="sector-pro-table">
+                <thead>
+                    <tr>
+                        <th class="spt-th-rank">#</th>
+                        <th class="spt-th-sector">Sector</th>
+                        <th class="spt-th-change">Change</th>
+                        <th class="spt-th-bar">Performance</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
     } catch (err) {
         console.warn('Failed to fetch sector performance:', err);
     }
@@ -1073,3 +1099,103 @@ function setupSectorMinimizer() {
     };
 }
 
+// --- Market Sentiment Gauge ---
+async function computeMarketSentiment() {
+    const needle = document.getElementById('sentiment-needle');
+    const scoreEl = document.getElementById('sentiment-score-value');
+    const labelEl = document.getElementById('sentiment-score-label');
+    const sfIndex = document.querySelector('#sf-index .sf-value');
+    const sfMovers = document.querySelector('#sf-movers .sf-value');
+    const sfSectors = document.querySelector('#sf-sectors .sf-value');
+
+    if (!needle || !scoreEl || !labelEl) return;
+
+    try {
+        // Fetch all three data sources in parallel
+        const [indexRes, moversRes, sectorRes] = await Promise.allSettled([
+            fetchWithTimeout(`${BACKEND_URL}/api/indices`, { timeout: 8000 }).then(r => safeJsonParse(r)),
+            fetchWithTimeout(`${BACKEND_URL}/api/fmp/movers`, { timeout: 8000 }).then(r => safeJsonParse(r)),
+            fetchWithTimeout(`${BACKEND_URL}/api/fmp/sectors`, { timeout: 8000 }).then(r => safeJsonParse(r))
+        ]);
+
+        let indexScore = 50; // default neutral
+        let moversScore = 50;
+        let sectorScore = 50;
+
+        // 1. INDEX MOMENTUM (weight: 40%)
+        // Average the percent changes of S&P 500, NASDAQ, DOW
+        const indexData = indexRes.status === 'fulfilled' ? indexRes.value : null;
+        if (indexData) {
+            const changes = [];
+            if (indexData.sp500?.changePercent) changes.push(parseFloat(indexData.sp500.changePercent));
+            if (indexData.nasdaq?.changePercent) changes.push(parseFloat(indexData.nasdaq.changePercent));
+            if (indexData.dowjones?.changePercent) changes.push(parseFloat(indexData.dowjones.changePercent));
+
+            if (changes.length) {
+                const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
+                // Map -3% to +3% range into 0-100
+                indexScore = Math.min(100, Math.max(0, ((avgChange + 3) / 6) * 100));
+                if (sfIndex) {
+                    const sign = avgChange >= 0 ? '+' : '';
+                    sfIndex.textContent = `${sign}${avgChange.toFixed(2)}%`;
+                    sfIndex.className = `sf-value ${avgChange >= 0 ? 'sf-positive' : 'sf-negative'}`;
+                }
+            }
+        }
+
+        // 2. GAINERS vs LOSERS RATIO (weight: 30%)
+        const moversData = moversRes.status === 'fulfilled' ? moversRes.value : null;
+        if (moversData) {
+            const gCount = Array.isArray(moversData.gainers) ? moversData.gainers.length : 0;
+            const lCount = Array.isArray(moversData.losers) ? moversData.losers.length : 0;
+            const total = gCount + lCount;
+            if (total > 0) {
+                moversScore = (gCount / total) * 100;
+                if (sfMovers) {
+                    sfMovers.textContent = `${gCount}G / ${lCount}L`;
+                    sfMovers.className = `sf-value ${gCount >= lCount ? 'sf-positive' : 'sf-negative'}`;
+                }
+            }
+        }
+
+        // 3. SECTOR BREADTH (weight: 30%)
+        // Count sectors with positive vs negative changes
+        const sectorData = sectorRes.status === 'fulfilled' ? sectorRes.value : null;
+        if (sectorData && Array.isArray(sectorData.sectors)) {
+            const posCount = sectorData.sectors.filter(s => (s.changesPercentage || 0) >= 0).length;
+            const totalSectors = sectorData.sectors.length;
+            if (totalSectors > 0) {
+                sectorScore = (posCount / totalSectors) * 100;
+                if (sfSectors) {
+                    sfSectors.textContent = `${posCount}/${totalSectors} positive`;
+                    sfSectors.className = `sf-value ${posCount >= totalSectors / 2 ? 'sf-positive' : 'sf-negative'}`;
+                }
+            }
+        }
+
+        // Weighted composite score (0-100)
+        const composite = Math.round(indexScore * 0.4 + moversScore * 0.3 + sectorScore * 0.3);
+
+        // Map score to label and color
+        let sentimentLabel, sentimentClass;
+        if (composite <= 20) { sentimentLabel = 'Extreme Fear'; sentimentClass = 'extreme-fear'; }
+        else if (composite <= 40) { sentimentLabel = 'Fear'; sentimentClass = 'fear'; }
+        else if (composite <= 60) { sentimentLabel = 'Neutral'; sentimentClass = 'neutral'; }
+        else if (composite <= 80) { sentimentLabel = 'Greed'; sentimentClass = 'greed'; }
+        else { sentimentLabel = 'Extreme Greed'; sentimentClass = 'extreme-greed'; }
+
+        // Update score display
+        scoreEl.textContent = composite;
+        labelEl.textContent = sentimentLabel;
+        labelEl.className = `sentiment-score-label ${sentimentClass}`;
+
+        // Rotate needle: 0 = -90deg (left), 100 = +90deg (right)
+        const angle = -90 + (composite / 100) * 180;
+        needle.setAttribute('transform', `rotate(${angle}, 100, 100)`);
+
+    } catch (err) {
+        console.warn('Failed to compute market sentiment:', err);
+        scoreEl.textContent = '--';
+        labelEl.textContent = 'Unavailable';
+    }
+}

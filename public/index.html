@@ -141,6 +141,59 @@
                             </div>
                         </div>
 
+                        <!-- Market Sentiment Gauge -->
+                        <div class="sentiment-gauge-card" id="sentiment-gauge-card">
+                            <div class="sentiment-gauge-header">
+                                <div class="header-title-wrap">
+                                    <i class="fa-solid fa-brain" style="color: var(--neon-cyan-vibrant);"></i>
+                                    <h3>Market Sentiment</h3>
+                                </div>
+                                <div class="sentiment-status-tag">
+                                    <span class="pulse-dot"></span> LIVE
+                                </div>
+                            </div>
+                            <div class="sentiment-gauge-body">
+                                <div class="sentiment-arc-wrap">
+                                    <svg viewBox="0 0 200 115" class="sentiment-arc-svg">
+                                        <!-- Background arc track -->
+                                        <defs>
+                                            <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%" stop-color="#ef4444"/>
+                                                <stop offset="25%" stop-color="#f97316"/>
+                                                <stop offset="50%" stop-color="#eab308"/>
+                                                <stop offset="75%" stop-color="#22c55e"/>
+                                                <stop offset="100%" stop-color="#10b981"/>
+                                            </linearGradient>
+                                        </defs>
+                                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12" stroke-linecap="round"/>
+                                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gauge-gradient)" stroke-width="12" stroke-linecap="round" opacity="0.35"/>
+                                        <!-- Needle -->
+                                        <line id="sentiment-needle" x1="100" y1="100" x2="100" y2="28" stroke="rgba(248,250,252,0.9)" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90, 100, 100)" style="transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);"/>
+                                        <circle cx="100" cy="100" r="5" fill="rgba(248,250,252,0.9)"/>
+                                        <circle cx="100" cy="100" r="2.5" fill="var(--neon-cyan-vibrant)"/>
+                                    </svg>
+                                    <div class="sentiment-score-display">
+                                        <span class="sentiment-score-value" id="sentiment-score-value">--</span>
+                                        <span class="sentiment-score-label" id="sentiment-score-label">Loading…</span>
+                                    </div>
+                                </div>
+                                <div class="sentiment-factors" id="sentiment-factors">
+                                    <div class="sentiment-factor-row" id="sf-index">
+                                        <span class="sf-name"><i class="fa-solid fa-chart-line"></i> Index Momentum</span>
+                                        <span class="sf-value">--</span>
+                                    </div>
+                                    <div class="sentiment-factor-row" id="sf-movers">
+                                        <span class="sf-name"><i class="fa-solid fa-scale-balanced"></i> Gainers / Losers</span>
+                                        <span class="sf-value">--</span>
+                                    </div>
+                                    <div class="sentiment-factor-row" id="sf-sectors">
+                                        <span class="sf-name"><i class="fa-solid fa-chart-pie"></i> Sector Breadth</span>
+                                        <span class="sf-value">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="trending-tickers-strip">
                             <div class="strip-header">
                                 <i class="fa-solid fa-fire" style="color: #ff6b6b; font-size: 1.15rem;"></i>
