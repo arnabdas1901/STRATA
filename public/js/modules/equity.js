@@ -4,9 +4,10 @@ let equityChartInstance = null;
 let rawHistoricalData = [];
 let activeEquityTicker = null;
 let rawNewsArticles = []; // Global store for loaded news articles
+let chartMode = 'line'; // 'line' or 'candlestick'
 
 export function loadDashboard() {
-    const init = () => {
+    const init = async () => {
         setupTabs('#dashboard-equity');
         
         const isDetailsPage = window.location.pathname.includes('equity-details.html');
@@ -14,6 +15,7 @@ export function loadDashboard() {
         if (isDetailsPage) {
             setupSearch();
             setupTimeframeSelectors();
+            setupChartModeToggle();
             
             const params = new URLSearchParams(window.location.search);
             const symbol = params.get('symbol');
@@ -25,14 +27,17 @@ export function loadDashboard() {
         } else {
             setupSearch();
             setupWatchlist();
-            fetchLiveIndexValues();
             setupMarketNews();
             setupNewsFilters();
             setupEquityDashboardTabs();
-            fetchMarketMovers();
-            fetchSectorPerformance();
             setupSectorMinimizer();
-            computeMarketSentiment();
+
+            const [indexPayload, moversData, sectorData] = await Promise.all([
+                fetchLiveIndexValues(),
+                fetchMarketMovers(),
+                fetchSectorPerformance()
+            ]);
+            computeMarketSentiment(indexPayload, moversData, sectorData);
         }
     };
 
@@ -270,6 +275,41 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
         }
     }
 
+    // Company Info Bar
+    const infoBar = document.getElementById('company-info-bar');
+    if (infoBar && profile) {
+        let hasInfo = false;
+        const infoCountry = document.querySelector('#info-country span');
+        const infoIpo = document.querySelector('#info-ipo span');
+        const infoShares = document.querySelector('#info-shares span');
+        const infoWebsite = document.querySelector('#info-website a');
+
+        if (profile.country && infoCountry) {
+            infoCountry.textContent = profile.country;
+            hasInfo = true;
+        }
+        if (profile.ipo && infoIpo) {
+            const ipoDate = new Date(profile.ipo);
+            infoIpo.textContent = isNaN(ipoDate) ? profile.ipo : ipoDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            hasInfo = true;
+        }
+        if (profile.shareOutstanding && infoShares) {
+            const shares = profile.shareOutstanding;
+            infoShares.textContent = shares >= 1000 ? (shares / 1000).toFixed(1) + 'B' : shares.toFixed(0) + 'M';
+            hasInfo = true;
+        }
+        if (profile.weburl && infoWebsite) {
+            infoWebsite.href = profile.weburl;
+            try {
+                infoWebsite.textContent = new URL(profile.weburl).hostname.replace('www.', '');
+            } catch(e) {
+                infoWebsite.textContent = 'Website';
+            }
+            hasInfo = true;
+        }
+        if (hasInfo) infoBar.style.display = '';
+    }
+
     // 3. Price and daily change
     const changeArrow = document.getElementById('change-arrow-icon');
     const changeText = document.getElementById('change-text');
@@ -305,6 +345,16 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
         if (el) {
             el.textContent = value;
         }
+    }
+
+    // 52-Week Date Annotations
+    const highDateEl = document.getElementById('metric-52w-high-date');
+    const lowDateEl = document.getElementById('metric-52w-low-date');
+    if (highDateEl && metricData['52WeekHighDate']) {
+        highDateEl.textContent = new Date(metricData['52WeekHighDate']).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    if (lowDateEl && metricData['52WeekLowDate']) {
+        lowDateEl.textContent = new Date(metricData['52WeekLowDate']).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
     // 52-Week Range Bar
@@ -371,6 +421,37 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
         } else {
             recoContent.innerHTML = `<p class="empty-notice">No recommendation data available.</p>`;
         }
+    }
+
+    // Analyst Recommendation Trend (Historical)
+    const trendWrap = document.getElementById('analyst-trend-chart-wrap');
+    const trendBars = document.getElementById('analyst-trend-bars');
+    if (trendWrap && trendBars && Array.isArray(recommendations) && recommendations.length > 1) {
+        const history = recommendations.slice(0, 6).reverse(); // oldest to newest, max 6 months
+        trendBars.innerHTML = history.map(r => {
+            const sb = r.strongBuy || 0;
+            const b = r.buy || 0;
+            const h = r.hold || 0;
+            const s = r.sell || 0;
+            const ss = r.strongSell || 0;
+            const total = sb + b + h + s + ss;
+            if (total === 0) return '';
+            const buyPct = ((sb + b) / total) * 100;
+            const holdPct = (h / total) * 100;
+            const sellPct = ((s + ss) / total) * 100;
+            const month = r.period ? new Date(r.period).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : '?';
+            return `
+                <div class="trend-bar-col">
+                    <div class="trend-stacked-bar">
+                        <div class="trend-seg buy" style="height:${buyPct}%" title="Buy: ${sb+b}"></div>
+                        <div class="trend-seg hold" style="height:${holdPct}%" title="Hold: ${h}"></div>
+                        <div class="trend-seg sell" style="height:${sellPct}%" title="Sell: ${s+ss}"></div>
+                    </div>
+                    <span class="trend-month-label">${month}</span>
+                </div>
+            `;
+        }).join('');
+        trendWrap.style.display = '';
     }
 
     // Populate Key Statistics KPI Summary Bar
@@ -446,7 +527,11 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
             { label: 'Debt/Equity', value: formatValue(deVal), type: 'debt_equity' },
             { label: 'Revenue Growth 5Y', value: formatValue(metricData.revenueGrowth5Y) + '%', type: 'percentage_high' },
             { label: 'EPS Growth 5Y', value: formatValue(metricData.epsGrowth5Y) + '%', type: 'percentage_high' },
-            { label: 'Dividend Yield', value: formatValue(metricData.dividendYieldIndicatedAnnual) + '%', type: 'dividend' }
+            { label: 'Dividend Yield', value: formatValue(metricData.dividendYieldIndicatedAnnual) + '%', type: 'dividend' },
+            { label: 'Gross Margin', value: formatValue(metricData.grossMarginTTM) + '%', type: 'percentage_high' },
+            { label: 'Operating Margin', value: formatValue(metricData.operatingMarginTTM) + '%', type: 'percentage_high' },
+            { label: 'EV/EBITDA', value: formatValue(metricData.evToEbitda ?? metricData.evEbitda), type: 'pe' },
+            { label: 'Quick Ratio', value: formatValue(metricData.quickRatioAnnual), type: 'current_ratio' }
         ];
 
         ratiosGrid.innerHTML = ratios.map(r => {
@@ -565,29 +650,13 @@ function renderEquityChart(data) {
     const canvas = document.getElementById('equityHistoricalChart');
     if (!canvas || !data || data.length === 0) return;
 
-    const labels = data.map(v => {
-        const date = new Date(v.datetime);
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
-    });
+    const ctx = canvas.getContext('2d');
     const prices = data.map(v => parseFloat(v.close));
     const volumes = data.map(v => parseFloat(v.volume || 0));
-
     const isPositive = prices[prices.length - 1] >= prices[0];
     const color = isPositive ? '#10b981' : '#ef4444';
-    
-    const ctx = canvas.getContext('2d');
-    const priceGradient = ctx.createLinearGradient(0, 0, 0, 320);
-    if (isPositive) {
-        priceGradient.addColorStop(0, 'rgba(16, 185, 129, 0.34)');
-        priceGradient.addColorStop(0.45, 'rgba(6, 182, 212, 0.16)');
-        priceGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-    } else {
-        priceGradient.addColorStop(0, 'rgba(239, 68, 68, 0.32)');
-        priceGradient.addColorStop(0.45, 'rgba(236, 72, 153, 0.14)');
-        priceGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-    }
 
-    // Color volume bars: green for days closing higher than previous close, red for lower
+    // Volume colors: green if up day, red if down
     const volumeColors = data.map((v, i) => {
         if (i === 0) return 'rgba(16, 185, 129, 0.2)';
         const prevClose = parseFloat(data[i - 1].close);
@@ -599,112 +668,260 @@ function renderEquityChart(data) {
         equityChartInstance.destroy();
     }
 
-    equityChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Close Price',
-                    data: prices,
-                    borderColor: color,
-                    backgroundColor: priceGradient,
-                    borderWidth: 2.5,
-                    pointRadius: 0,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: color,
-                    pointBorderColor: '#f8fafc',
-                    pointBorderWidth: 1.5,
-                    fill: true,
-                    tension: 0.22,
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Volume',
-                    data: volumes,
-                    type: 'bar',
-                    backgroundColor: volumeColors,
-                    hoverBackgroundColor: volumeColors.map(c => c.replace('0.3', '0.6').replace('0.2', '0.5')),
-                    borderColor: 'rgba(255,255,255,0.02)',
-                    borderWidth: 1,
-                    barPercentage: 0.72,
-                    categoryPercentage: 0.82,
-                    yAxisID: 'yVolume'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: 'index',
+    const isCandlestick = chartMode === 'candlestick' && typeof Chart.controllers?.candlestick !== 'undefined';
+
+    if (isCandlestick) {
+        // ── CANDLESTICK MODE ──
+        const ohlcData = data.map(v => ({
+            x: new Date(v.datetime).getTime(),
+            o: parseFloat(v.open || v.close),
+            h: parseFloat(v.high || v.close),
+            l: parseFloat(v.low || v.close),
+            c: parseFloat(v.close)
+        }));
+
+        equityChartInstance = new Chart(ctx, {
+            type: 'candlestick',
+            data: {
+                datasets: [
+                    {
+                        label: 'OHLC',
+                        data: ohlcData,
+                        color: {
+                            up: 'rgba(16, 185, 129, 1)',
+                            down: 'rgba(239, 68, 68, 1)',
+                            unchanged: 'rgba(148, 163, 184, 0.8)'
+                        },
+                        borderColor: {
+                            up: 'rgba(16, 185, 129, 1)',
+                            down: 'rgba(239, 68, 68, 1)',
+                            unchanged: 'rgba(148, 163, 184, 0.8)'
+                        },
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Volume',
+                        data: data.map((v, i) => ({
+                            x: new Date(v.datetime).getTime(),
+                            y: parseFloat(v.volume || 0)
+                        })),
+                        type: 'bar',
+                        backgroundColor: volumeColors,
+                        borderColor: 'rgba(255,255,255,0.02)',
+                        borderWidth: 1,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.8,
+                        yAxisID: 'yVolume'
+                    }
+                ]
             },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(3, 7, 18, 0.97)',
-                    titleColor: 'rgba(255, 255, 255, 0.85)',
-                    bodyColor: '#ffffff',
-                    bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
-                    borderColor: 'rgba(37, 99, 235, 0.45)',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: false,
-                    callbacks: {
-                        label: function(context) {
-                            const val = context.parsed.y;
-                            if (context.dataset.label === 'Close Price') {
-                                return `Price: $${val.toFixed(2)}`;
-                            } else if (context.dataset.label === 'Volume') {
-                                return `Volume: ${val.toLocaleString()}`;
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(3, 7, 18, 0.97)',
+                        titleColor: 'rgba(255, 255, 255, 0.85)',
+                        bodyColor: '#ffffff',
+                        bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+                        borderColor: 'rgba(37, 99, 235, 0.45)',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            title: function(items) {
+                                if (!items.length) return '';
+                                const d = new Date(items[0].parsed.x);
+                                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                            },
+                            label: function(context) {
+                                if (context.dataset.label === 'OHLC') {
+                                    const p = context.raw;
+                                    return [
+                                        `Open:  $${p.o.toFixed(2)}`,
+                                        `High:  $${p.h.toFixed(2)}`,
+                                        `Low:   $${p.l.toFixed(2)}`,
+                                        `Close: $${p.c.toFixed(2)}`
+                                    ];
+                                } else if (context.dataset.label === 'Volume') {
+                                    return `Volume: ${context.parsed.y.toLocaleString()}`;
+                                }
+                                return '';
                             }
-                            return `${context.dataset.label}: ${val}`;
                         }
                     }
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.05)',
-                        drawBorder: false
+                },
+                scales: {
+                    x: {
+                        type: 'timeseries',
+                        time: {
+                            unit: 'day',
+                            displayFormats: { day: 'MMM dd' }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            maxTicksLimit: 8,
+                            source: 'auto'
+                        }
                     },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.4)',
-                        maxTicksLimit: 8
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            font: { family: "'JetBrains Mono', monospace" },
+                            callback: (val) => `$${val.toFixed(2)}`
+                        }
+                    },
+                    yVolume: {
+                        type: 'linear',
+                        display: false,
+                        position: 'left',
+                        grid: { drawOnChartArea: false },
+                        min: 0,
+                        max: Math.max(...volumes) * 4
                     }
                 },
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.05)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        font: { family: "'JetBrains Mono', monospace" },
-                        callback: (val) => `$${val.toFixed(2)}`
-                    }
-                },
-                yVolume: {
-                    type: 'linear',
-                    display: false,
-                    position: 'left',
-                    grid: {
-                        drawOnChartArea: false
-                    },
-                    min: 0,
-                    max: Math.max(...volumes) * 4
-                }
-            },
-            animation: {
-                duration: 1000,
-                easing: 'easeOutQuart'
+                animation: { duration: 800, easing: 'easeOutQuart' }
             }
+        });
+    } else {
+        // ── LINE MODE (original) ──
+        const labels = data.map(v => {
+            const date = new Date(v.datetime);
+            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+        });
+
+        const priceGradient = ctx.createLinearGradient(0, 0, 0, 320);
+        if (isPositive) {
+            priceGradient.addColorStop(0, 'rgba(16, 185, 129, 0.34)');
+            priceGradient.addColorStop(0.45, 'rgba(6, 182, 212, 0.16)');
+            priceGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+        } else {
+            priceGradient.addColorStop(0, 'rgba(239, 68, 68, 0.32)');
+            priceGradient.addColorStop(0.45, 'rgba(236, 72, 153, 0.14)');
+            priceGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
         }
+
+        equityChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Close Price',
+                        data: prices,
+                        borderColor: color,
+                        backgroundColor: priceGradient,
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: color,
+                        pointBorderColor: '#f8fafc',
+                        pointBorderWidth: 1.5,
+                        fill: true,
+                        tension: 0.22,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Volume',
+                        data: volumes,
+                        type: 'bar',
+                        backgroundColor: volumeColors,
+                        hoverBackgroundColor: volumeColors.map(c => c.replace('0.3', '0.6').replace('0.2', '0.5')),
+                        borderColor: 'rgba(255,255,255,0.02)',
+                        borderWidth: 1,
+                        barPercentage: 0.72,
+                        categoryPercentage: 0.82,
+                        yAxisID: 'yVolume'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(3, 7, 18, 0.97)',
+                        titleColor: 'rgba(255, 255, 255, 0.85)',
+                        bodyColor: '#ffffff',
+                        bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
+                        borderColor: 'rgba(37, 99, 235, 0.45)',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.parsed.y;
+                                if (context.dataset.label === 'Close Price') {
+                                    return `Price: $${val.toFixed(2)}`;
+                                } else if (context.dataset.label === 'Volume') {
+                                    return `Volume: ${val.toLocaleString()}`;
+                                }
+                                return `${context.dataset.label}: ${val}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                        ticks: { color: 'rgba(255, 255, 255, 0.4)', maxTicksLimit: 8 }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            font: { family: "'JetBrains Mono', monospace" },
+                            callback: (val) => `$${val.toFixed(2)}`
+                        }
+                    },
+                    yVolume: {
+                        type: 'linear',
+                        display: false,
+                        position: 'left',
+                        grid: { drawOnChartArea: false },
+                        min: 0,
+                        max: Math.max(...volumes) * 4
+                    }
+                },
+                animation: { duration: 1000, easing: 'easeOutQuart' }
+            }
+        });
+    }
+}
+
+function setupChartModeToggle() {
+    const toggle = document.getElementById('chart-mode-toggle');
+    if (!toggle) return;
+
+    toggle.querySelectorAll('.chart-mode-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const mode = btn.getAttribute('data-mode');
+            if (mode === chartMode) return;
+
+            chartMode = mode;
+            toggle.querySelectorAll('.chart-mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (rawHistoricalData.length > 0) {
+                renderEquityChart(rawHistoricalData);
+            }
+        });
     });
 }
 
@@ -724,6 +941,26 @@ async function fetchLiveIndexValues() {
         const response = await fetchWithTimeout(`${BACKEND_URL}/api/indices`);
         const payload = await safeJsonParse(response);
         
+        // Market Status Badge
+        const statusDot = document.getElementById('market-status-dot');
+        const statusText = document.getElementById('market-status-text');
+        if (statusDot && statusText) {
+            const state = payload?.sp500?.marketState || payload?.nasdaq?.marketState || 'CLOSED';
+            const stateMap = {
+                'REGULAR': { text: 'Market Open', cls: 'status-open' },
+                'PRE': { text: 'Pre-Market', cls: 'status-pre' },
+                'POST': { text: 'After-Hours', cls: 'status-post' },
+                'POSTPOST': { text: 'Market Closed', cls: 'status-closed' },
+                'PREPRE': { text: 'Market Closed', cls: 'status-closed' },
+                'CLOSED': { text: 'Market Closed', cls: 'status-closed' }
+            };
+            const info = stateMap[state] || stateMap['CLOSED'];
+            statusText.textContent = info.text;
+            statusDot.className = `market-status-dot ${info.cls}`;
+            const strip = document.getElementById('market-status-strip');
+            if (strip) strip.className = `market-status-strip ${info.cls}`;
+        }
+
         const formatIndexValue = (value) => parseFloat(value).toFixed(2);
         const formatChange = (value, percentage) => `${value >= 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(percentage).toFixed(2)}%)`;
         const formatSource = (item, fallback) => {
@@ -757,8 +994,10 @@ async function fetchLiveIndexValues() {
                 dowChange.className = 'index-change ' + (payload.dowjones.change >= 0 ? 'pos-change' : 'neg-change');
             }
         }
+        return payload;
     } catch (error) {
         console.warn('Failed to load live index values:', error);
+        return null;
     }
 }
 
@@ -793,6 +1032,10 @@ function renderNewsGrid(newsItems) {
         const imageUrl = item.image || 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=1470&auto=format&fit=crop';
         const date = new Date(item.datetime * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         
+        const tickerPills = item.related ? item.related.split(',').filter(t => t.trim()).slice(0, 3).map(t => 
+            `<span class="news-ticker-pill" data-symbol="${t.trim()}">${t.trim()}</span>`
+        ).join('') : '';
+
         return `
             <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="news-card">
                 <div class="news-thumbnail" style="background-image: url('${imageUrl}')"></div>
@@ -803,10 +1046,23 @@ function renderNewsGrid(newsItems) {
                     </div>
                     <h4 class="news-headline">${item.headline}</h4>
                     <p class="news-summary">${item.summary ? item.summary.substring(0, 100) + '...' : ''}</p>
+                    ${tickerPills ? `<div class="news-ticker-pills">${tickerPills}</div>` : ''}
                 </div>
             </a>
         `;
     }).join('');
+
+    // Add click handlers for news ticker pills
+    grid.querySelectorAll('.news-ticker-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const symbol = pill.getAttribute('data-symbol');
+            if (symbol) {
+                window.location.href = `equity-details.html?symbol=${encodeURIComponent(symbol)}`;
+            }
+        });
+    });
 }
 
 function setupWatchlist() {
@@ -971,13 +1227,18 @@ async function fetchMarketMovers() {
                 const pctStr = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
                 const textClass = isPositive ? 'positive-text' : (pct < 0 ? 'negative-text' : 'positive-text');
 
+                const priceStr = item.price != null ? `$${parseFloat(item.price).toFixed(2)}` : '--';
+                const volStr = formatVol(item.volume);
+
                 return `
                     <tr class="movers-row" data-symbol="${sym}" title="Click to view full analysis for ${sym}">
                         <td class="company-cell">
                             <span class="symbol-tag font-mono">${sym}</span>
                             <span class="company-name-text">${name}</span>
                         </td>
+                        <td class="num-col font-mono">${priceStr}</td>
                         <td class="num-col font-mono ${textClass}">${pctStr}</td>
+                        <td class="num-col font-mono movers-vol-col">${volStr}</td>
                     </tr>
                 `;
             }).join('');
@@ -999,8 +1260,10 @@ async function fetchMarketMovers() {
         if (data.losers && losersTbody) {
             renderTableRows(losersTbody, data.losers, false);
         }
+        return data;
     } catch (err) {
         console.warn('Failed to fetch market movers:', err);
+        return null;
     }
 }
 
@@ -1078,8 +1341,10 @@ export async function fetchSectorPerformance() {
                 <tbody>${rows}</tbody>
             </table>
         `;
+        return data;
     } catch (err) {
         console.warn('Failed to fetch sector performance:', err);
+        return null;
     }
 }
 
@@ -1100,7 +1365,7 @@ function setupSectorMinimizer() {
 }
 
 // --- Market Sentiment Gauge ---
-async function computeMarketSentiment() {
+async function computeMarketSentiment(indexPayload, moversPayload, sectorPayload) {
     const needle = document.getElementById('sentiment-needle');
     const scoreEl = document.getElementById('sentiment-score-value');
     const labelEl = document.getElementById('sentiment-score-label');
@@ -1111,20 +1376,13 @@ async function computeMarketSentiment() {
     if (!needle || !scoreEl || !labelEl) return;
 
     try {
-        // Fetch all three data sources in parallel
-        const [indexRes, moversRes, sectorRes] = await Promise.allSettled([
-            fetchWithTimeout(`${BACKEND_URL}/api/indices`, { timeout: 8000 }).then(r => safeJsonParse(r)),
-            fetchWithTimeout(`${BACKEND_URL}/api/fmp/movers`, { timeout: 8000 }).then(r => safeJsonParse(r)),
-            fetchWithTimeout(`${BACKEND_URL}/api/fmp/sectors`, { timeout: 8000 }).then(r => safeJsonParse(r))
-        ]);
-
         let indexScore = 50; // default neutral
         let moversScore = 50;
         let sectorScore = 50;
 
         // 1. INDEX MOMENTUM (weight: 40%)
         // Average the percent changes of S&P 500, NASDAQ, DOW
-        const indexData = indexRes.status === 'fulfilled' ? indexRes.value : null;
+        const indexData = indexPayload;
         if (indexData) {
             const changes = [];
             if (indexData.sp500?.changePercent) changes.push(parseFloat(indexData.sp500.changePercent));
@@ -1144,7 +1402,7 @@ async function computeMarketSentiment() {
         }
 
         // 2. GAINERS vs LOSERS RATIO (weight: 30%)
-        const moversData = moversRes.status === 'fulfilled' ? moversRes.value : null;
+        const moversData = moversPayload;
         if (moversData) {
             const gCount = Array.isArray(moversData.gainers) ? moversData.gainers.length : 0;
             const lCount = Array.isArray(moversData.losers) ? moversData.losers.length : 0;
@@ -1160,7 +1418,7 @@ async function computeMarketSentiment() {
 
         // 3. SECTOR BREADTH (weight: 30%)
         // Count sectors with positive vs negative changes
-        const sectorData = sectorRes.status === 'fulfilled' ? sectorRes.value : null;
+        const sectorData = sectorPayload;
         if (sectorData && Array.isArray(sectorData.sectors)) {
             const posCount = sectorData.sectors.filter(s => (s.changesPercentage || 0) >= 0).length;
             const totalSectors = sectorData.sectors.length;

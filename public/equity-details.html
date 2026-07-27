@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -139,15 +142,33 @@
                         </div>
                     </div>
 
+                    <!-- Company Info Bar -->
+                    <div class="company-info-bar equity-reveal-card" id="company-info-bar" style="display:none;">
+                        <div class="info-bar-item" id="info-country"><i class="fa-solid fa-globe"></i> <span>--</span></div>
+                        <div class="info-bar-item" id="info-ipo"><i class="fa-solid fa-calendar-day"></i> IPO: <span>--</span></div>
+                        <div class="info-bar-item" id="info-shares"><i class="fa-solid fa-layer-group"></i> Shares: <span>--</span></div>
+                        <div class="info-bar-item" id="info-website"><i class="fa-solid fa-arrow-up-right-from-square"></i> <a href="#" target="_blank" rel="noopener noreferrer">Website</a></div>
+                    </div>
+
                     <!-- Price Chart -->
                     <div class="chart-container-card equity-reveal-card">
                         <div class="chart-header">
                             <h3>Historical Price Trajectory</h3>
-                            <div class="chart-timeframe-selectors">
-                                <button class="tf-btn" data-tf="1M">1M</button>
-                                <button class="tf-btn active" data-tf="1Y">1Y</button>
-                                <button class="tf-btn" data-tf="5Y">5Y</button>
-                                <button class="tf-btn" data-tf="MAX">MAX</button>
+                            <div class="chart-controls-row">
+                                <div class="chart-mode-toggle" id="chart-mode-toggle">
+                                    <button class="chart-mode-btn active" data-mode="line" title="Line Chart">
+                                        <i class="fa-solid fa-chart-line"></i>
+                                    </button>
+                                    <button class="chart-mode-btn" data-mode="candlestick" title="Candlestick Chart">
+                                        <i class="fa-solid fa-chart-column"></i>
+                                    </button>
+                                </div>
+                                <div class="chart-timeframe-selectors">
+                                    <button class="tf-btn" data-tf="1M">1M</button>
+                                    <button class="tf-btn active" data-tf="1Y">1Y</button>
+                                    <button class="tf-btn" data-tf="5Y">5Y</button>
+                                    <button class="tf-btn" data-tf="MAX">MAX</button>
+                                </div>
                             </div>
                         </div>
                         <div class="chart-wrapper-box">
@@ -186,10 +207,12 @@
                         <div class="metric-card">
                             <span class="metric-title">52-Week High</span>
                             <span id="metric-52w-high" class="metric-value">--</span>
+                            <span id="metric-52w-high-date" class="metric-date-annotation"></span>
                         </div>
                         <div class="metric-card">
                             <span class="metric-title">52-Week Low</span>
                             <span id="metric-52w-low" class="metric-value">--</span>
+                            <span id="metric-52w-low-date" class="metric-date-annotation"></span>
                         </div>
                     </div>
 
@@ -218,6 +241,10 @@
                         </div>
                         <div id="analyst-reco-content" class="analyst-reco-content">
                             <p class="empty-notice">Loading analyst recommendations...</p>
+                        </div>
+                        <div id="analyst-trend-chart-wrap" class="analyst-trend-wrap" style="display:none;">
+                            <h4 class="analyst-trend-title"><i class="fa-solid fa-chart-bar"></i> Recommendation Trend (6 Months)</h4>
+                            <div class="analyst-trend-bars" id="analyst-trend-bars"></div>
                         </div>
                     </div>
 

@@ -118,6 +118,10 @@
                         </button>
                     </div>
 
+                    <div class="market-status-strip" id="market-status-strip">
+                        <span class="market-status-dot" id="market-status-dot"></span>
+                        <span class="market-status-text" id="market-status-text">Checking market status…</span>
+                    </div>
                     <!-- Tab 1: Watchlist & Overview -->
                     <div id="tab-watchlist-content" class="equity-tab-panel active" role="tabpanel" aria-labelledby="tab-btn-watchlist">
                         <div class="index-summary-strip" aria-live="polite">
@@ -258,7 +262,9 @@
                                         <thead>
                                             <tr>
                                                 <th>Company</th>
+                                                <th class="num-col">Price</th>
                                                 <th class="num-col">24h Change</th>
+                                                <th class="num-col movers-vol-col">Volume</th>
                                             </tr>
                                         </thead>
                                         <tbody id="top-gainers-tbody">
@@ -313,7 +319,9 @@
                                         <thead>
                                             <tr>
                                                 <th>Company</th>
+                                                <th class="num-col">Price</th>
                                                 <th class="num-col">24h Change</th>
+                                                <th class="num-col movers-vol-col">Volume</th>
                                             </tr>
                                         </thead>
                                         <tbody id="top-losers-tbody">

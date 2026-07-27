@@ -7012,3 +7012,304 @@ select {
     }
 }
 
+/* ============================================================
+   MARKET STATUS BADGE
+   ============================================================ */
+.market-status-strip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(148, 163, 184, 0.8);
+    margin-bottom: 12px;
+}
+
+.market-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, 0.5);
+    flex-shrink: 0;
+}
+
+.market-status-strip.status-open {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.25);
+    color: #10b981;
+}
+.market-status-dot.status-open {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    animation: pulseGlow 1.5s infinite;
+}
+
+.market-status-strip.status-pre {
+    background: rgba(234, 179, 8, 0.08);
+    border-color: rgba(234, 179, 8, 0.25);
+    color: #eab308;
+}
+.market-status-dot.status-pre {
+    background: #eab308;
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
+    animation: pulseGlow 1.5s infinite;
+}
+
+.market-status-strip.status-post {
+    background: rgba(249, 115, 22, 0.08);
+    border-color: rgba(249, 115, 22, 0.25);
+    color: #f97316;
+}
+.market-status-dot.status-post {
+    background: #f97316;
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+    animation: pulseGlow 1.5s infinite;
+}
+
+.market-status-strip.status-closed {
+    background: rgba(239, 68, 68, 0.06);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+.market-status-dot.status-closed {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+/* Movers Volume Column - hide on mobile */
+@media (max-width: 640px) {
+    .movers-vol-col {
+        display: none;
+    }
+}
+
+/* ============================================================
+   NEWS TICKER PILLS
+   ============================================================ */
+.news-ticker-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.news-ticker-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    color: var(--neon-cyan-vibrant);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.news-ticker-pill:hover {
+    background: rgba(6, 182, 212, 0.18);
+    border-color: rgba(6, 182, 212, 0.4);
+    transform: translateY(-1px);
+}
+
+/* ============================================================
+   COMPANY INFO BAR
+   ============================================================ */
+.company-info-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 14px 20px;
+    margin-top: 12px;
+    background: rgba(13, 19, 38, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+}
+
+.info-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: rgba(248, 250, 252, 0.7);
+}
+
+.info-bar-item i {
+    color: var(--neon-cyan-vibrant);
+    font-size: 0.72rem;
+    opacity: 0.7;
+}
+
+.info-bar-item a {
+    color: var(--neon-cyan-vibrant);
+    text-decoration: none;
+    transition: opacity 0.15s;
+}
+
+.info-bar-item a:hover {
+    opacity: 0.7;
+    text-decoration: underline;
+}
+
+/* 52-Week Date Annotation */
+.metric-date-annotation {
+    display: block;
+    font-size: 0.68rem;
+    color: rgba(148, 163, 184, 0.6);
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* ============================================================
+   ANALYST RECOMMENDATION TREND CHART
+   ============================================================ */
+.analyst-trend-wrap {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.analyst-trend-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(248, 250, 252, 0.7);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.analyst-trend-title i {
+    color: var(--neon-cyan-vibrant);
+    font-size: 0.75rem;
+}
+
+.analyst-trend-bars {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    align-items: flex-end;
+    height: 100px;
+}
+
+.trend-bar-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    max-width: 50px;
+}
+
+.trend-stacked-bar {
+    width: 100%;
+    height: 80px;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.trend-seg {
+    width: 100%;
+    transition: height 0.4s ease;
+}
+
+.trend-seg.buy {
+    background: linear-gradient(180deg, #10b981, #059669);
+}
+
+.trend-seg.hold {
+    background: linear-gradient(180deg, #eab308, #ca8a04);
+}
+
+.trend-seg.sell {
+    background: linear-gradient(180deg, #ef4444, #dc2626);
+}
+
+.trend-month-label {
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    color: rgba(148, 163, 184, 0.6);
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .company-info-bar {
+        gap: 10px;
+        padding: 10px 14px;
+    }
+    .info-bar-item {
+        font-size: 0.72rem;
+    }
+    .analyst-trend-bars {
+        gap: 8px;
+        height: 80px;
+    }
+    .trend-stacked-bar {
+        height: 60px;
+    }
+}
+
+/* ============================================================
+   CHART MODE TOGGLE (Line ↔ Candlestick)
+   ============================================================ */
+.chart-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chart-mode-toggle {
+    display: inline-flex;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.chart-mode-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 30px;
+    background: transparent;
+    border: none;
+    color: rgba(148, 163, 184, 0.6);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.78rem;
+}
+
+.chart-mode-btn:hover {
+    color: rgba(248, 250, 252, 0.8);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.chart-mode-btn.active {
+    color: var(--neon-cyan-vibrant);
+    background: rgba(6, 182, 212, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(6, 182, 212, 0.25);
+}
+
+@media (max-width: 768px) {
+    .chart-controls-row {
+        gap: 8px;
+    }
+    .chart-mode-btn {
+        width: 30px;
+        height: 28px;
+        font-size: 0.72rem;
+    }
+}
