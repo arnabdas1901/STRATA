@@ -7313,3 +7313,253 @@ select {
         font-size: 0.72rem;
     }
 }
+
+/* ============================================================
+   CRYPTO ZERO-COST FEATURES
+   ============================================================ */
+
+/* Rank Badge on Landing Cards */
+.bracket-rank-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(6, 182, 212, 0.12);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    color: var(--neon-cyan-vibrant);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+}
+.crypto-bracket-card {
+    position: relative;
+}
+
+/* BTC / ETH Price Pairs */
+.crypto-btc-eth-prices {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: rgba(148, 163, 184, 0.7);
+    margin-top: 4px;
+}
+.crypto-btc-eth-prices .pair-label {
+    font-weight: 600;
+    color: rgba(248, 250, 252, 0.5);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+}
+.crypto-btc-eth-prices .pair-sep {
+    margin: 0 6px;
+    color: rgba(148, 163, 184, 0.3);
+}
+
+/* Last Updated Badge */
+.crypto-last-updated {
+    font-size: 0.68rem;
+    color: rgba(148, 163, 184, 0.5);
+    margin-top: 4px;
+    font-weight: 500;
+}
+.crypto-last-updated::before {
+    content: '\f017';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    margin-right: 5px;
+    font-size: 0.6rem;
+    opacity: 0.6;
+}
+
+/* Project Health Score Panel */
+.crypto-health-panel {
+    background: rgba(13, 19, 38, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.health-score-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.health-score-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: rgba(248, 250, 252, 0.7);
+}
+
+.health-score-header i {
+    color: var(--neon-cyan-vibrant);
+    font-size: 0.68rem;
+    opacity: 0.7;
+    width: 14px;
+    text-align: center;
+}
+
+.health-score-label {
+    flex: 1;
+}
+
+.health-score-val {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(248, 250, 252, 0.9);
+}
+
+.health-score-bar-track {
+    height: 5px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.health-score-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease;
+}
+
+/* Smart Contract Address Card */
+.crypto-contract-card {
+    background: rgba(13, 19, 38, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.contract-chain-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    color: var(--neon-cyan-vibrant);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.contract-chain-badge i {
+    font-size: 0.65rem;
+}
+
+.contract-address-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.contract-addr {
+    font-size: 0.78rem;
+    color: rgba(248, 250, 252, 0.6);
+    letter-spacing: 0.5px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.contract-copy-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(148, 163, 184, 0.7);
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    transition: all 0.15s ease;
+}
+
+.contract-copy-btn:hover {
+    background: rgba(6, 182, 212, 0.12);
+    color: var(--neon-cyan-vibrant);
+    border-color: rgba(6, 182, 212, 0.3);
+}
+
+@media (max-width: 768px) {
+    .crypto-health-panel {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 14px;
+    }
+    .health-score-header {
+        font-size: 0.7rem;
+    }
+    .crypto-contract-card {
+        padding: 12px 14px;
+    }
+    .crypto-btc-eth-prices {
+        font-size: 0.68rem;
+    }
+}
+
+/* ============================================================
+   FOREX PREMIUM LAYOUT & VISUALS
+   ============================================================ */
+.bracket-icon-wrapper {
+    position: relative;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(15, 23, 42, 0.6));
+    border: 1.5px solid rgba(6, 182, 212, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--neon-cyan-vibrant);
+    font-size: 1.35rem;
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.1);
+    transition: all 0.25s ease;
+}
+
+.crypto-bracket-card:hover .bracket-icon-wrapper {
+    border-color: var(--neon-cyan-vibrant);
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.35);
+    transform: scale(1.05);
+}
+
+.bracket-flag-badge {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    font-size: 1.05rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.bracket-sparkline {
+    width: 100%;
+    height: 30px;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.crypto-bracket-card:hover .bracket-sparkline {
+    opacity: 1;
+}
+

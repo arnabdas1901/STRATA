@@ -102,6 +102,28 @@ function setupLandingGridClicks() {
     });
 }
 
+function generateSparklineSvg(dataPoints, width = 120, height = 30) {
+    if (!dataPoints || dataPoints.length < 2) return '';
+    const min = Math.min(...dataPoints);
+    const max = Math.max(...dataPoints);
+    const range = max - min === 0 ? 1 : max - min;
+    
+    const points = dataPoints.map((val, index) => {
+        const x = (index / (dataPoints.length - 1)) * width;
+        const y = height - ((val - min) / range) * height;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    
+    const isPositive = dataPoints[dataPoints.length - 1] >= dataPoints[0];
+    const strokeColor = isPositive ? '#10b981' : '#ef4444';
+    
+    return `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible; display: block; margin: 8px auto 0;">
+            <polyline fill="none" stroke="${strokeColor}" stroke-width="1.5" points="${points.join(' ')}" />
+        </svg>
+    `;
+}
+
 async function loadLatestForexRates() {
     try {
         const res = await fetchWithTimeout(`${BACKEND_URL}/api/forex/latest`, { timeout: 8000 });
@@ -115,6 +137,7 @@ async function loadLatestForexRates() {
             const symbolEl = card.querySelector('.bracket-symbol');
             const priceEl = card.querySelector('.bracket-price');
             const changeEl = card.querySelector('.bracket-change');
+            const sparklineEl = card.querySelector('.bracket-sparkline');
             if (!symbolEl || !priceEl || !changeEl) return;
 
             const symbol = symbolEl.innerText;
@@ -135,6 +158,12 @@ async function loadLatestForexRates() {
                     liveRate = metric.rate;
                     changeVal = metric.change;
                     changePercent = metric.changePercent;
+
+                    // Draw sparkline
+                    const history = data.sparklines?.[toCurrency];
+                    if (history && sparklineEl) {
+                        sparklineEl.innerHTML = generateSparklineSvg(history);
+                    }
                 }
             } else if (toCurrency === 'USD') {
                 const metric = data.changes[fromCurrency];
@@ -145,6 +174,13 @@ async function loadLatestForexRates() {
                     liveRate = liveRateInverted;
                     changeVal = liveRateInverted - yesterdayRateInverted;
                     changePercent = (changeVal / yesterdayRateInverted) * 100;
+
+                    // Draw sparkline (inverted)
+                    const history = data.sparklines?.[fromCurrency];
+                    if (history && sparklineEl) {
+                        const invertedHistory = history.map(h => h > 0 ? 1 / h : 0);
+                        sparklineEl.innerHTML = generateSparklineSvg(invertedHistory);
+                    }
                 }
             }
 
@@ -204,6 +240,15 @@ async function executeForexSearch(pairQuery, days = 365) {
         const changeEl = document.getElementById('forex-change-display');
         changeEl.innerText = `${sign}${data.change.toFixed(4)} (${sign}${data.changePercent.toFixed(2)}%)`;
         changeEl.className = `price-change-percent ${colorClass}`;
+
+        const lastUpdatedEl = document.getElementById('forex-last-updated');
+        if (lastUpdatedEl && data.lastUpdated) {
+            const updatedDate = new Date(data.lastUpdated);
+            lastUpdatedEl.innerText = `As of ${updatedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            lastUpdatedEl.style.display = '';
+        } else if (lastUpdatedEl) {
+            lastUpdatedEl.style.display = 'none';
+        }
 
         document.getElementById('forex-description-display').innerText = 'Click "Generate Profile" to run on-demand AI macroeconomic analysis.';
 
@@ -480,6 +525,11 @@ async function generateAiForexProfile() {
         if (data.error) throw new Error(data.error);
 
         display.innerText = data.analysis || 'Analysis unavailable.';
+
+        const cachedBadge = document.getElementById('forex-ai-cached-badge');
+        if (cachedBadge) {
+            cachedBadge.style.display = data.cached ? '' : 'none';
+        }
 
         if (btn) {
             btn.disabled = false;

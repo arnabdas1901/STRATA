@@ -141,6 +141,7 @@
                         <div class="hero-pricing">
                             <div id="forex-live-price" class="price-value">--</div>
                             <div id="forex-change-display" class="price-change-percent">--</div>
+                            <div id="forex-last-updated" class="crypto-last-updated" style="display:none; margin-top: 4px; text-align: right;"></div>
                         </div>
                     </div>
                     <div class="metric-summary-grid" style="margin-top: 24px;">
@@ -176,7 +177,10 @@
                     <div class="company-profile-card" id="forex-pdf-export-area">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <h3 style="margin: 0;"><i class="fa-solid fa-globe"></i> Currency Profile & Macro Analysis</h3>
-                            <button id="forex-ai-generate-btn" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem;"><i class="fa-solid fa-robot"></i> Generate Profile</button>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="forex-ai-cached-badge" class="badge secondary" style="display: none; background: rgba(234, 179, 8, 0.1); border-color: rgba(234, 179, 8, 0.25); color: #eab308; font-size: 0.7rem; padding: 2px 6px;">Cached</span>
+                                <button id="forex-ai-generate-btn" class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem;"><i class="fa-solid fa-robot"></i> Generate Profile</button>
+                            </div>
                         </div>
                         <p id="forex-description-display" style="color: var(--text-secondary-muted); line-height: 1.6; margin-top: 12px;">
                             Click "Generate Profile" to run on-demand AI macroeconomic analysis.

@@ -3,6 +3,8 @@ import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, escapeHtml, fo
 let cryptoChartInstance = null;
 let activeCryptoId = null;
 let currentCryptoPrice = 0; // for converter
+let cryptoChartMode = 'price'; // 'price' or 'mcap'
+let lastCryptoHistory = null; // cache for chart mode toggle
 
 // ─── Entry Point ────────────────────────────────────────────────────────────────
 
@@ -12,6 +14,7 @@ export function setupCryptoTracker() {
     if (isDetailsPage) {
         setupSearch();
         setupCryptoTimeframeSelectors();
+        setupCryptoChartModeToggle();
         setupTabs('#dashboard-crypto');
         setupAboutToggle();
         setupConverter();
@@ -119,7 +122,9 @@ async function loadTopCryptos() {
             const changeColor = change24h >= 0 ? '#10b981' : '#ef4444';
             const changeIcon = change24h >= 0 ? '▲' : '▼';
 
+            const rank = crypto.market_cap_rank;
             bracket.innerHTML = `
+                ${rank ? `<div class="bracket-rank-badge">#${rank}</div>` : ''}
                 <div class="bracket-icon">${crypto.image ? `<img src="${crypto.image}" alt="${crypto.name}">` : '💰'}</div>
                 <div class="bracket-name">${escapeHtml(crypto.name)}</div>
                 <div class="bracket-symbol">${escapeHtml(crypto.symbol.toUpperCase())}</div>
@@ -175,6 +180,7 @@ async function displayCryptoDetails(cryptoId, cryptoSymbol = null) {
 
         const details = await safeJsonParse(detailsResponse);
         const history = await safeJsonParse(historyResponse);
+        lastCryptoHistory = history; // cache for chart mode toggle
 
         if (!detailsResponse || !detailsResponse.ok) throw new Error(details?.error || 'Failed to fetch details');
 
@@ -292,8 +298,32 @@ function populateCryptoDetails(crypto) {
 
     if (priceDisplay) priceDisplay.textContent = formatCryptoPrice(currentPrice);
     if (changeDisplay) {
-        changeDisplay.textContent = `${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}% (24h)`;
+        const absChange = marketData.price_change_24h || 0;
+        const absStr = absChange !== 0 ? ` (${absChange >= 0 ? '+' : ''}${formatCryptoPrice(Math.abs(absChange))})` : '';
+        changeDisplay.textContent = `${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%${absStr} (24h)`;
         changeDisplay.style.color = change24h >= 0 ? '#10b981' : '#ef4444';
+    }
+
+    // BTC / ETH Price Pairs
+    const btcEthEl = document.getElementById('crypto-btc-eth-prices');
+    if (btcEthEl) {
+        const btcPrice = marketData.current_price?.btc;
+        const ethPrice = marketData.current_price?.eth;
+        let pairs = [];
+        if (btcPrice != null && btcPrice > 0) pairs.push(`<span class="pair-label">BTC</span> ${btcPrice < 0.0001 ? btcPrice.toExponential(2) : btcPrice.toFixed(btcPrice < 1 ? 6 : 2)}`);
+        if (ethPrice != null && ethPrice > 0) pairs.push(`<span class="pair-label">ETH</span> ${ethPrice < 0.0001 ? ethPrice.toExponential(2) : ethPrice.toFixed(ethPrice < 1 ? 6 : 2)}`);
+        btcEthEl.innerHTML = pairs.length > 0 ? pairs.join('<span class="pair-sep">·</span>') : '';
+        btcEthEl.style.display = pairs.length > 0 ? '' : 'none';
+    }
+
+    // Last Updated Badge
+    const lastUpdatedEl = document.getElementById('crypto-last-updated');
+    if (lastUpdatedEl && marketData.last_updated) {
+        const updatedDate = new Date(marketData.last_updated);
+        const diffMs = Date.now() - updatedDate.getTime();
+        const diffMin = Math.round(diffMs / 60000);
+        lastUpdatedEl.textContent = diffMin < 1 ? 'Just now' : diffMin < 60 ? `${diffMin}m ago` : `${Math.round(diffMin / 60)}h ago`;
+        lastUpdatedEl.style.display = '';
     }
 
     // ── Category Tags ───────────────────────────────────────────────────────────
@@ -320,6 +350,10 @@ function populateCryptoDetails(crypto) {
         }
         if (github) {
             socialHtml += `<a href="${escapeHtml(github)}" class="crypto-social-link" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i></a>`;
+        }
+        const telegram = crypto.links?.telegram_channel_identifier || '';
+        if (telegram) {
+            socialHtml += `<a href="https://t.me/${escapeHtml(telegram)}" class="crypto-social-link" target="_blank" rel="noopener"><i class="fa-brands fa-telegram"></i></a>`;
         }
         socialContainer.innerHTML = socialHtml;
     }
@@ -551,6 +585,66 @@ function populateCryptoDetails(crypto) {
         `;
     }
 
+    // ── Project Health Scores ────────────────────────────────────────────────────
+    const healthPanel = document.getElementById('crypto-health-panel');
+    if (healthPanel) {
+        const scores = [
+            { label: 'Overall', value: crypto.coingecko_score, icon: 'fa-star' },
+            { label: 'Developer', value: crypto.developer_score, icon: 'fa-code' },
+            { label: 'Community', value: crypto.community_score, icon: 'fa-users' },
+            { label: 'Liquidity', value: crypto.liquidity_score, icon: 'fa-droplet' },
+            { label: 'Public Interest', value: crypto.public_interest_score, icon: 'fa-eye' },
+        ];
+        const hasScores = scores.some(s => s.value != null && s.value > 0);
+        if (hasScores) {
+            healthPanel.innerHTML = scores.map(s => {
+                const val = s.value != null ? parseFloat(s.value).toFixed(1) : '--';
+                const pct = s.value != null ? Math.min(100, s.value) : 0;
+                const hue = pct > 60 ? 160 : pct > 30 ? 45 : 0; // green > yellow > red
+                return `
+                    <div class="health-score-item">
+                        <div class="health-score-header">
+                            <i class="fa-solid ${s.icon}"></i>
+                            <span class="health-score-label">${s.label}</span>
+                            <span class="health-score-val font-mono">${val}</span>
+                        </div>
+                        <div class="health-score-bar-track">
+                            <div class="health-score-bar-fill" style="width:${pct}%;background:hsl(${hue},70%,50%)"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            healthPanel.style.display = '';
+        }
+    }
+
+    // ── Smart Contract Address ───────────────────────────────────────────────────
+    const contractCard = document.getElementById('crypto-contract-card');
+    if (contractCard) {
+        const platforms = crypto.platforms || {};
+        const platformId = crypto.asset_platform_id || '';
+        const entries = Object.entries(platforms).filter(([, addr]) => addr && addr.length > 5);
+        if (entries.length > 0) {
+            const [chain, address] = entries[0];
+            const chainLabel = chain.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            const shortAddr = address.length > 16 ? address.slice(0, 8) + '...' + address.slice(-6) : address;
+            contractCard.innerHTML = `
+                <div class="contract-chain-badge"><i class="fa-solid fa-link-simple"></i> ${escapeHtml(chainLabel)}</div>
+                <div class="contract-address-row">
+                    <code class="contract-addr font-mono">${escapeHtml(shortAddr)}</code>
+                    <button class="contract-copy-btn" title="Copy full address" data-addr="${escapeHtml(address)}">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+            `;
+            contractCard.style.display = '';
+            contractCard.querySelector('.contract-copy-btn')?.addEventListener('click', (e) => {
+                const addr = e.currentTarget.getAttribute('data-addr');
+                navigator.clipboard.writeText(addr).then(() => showToast('Contract address copied!')).catch(() => {});
+            });
+        }
+    }
+
     // ── About Section ───────────────────────────────────────────────────────────
     const aboutText = document.getElementById('crypto-about-text');
     if (aboutText) aboutText.innerHTML = description || 'No description available.';
@@ -605,7 +699,8 @@ function setupConverter() {
 // ─── Chart Rendering (verbatim from original) ──────────────────────────────────
 
 function renderCryptoChart(history) {
-    const prices = history?.prices || [];
+    const isMcapMode = cryptoChartMode === 'mcap';
+    const prices = isMcapMode ? (history?.market_caps || history?.prices || []) : (history?.prices || []);
     const volumes = history?.total_volumes || [];
     
     const labels = prices.map(([timestamp]) => {
@@ -649,7 +744,7 @@ function renderCryptoChart(history) {
             labels,
             datasets: [
                 {
-                    label: 'Close Price',
+                    label: isMcapMode ? 'Market Cap' : 'Close Price',
                     data: dataPoints,
                     borderColor: color,
                     backgroundColor: priceGradient,
@@ -694,6 +789,8 @@ function renderCryptoChart(history) {
                             const val = context.parsed.y;
                             if (context.dataset.label === 'Close Price') {
                                 return `Price: $${val.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+                            } else if (context.dataset.label === 'Market Cap') {
+                                return `MCap: $${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
                             } else if (context.dataset.label === 'Volume') {
                                 return `Volume: $${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
                             }
@@ -724,7 +821,7 @@ function renderCryptoChart(history) {
                     ticks: {
                         color: 'rgba(255, 255, 255, 0.6)',
                         font: { family: "'JetBrains Mono', monospace" },
-                        callback: (val) => '$' + val.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                        callback: (val) => isMcapMode ? '$' + (val >= 1e9 ? (val/1e9).toFixed(1) + 'B' : val >= 1e6 ? (val/1e6).toFixed(1) + 'M' : val.toLocaleString()) : '$' + val.toLocaleString(undefined, { maximumFractionDigits: 2 })
                     }
                 },
                 yVolume: {
@@ -764,8 +861,32 @@ async function loadCryptoHistoryOnly(cryptoId, days = 365) {
     try {
         const response = await fetchWithTimeout(`${BACKEND_URL}/api/crypto/history?id=${encodeURIComponent(cryptoId)}&days=${days}`, { timeout: 10000 });
         const history = await safeJsonParse(response);
+        lastCryptoHistory = history; // update cache
         renderCryptoChart(history);
     } catch (error) {
         console.warn('Failed to load crypto history:', error);
     }
+}
+
+// ─── Chart Mode Toggle (Price ↔ Market Cap) ─────────────────────────────────────
+
+function setupCryptoChartModeToggle() {
+    const toggle = document.getElementById('crypto-chart-mode-toggle');
+    if (!toggle) return;
+
+    toggle.querySelectorAll('.chart-mode-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const mode = btn.getAttribute('data-mode');
+            if (mode === cryptoChartMode) return;
+
+            cryptoChartMode = mode;
+            toggle.querySelectorAll('.chart-mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (lastCryptoHistory) {
+                renderCryptoChart(lastCryptoHistory);
+            }
+        });
+    });
 }

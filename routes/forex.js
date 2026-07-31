@@ -72,6 +72,7 @@ router.get('/latest', async (req, res) => {
         const rates = data.rates[latestDate] || {};
         const prevRates = data.rates[prevDate] || {};
         const dailyChanges = {};
+        const sparklineData = {};
 
         for (const curr of Object.keys(rates)) {
             const currentVal = Number(rates[curr]);
@@ -84,6 +85,11 @@ router.get('/latest', async (req, res) => {
                     changePercent: (change / prevVal) * 100
                 };
             }
+            
+            // Map the full history for this currency for sparkline rendering
+            sparklineData[curr] = dates
+                .map(d => Number(data.rates[d]?.[curr]))
+                .filter(v => Number.isFinite(v));
         }
 
         const payload = {
@@ -92,6 +98,7 @@ router.get('/latest', async (req, res) => {
             provider: 'Frankfurter (ECB)',
             rates,
             changes: dailyChanges,
+            sparklines: sparklineData,
             lastRefreshed: new Date().toISOString()
         };
 
