@@ -152,7 +152,7 @@ select {
 }
 
 .brand-logo-sticker {
-    height: 36px !important;
+    height: 48px !important;
     width: auto !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
@@ -161,7 +161,7 @@ select {
 }
 
 .brand-logo-sticker-mobile {
-    height: 28px !important;
+    height: 38px !important;
     width: auto !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
