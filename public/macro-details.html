@@ -118,6 +118,8 @@
                                     <div class="ticker-badges">
                                         <span id="central-bank-badge" class="badge">Central Bank</span>
                                         <span id="currency-badge" class="badge secondary">Macro</span>
+                                        <span id="macro-region-badge" class="badge secondary" style="display:none; background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.2); color: #60a5fa;"></span>
+                                        <span id="macro-income-level-badge" class="badge secondary" style="display:none; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.2); color: #34d399;"></span>
                                     </div>
                                 </div>
                             </div>
@@ -135,6 +137,12 @@
                         <div class="metric-card"><span class="metric-title">Unemployment Rate</span><span id="metric-unemployment" class="metric-value">--</span></div>
                         <div class="metric-card"><span class="metric-title">Current Account (% GDP)</span><span id="metric-current-account" class="metric-value">--</span></div>
                         <div class="metric-card"><span class="metric-title">Last Updated (CPI)</span><span id="metric-inflation-date" class="metric-value">--</span></div>
+                    </div>
+
+                    <div class="macro-trends-panel">
+                        <div id="macro-gdp-sparkline" class="macro-trend-item" style="display:none;"></div>
+                        <div id="macro-unemployment-sparkline" class="macro-trend-item" style="display:none;"></div>
+                        <div id="macro-currentacct-sparkline" class="macro-trend-item" style="display:none;"></div>
                     </div>
 
                     <div class="company-profile-card" style="margin-top: 24px; margin-bottom: 24px;">

@@ -3,6 +3,22 @@ import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast } from '../util
 let macroChartInstance = null;
 let globalCountryMap = [];
 
+// ── SVG Sparkline Generator ────────────────────────────────────────────────────
+function generateMacroSparkline(dataPoints, width = 120, height = 28) {
+    if (!dataPoints || dataPoints.length < 2) return '';
+    const min = Math.min(...dataPoints);
+    const max = Math.max(...dataPoints);
+    const range = max - min === 0 ? 1 : max - min;
+    const points = dataPoints.map((val, i) => {
+        const x = (i / (dataPoints.length - 1)) * width;
+        const y = height - ((val - min) / range) * (height - 2) - 1;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const isUp = dataPoints[dataPoints.length - 1] >= dataPoints[0];
+    const color = isUp ? '#10b981' : '#ef4444';
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow:visible;display:block;margin:6px auto 0;"><polyline fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${points.join(' ')}"/></svg>`;
+}
+
 // ── Country Metadata Registry ──────────────────────────────────────────────────
 // Maps ISO 3166-1 alpha-2 codes to emoji flags and central bank names.
 // Used by the search handler to resolve proper metadata for any country.
@@ -178,8 +194,15 @@ async function loadMajorEconomies() {
         { code: 'CN', name: 'China', flag: '🇨🇳', bank: 'PBOC' }
     ];
 
+    // Resolve income level from global country map
+    const getIncomeLevel = (isoCode) => {
+        const country = globalCountryMap.find(c => c.iso2Code === isoCode || c.id === isoCode);
+        return country?.incomeLevel?.value || '';
+    };
+
     grid.innerHTML = '';
     for (const eco of economies) {
+        const incomeLevel = getIncomeLevel(eco.code);
         const bracket = document.createElement('div');
         bracket.className = 'crypto-bracket-card';
         bracket.role = 'button';
@@ -188,8 +211,11 @@ async function loadMajorEconomies() {
             <div class="bracket-icon"><span style="font-size: 32px;">${eco.flag}</span></div>
             <div class="bracket-name">${eco.name}</div>
             <div class="bracket-symbol">${eco.bank}</div>
+            ${incomeLevel ? `<div class="macro-income-badge">${incomeLevel}</div>` : ''}
             <div class="bracket-price"><span class="pulse-text" style="color: var(--text-secondary-muted); font-size: 0.85rem;">Loading…</span></div>
             <div class="bracket-change">CPI (YoY)</div>
+            <div class="macro-yoy-change" style="display:none;"></div>
+            <div class="bracket-sparkline"></div>
         `;
         grid.appendChild(bracket);
 
@@ -205,12 +231,30 @@ async function loadMajorEconomies() {
             .then(data => {
                 const priceEl = bracket.querySelector('.bracket-price');
                 const changeEl = bracket.querySelector('.bracket-change');
+                const yoyEl = bracket.querySelector('.macro-yoy-change');
+                const sparkEl = bracket.querySelector('.bracket-sparkline');
                 if (data) {
-                    const latest = data.find(d => d.value !== null);
+                    const validData = data.filter(d => d.value !== null).sort((a, b) => parseInt(a.date) - parseInt(b.date));
+                    const latest = validData.length > 0 ? validData[validData.length - 1] : null;
                     if (latest) {
                         priceEl.innerText = `${latest.value.toFixed(2)}%`;
                         changeEl.style.color = latest.value > 3.0 ? '#ef4444' : '#10b981';
                         changeEl.innerText = `CPI (YoY, ${latest.date})`;
+
+                        // YoY percentage-point change
+                        if (validData.length >= 2) {
+                            const prev = validData[validData.length - 2];
+                            const ppChange = latest.value - prev.value;
+                            const sign = ppChange >= 0 ? '+' : '';
+                            yoyEl.innerHTML = `<span style="color:${ppChange >= 0 ? '#ef4444' : '#10b981'};">${sign}${ppChange.toFixed(1)}pp</span> vs ${prev.date}`;
+                            yoyEl.style.display = '';
+                        }
+
+                        // CPI Trend sparkline (last 8 years)
+                        const sparkData = validData.slice(-8).map(d => d.value);
+                        if (sparkData.length >= 3 && sparkEl) {
+                            sparkEl.innerHTML = generateMacroSparkline(sparkData);
+                        }
                         return;
                     }
                 }
@@ -275,13 +319,32 @@ async function displayMacroDetails(code, name, flag, bank) {
             document.getElementById('metric-core-inflation').innerText = `${latestCpi.value.toFixed(2)}%`;
         }
 
-        document.getElementById('metric-interest-rate').innerText = latestRate ? `${latestRate.value.toFixed(2)}%` : 'N/A';
-        document.getElementById('metric-gdp-growth').innerText = latestGdp ? `${latestGdp.value.toFixed(2)}%` : 'N/A';
-        document.getElementById('metric-unemployment').innerText = latestUnemploy ? `${latestUnemploy.value.toFixed(2)}%` : 'N/A';
-        document.getElementById('metric-current-account').innerText = latestCurrentAcct ? `${latestCurrentAcct.value.toFixed(2)}%` : 'N/A';
+        // Show vintage year for each metric so users understand data lag
+        const setMetricWithVintage = (elId, indicator, suffix = '%') => {
+            const el = document.getElementById(elId);
+            if (!el || !indicator) { if (el) el.innerText = 'N/A'; return; }
+            el.innerHTML = `${indicator.value.toFixed(2)}${suffix} <span class="metric-vintage">(${indicator.date})</span>`;
+        };
+        setMetricWithVintage('metric-interest-rate', latestRate);
+        setMetricWithVintage('metric-gdp-growth', latestGdp);
+        setMetricWithVintage('metric-unemployment', latestUnemploy);
+        setMetricWithVintage('metric-current-account', latestCurrentAcct);
 
+        // Region & Income Level badges from country metadata
         const countryObj = globalCountryMap.find(c => c.id === code || c.iso2Code === code);
-        document.getElementById('currency-badge').innerText = countryObj && countryObj.capitalCity ? `Capital: ${countryObj.capitalCity}` : 'Sovereign Macro';
+        const capitalBadge = document.getElementById('currency-badge');
+        if (capitalBadge) capitalBadge.innerText = countryObj && countryObj.capitalCity ? `Capital: ${countryObj.capitalCity}` : 'Sovereign Macro';
+
+        const regionBadge = document.getElementById('macro-region-badge');
+        if (regionBadge && countryObj?.region?.value) {
+            regionBadge.innerText = countryObj.region.value;
+            regionBadge.style.display = '';
+        }
+        const incomeBadge = document.getElementById('macro-income-level-badge');
+        if (incomeBadge && countryObj?.incomeLevel?.value) {
+            incomeBadge.innerText = countryObj.incomeLevel.value;
+            incomeBadge.style.display = '';
+        }
 
         // Prepare chart data (Align interest rate series to CPI date labels)
         const labels = validCpi.map(d => d.date);
@@ -294,6 +357,27 @@ async function displayMacroDetails(code, name, flag, bank) {
         const rateValues = labels.map(date => rateMap[date] !== undefined ? rateMap[date] : null);
 
         renderMacroChart(labels, cpiValues, rateValues);
+
+        // GDP, Unemployment, Current Account trend sparklines (from already-fetched data)
+        const renderHistorySparkline = (containerId, rawData, label) => {
+            const el = document.getElementById(containerId);
+            if (!el || !rawData) return;
+            const valid = rawData.filter(d => d.value !== null).sort((a, b) => parseInt(a.date) - parseInt(b.date));
+            if (valid.length < 3) return;
+            const sparkData = valid.slice(-10).map(d => d.value);
+            const years = valid.slice(-10).map(d => d.date);
+            el.innerHTML = `
+                <div class="macro-trend-header">
+                    <span class="macro-trend-label"><i class="fa-solid fa-chart-line"></i> ${label}</span>
+                    <span class="macro-trend-range font-mono">${years[0]}–${years[years.length - 1]}</span>
+                </div>
+                ${generateMacroSparkline(sparkData, 260, 40)}
+            `;
+            el.style.display = '';
+        };
+        renderHistorySparkline('macro-gdp-sparkline', gdpData, 'GDP Growth Trend');
+        renderHistorySparkline('macro-unemployment-sparkline', unemployData, 'Unemployment Trend');
+        renderHistorySparkline('macro-currentacct-sparkline', currentAcctData, 'Current Account Trend');
 
         if (loader) loader.classList.add('hidden-element');
         if (results) results.classList.remove('hidden-element');

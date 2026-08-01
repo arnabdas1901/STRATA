@@ -7563,3 +7563,94 @@ select {
     opacity: 1;
 }
 
+/* ============================================================
+   MACRO DASHBOARD — ZERO-COST FEATURES
+   ============================================================ */
+
+/* Income level badge on landing page economy cards */
+.macro-income-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin-top: -2px;
+}
+
+/* Year-over-Year CPI change indicator on landing cards */
+.macro-yoy-change {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-secondary-muted);
+    font-family: var(--font-mono);
+    letter-spacing: 0.3px;
+}
+
+/* Vintage year annotation on metric values */
+.metric-vintage {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--text-secondary-muted);
+    opacity: 0.75;
+    margin-left: 2px;
+}
+
+/* Historical trend sparkline panel on details page */
+.macro-trends-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.macro-trend-item {
+    background: var(--bg-card-midnight);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 16px 20px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    transition: border-color 0.2s ease;
+}
+
+.macro-trend-item:hover {
+    border-color: rgba(6, 182, 212, 0.25);
+}
+
+.macro-trend-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.macro-trend-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary-white);
+}
+
+.macro-trend-label i {
+    color: var(--neon-cyan-vibrant);
+    margin-right: 6px;
+    font-size: 0.75rem;
+}
+
+.macro-trend-range {
+    font-size: 0.68rem;
+    color: var(--text-secondary-muted);
+}
+
+@media (max-width: 768px) {
+    .macro-trends-panel {
+        grid-template-columns: 1fr;
+    }
+    .macro-income-badge {
+        font-size: 0.6rem;
+        padding: 1px 6px;
+    }
+}
+
