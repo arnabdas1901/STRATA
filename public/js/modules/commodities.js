@@ -118,7 +118,6 @@ function setupLandingUIListeners() {
             btn.setAttribute('aria-selected', 'true');
             activeSector = btn.getAttribute('data-sector') || 'all';
             renderCommodityTable(commoditiesData);
-            renderQuickGrid(commoditiesData);
         });
     });
 }
@@ -137,7 +136,6 @@ async function loadCommodityDashboard() {
         if (payload?.commodities && Array.isArray(payload.commodities)) {
             commoditiesData = payload.commodities;
             renderCommodityTable(commoditiesData);
-            renderQuickGrid(commoditiesData);
             updateFeedStatus(payload);
         } else {
             tableBody.innerHTML = '<tr><td colspan="8" class="commodities-empty-cell">Unable to load market data.</td></tr>';
@@ -268,38 +266,6 @@ function renderCommodityTable(items) {
     });
 }
 
-function renderQuickGrid(items) {
-    const grid = document.getElementById('commodity-quick-grid');
-    if (!grid) return;
-
-    const filtered = filterBySector(items).filter((item) => !item.error);
-    if (filtered.length === 0) {
-        grid.innerHTML = '';
-        return;
-    }
-
-    grid.innerHTML = filtered.map((item) => {
-        const changeVal = item.changePercent != null ? Number(item.changePercent) : 0;
-        const changeClass = changeVal >= 0 ? 'pos-change' : 'neg-change';
-
-        return `
-            <button class="commodities-quick-card" data-id="${item.id}" type="button">
-                <div class="commodities-quick-top">
-                    <span class="commodities-instrument-icon sector-${item.sector || 'other'}"><i class="fa-solid ${item.icon || 'fa-chart-line'}"></i></span>
-                    <span class="commodities-sector-tag sector-tag-${item.sector}">${item.sectorLabel}</span>
-                </div>
-                <div class="commodities-quick-name">${item.name}</div>
-                <div class="commodities-quick-symbol">${item.futuresTicker || item.symbol}</div>
-                <div class="commodities-quick-price">${formatCommodityPrice(item.price, item.unit)}</div>
-                <div class="commodities-quick-change ${changeClass}">${formatChangePercent(item.changePercent)}</div>
-            </button>
-        `;
-    }).join('');
-
-    grid.querySelectorAll('.commodities-quick-card').forEach((card) => {
-        card.addEventListener('click', () => selectCommodity(card.getAttribute('data-id')));
-    });
-}
 
 function selectCommodity(id) {
     const item = commoditiesData.find((c) => c.id === id);

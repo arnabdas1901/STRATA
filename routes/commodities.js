@@ -492,17 +492,31 @@ router.get('/', async (req, res) => {
         try {
             let data;
             if (config.provider === 'AlphaVantage') {
-                await delay(1200);
-                const response = await fetchAlphaVantageCommodity(config.symbol, config.interval);
-                if (response.error) throw new Error(response.error);
+                try {
+                    await delay(1200);
+                    const response = await fetchAlphaVantageCommodity(config.symbol, config.interval);
+                    if (response.error) throw new Error(response.error);
 
-                data = buildCommodityPayload(key, config, {
-                    price: response.price,
-                    change: response.change,
-                    changePercent: response.changePercent,
-                    provider: 'AlphaVantage',
-                    lastUpdated: response.lastUpdated,
-                });
+                    data = buildCommodityPayload(key, config, {
+                        price: response.price,
+                        change: response.change,
+                        changePercent: response.changePercent,
+                        provider: 'AlphaVantage',
+                        lastUpdated: response.lastUpdated,
+                    });
+                } catch (avError) {
+                    console.warn(`AlphaVantage failed for ${key}: ${avError.message}. Falling back to Yahoo Finance.`);
+                    const response = await fetchYahooChart(config.futuresTicker, '5d', '1d');
+                    if (response.error) throw new Error(response.error);
+
+                    data = buildCommodityPayload(key, config, {
+                        price: response.price,
+                        change: response.change,
+                        changePercent: response.changePercent,
+                        provider: 'Yahoo Finance (Fallback)',
+                        lastUpdated: new Date().toISOString(),
+                    });
+                }
             } else if (config.provider === 'TwelveData') {
                 const response = await fetchTwelveDataQuote(config.symbol);
                 if (response.error) throw new Error(response.error);
