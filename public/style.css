@@ -7678,3 +7678,142 @@ select {
     }
 }
 
+
+/* =============================================================================
+   FIXED INCOME / YIELD CURVE TERMINAL
+   ============================================================================= */
+
+/* Recession Risk Banner */
+.yields-risk-banner {
+    background: rgba(13, 19, 38, 0.85);
+    border: 1px solid rgba(6, 182, 212, 0.18);
+    border-radius: 14px;
+    padding: 22px 28px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(16px);
+    transition: border-color 0.4s ease, background 0.4s ease;
+}
+
+.yields-risk-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.yields-risk-indicator {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.yields-risk-indicator i {
+    font-size: 2rem;
+    transition: color 0.3s ease;
+}
+
+.yields-risk-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--text-secondary-muted);
+    margin-bottom: 2px;
+}
+
+.yields-risk-value {
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: color 0.3s ease;
+}
+
+.yields-risk-desc {
+    color: var(--text-secondary-muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    max-width: 500px;
+}
+
+/* Spread Cards Grid */
+.yields-spreads-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 4px;
+}
+
+.yields-spread-card {
+    background: var(--bg-card-midnight);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 22px 24px;
+    text-align: center;
+    backdrop-filter: blur(12px);
+    transition: border-color 0.3s ease, transform 0.2s ease;
+}
+
+.yields-spread-card:hover {
+    border-color: var(--neon-cyan-vibrant);
+    transform: translateY(-2px);
+}
+
+.yields-spread-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    color: var(--text-secondary-muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.yields-spread-header i {
+    color: var(--neon-cyan-vibrant);
+    font-size: 0.9rem;
+}
+
+.yields-spread-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-primary-white);
+    margin-bottom: 6px;
+}
+
+.yields-spread-sub {
+    font-size: 0.72rem;
+    color: var(--text-secondary-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+}
+
+/* Mobile: stack spreads and risk banner */
+@media (max-width: 768px) {
+    .yields-spreads-grid {
+        grid-template-columns: 1fr;
+    }
+    .yields-spread-value {
+        font-size: 1.6rem;
+    }
+    .yields-risk-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .yields-risk-desc {
+        max-width: 100%;
+    }
+}
+
+/* Yield BPS Change Indicator */
+.yield-bps-change {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+}

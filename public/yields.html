@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATA - Fixed Income & Yield Curve Terminal</title>
+    <meta name="description" content="Track US Treasury yield curves, bond spreads, and recession risk indicators in real-time.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-brand-block">
+                    <div class="logo-title-row">
+                        <span class="logo-text">STRATA</span>
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
+                    </div>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>Equity Analysis</span>
+                </a>
+                <a class="nav-item" href="calculators.html">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Financial Calculators</span>
+                </a>
+                <a class="nav-item" href="portfolio.html">
+                    <i class="fa-solid fa-pie-chart"></i>
+                    <span>Mock Portfolio</span>
+                </a>
+                <a class="nav-item" href="ai.html">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>AI Analyst</span>
+                </a>
+                <a class="nav-item" href="crypto.html">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>Crypto Analysis</span>
+                </a>
+                <a class="nav-item" href="commodities.html">
+                    <i class="fa-solid fa-wheat-awn"></i>
+                    <span>Commodities</span>
+                </a>
+                <a class="nav-item" href="macro.html">
+                    <i class="fa-solid fa-earth-americas"></i>
+                    <span>Global Inflation</span>
+                </a>
+                <a class="nav-item active" href="yields.html">
+                    <i class="fa-solid fa-landmark"></i>
+                    <span>Fixed Income</span>
+                </a>
+                <a class="nav-item" href="forex.html">
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <span>Currencies</span>
+                </a>
+                <a class="nav-item" href="stress.html">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Stress Tester</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header-bar">
+                <div class="top-brand-group">
+                    <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <a href="index.html" class="top-app-brand">
+                        <div class="logo-brand-block">
+                            <div class="logo-title-row">
+                                <span class="top-app-logo-text">STRATA</span>
+                                <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile" onerror="this.style.display='none'">
+                            </div>
+                            <span class="top-app-tagline">REAL-TIME MARKET ANALYTICS</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="top-status-badge">
+                    <span class="status-indicator connected"></span>
+                    <span class="status-label">Operational</span>
+                </div>
+            </header>
+
+            <section id="dashboard-yields" class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <div>
+                        <h1>Fixed Income & Yield Curve Terminal</h1>
+                        <p class="subtitle">US Treasury rates, bond spreads &amp; recession risk indicators</p>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="yields-loader" class="ticker-hero-card" style="text-align:center; padding: 60px 20px;">
+                    <span class="pulse-text" style="color: var(--neon-cyan-vibrant); font-size: 1.1rem;">
+                        <i class="fa-solid fa-satellite-dish"></i> Fetching Treasury yield data…
+                    </span>
+                </div>
+
+                <!-- Results Container (hidden until data loads) -->
+                <div id="yields-results" class="hidden-element">
+
+                    <!-- Recession Risk Banner -->
+                    <div id="yields-risk-banner" class="yields-risk-banner">
+                        <div class="yields-risk-content">
+                            <div class="yields-risk-indicator">
+                                <i id="yields-risk-icon" class="fa-solid fa-shield-check"></i>
+                                <div>
+                                    <span class="yields-risk-label">Recession Risk</span>
+                                    <span id="yields-risk-level" class="yields-risk-value">Low</span>
+                                </div>
+                            </div>
+                            <p id="yields-risk-description" class="yields-risk-desc">Yield curve is normally shaped.</p>
+                        </div>
+                    </div>
+
+                    <!-- Spread Cards -->
+                    <div class="yields-spreads-grid">
+                        <div class="yields-spread-card">
+                            <div class="yields-spread-header">
+                                <i class="fa-solid fa-arrows-left-right"></i>
+                                <span>10-Year vs 2-Year Spread</span>
+                            </div>
+                            <div id="yields-spread-10y2y" class="yields-spread-value font-mono">—</div>
+                            <div class="yields-spread-sub">Classic recession predictor</div>
+                        </div>
+                        <div class="yields-spread-card">
+                            <div class="yields-spread-header">
+                                <i class="fa-solid fa-arrows-left-right"></i>
+                                <span>10-Year vs 3-Month Spread</span>
+                            </div>
+                            <div id="yields-spread-10y3m" class="yields-spread-value font-mono">—</div>
+                            <div class="yields-spread-sub">Fed's preferred indicator</div>
+                        </div>
+                    </div>
+
+                    <!-- Treasury Rate Cards -->
+                    <div class="metric-summary-grid" style="margin-top: 20px;">
+                        <div class="metric-card"><span class="metric-title">Fed Funds Rate</span><span id="yield-fed-rate" class="metric-value font-mono" style="color: #f59e0b;">—</span></div>
+                        <div class="metric-card"><span class="metric-title">3-Month T-Bill</span><span id="yield-3m" class="metric-value font-mono">—</span></div>
+                        <div class="metric-card"><span class="metric-title">2-Year Note</span><span id="yield-2y" class="metric-value font-mono">—</span></div>
+                        <div class="metric-card"><span class="metric-title">5-Year Note</span><span id="yield-5y" class="metric-value font-mono">—</span></div>
+                        <div class="metric-card"><span class="metric-title">10-Year Note</span><span id="yield-10y" class="metric-value font-mono">—</span></div>
+                        <div class="metric-card"><span class="metric-title">30-Year Bond</span><span id="yield-30y" class="metric-value font-mono">—</span></div>
+                        <div class="metric-card"><span class="metric-title">Data Date</span><span id="yield-date" class="metric-value">—</span></div>
+                    </div>
+
+                    <!-- Yield Curve Chart -->
+                    <div class="chart-container-card" style="margin-top: 24px;">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-chart-area"></i> US Treasury Yield Curve</h3>
+                        </div>
+                        <div class="chart-wrapper-box"><canvas id="yieldCurveChart"></canvas></div>
+                    </div>
+
+                    <!-- Historical Spread Chart -->
+                    <div id="spread-history-container" class="chart-container-card" style="margin-top: 24px;">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-chart-line"></i> 10Y-2Y Spread History (12 Months)</h3>
+                        </div>
+                        <div class="chart-wrapper-box"><canvas id="spreadHistoryChart"></canvas></div>
+                    </div>
+
+                    <!-- AI Analysis -->
+                    <div class="company-profile-card" style="margin-top: 24px; margin-bottom: 24px;">
+                        <h3><i class="fa-solid fa-robot"></i> Fixed Income Strategy Analysis</h3>
+                        <p id="yields-analysis-display" style="color: var(--text-secondary-muted); line-height: 1.6; margin-top: 12px;">
+                            <span class="pulse-text" style="color: var(--neon-cyan-vibrant);">Generating yield curve insights…</span>
+                        </p>
+                    </div>
+
+                    <p class="projection-disclaimer" style="margin-top: 24px; text-align: center;">
+                        <i class="fa-solid fa-circle-info"></i> <strong>Data Notice:</strong> Treasury yields are sourced from the <strong>Federal Reserve (FRED)</strong> and <strong>CBOE</strong> indices. Yields are updated once daily at market close. The 10Y-2Y spread has preceded every US recession since 1955.
+                    </p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="global-toast-notification" class="toast-system hidden-toast"></div>
+
+    <script type="module" src="js/main.js"></script>
+    <script type="module">
+        import { initYieldsDashboard } from './js/modules/yields.js';
+        initYieldsDashboard();
+    </script>
+</body>
+</html>

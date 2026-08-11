@@ -60,6 +60,7 @@ const aiRoutes = require('./routes/ai');
 const commoditiesRoutes = require('./routes/commodities');
 const forexRoutes = require('./routes/forex');
 const stressRoutes = require('./routes/stress');
+const yieldsRoutes = require('./routes/yields');
 
 // Mount Routes
 app.use('/api', equityRoutes); // contains /finnhub/* and /twelvedata/*
@@ -69,6 +70,7 @@ app.use('/api/commodities', commoditiesRoutes);
 app.use('/api/forex', forexRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/stress', stressRoutes);
+app.use('/api/yields', yieldsRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
