@@ -175,28 +175,72 @@ router.get('/search', async (req, res) => {
             lastUpdated: latestDate
         };
     } catch (fbError) {
-        console.warn(`Frankfurter failed for ${fromSymbol}/${toSymbol}: ${fbError.message}. Falling back to Alpha Vantage.`);
+        console.warn(`Frankfurter failed for ${fromSymbol}/${toSymbol}: ${fbError.message}. Trying Polygon.io.`);
 
-        try {
-            const avData = await fetchAlphaVantageForexDaily(fromSymbol, toSymbol);
-            if (avData && !avData.error) {
-                payload = {
-                    ...avData,
-                    provider: 'Alpha Vantage',
-                    pair: normalizedPair,
-                    fromSymbol,
-                    toSymbol
-                };
-                if (payload.chartData && days < 365) {
-                    const cutoffTime = (Date.now() - days * 24 * 60 * 60 * 1000) / 1000;
-                    payload.chartData = payload.chartData.filter((d) => d.time >= cutoffTime);
+        // 1. Fallback: Polygon.io (highly stable, covers all currencies)
+        if (process.env.POLYGON_API_KEY && !payload) {
+            try {
+                const endDateStr = new Date().toISOString().split('T')[0];
+                const ticker = `C:${fromSymbol}${toSymbol}`;
+                const polyUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${startDateStr}/${endDateStr}?adjusted=true&sort=asc&apiKey=${process.env.POLYGON_API_KEY}`;
+                
+                const polyRes = await fetch(polyUrl);
+                const polyData = await polyRes.json();
+
+                if ((polyData.status === 'OK' || polyData.status === 'DELAYED') && polyData.results && polyData.results.length > 1) {
+                    const results = polyData.results;
+                    const latest = results[results.length - 1];
+                    const prev = results[results.length - 2];
+                    const currentPrice = latest.c;
+                    const previousPrice = prev.c;
+                    const change = currentPrice - previousPrice;
+                    const changePercent = (change / previousPrice) * 100;
+
+                    const chartData = results.map(r => ({
+                        time: r.t / 1000,
+                        close: r.c
+                    }));
+
+                    payload = {
+                        price: currentPrice,
+                        change,
+                        changePercent,
+                        chartData,
+                        provider: 'Polygon.io',
+                        pair: normalizedPair,
+                        fromSymbol,
+                        toSymbol,
+                        lastUpdated: endDateStr
+                    };
                 }
-            } else {
-                throw new Error(avData?.error || 'Alpha Vantage returned no valid data');
+            } catch (polyErr) {
+                console.warn(`Polygon.io fallback failed for ${normalizedPair}:`, polyErr.message);
             }
-        } catch (avError) {
-            console.error('Alpha Vantage Fallback Exception:', avError.message || avError);
-            return res.status(500).json({ error: `Failed to fetch data for ${normalizedPair}. This pair may not be supported by available providers.` });
+        }
+
+        // 2. Fallback: Alpha Vantage (secondary fallback, rate limited)
+        if (!payload) {
+            try {
+                const avData = await fetchAlphaVantageForexDaily(fromSymbol, toSymbol);
+                if (avData && !avData.error) {
+                    payload = {
+                        ...avData,
+                        provider: 'Alpha Vantage',
+                        pair: normalizedPair,
+                        fromSymbol,
+                        toSymbol
+                    };
+                    if (payload.chartData && days < 365) {
+                        const cutoffTime = (Date.now() - days * 24 * 60 * 60 * 1000) / 1000;
+                        payload.chartData = payload.chartData.filter((d) => d.time >= cutoffTime);
+                    }
+                } else {
+                    throw new Error(avData?.error || 'Alpha Vantage returned no valid data');
+                }
+            } catch (avError) {
+                console.error('Alpha Vantage Fallback Exception:', avError.message || avError);
+                return res.status(500).json({ error: `Failed to fetch data for ${normalizedPair}. This pair may not be supported by available providers.` });
+            }
         }
     }
 

@@ -403,11 +403,6 @@ function renderCalendarTable(container, events) {
         return '<span class="econ-badge econ-badge-low">LOW</span>';
     };
 
-    const formatVal = (val, unit) => {
-        if (val == null || val === '') return '—';
-        return `${val}${unit || ''}`;
-    };
-
     const formatDate = (dateStr) => {
         if (!dateStr) return '—';
         try {
@@ -421,8 +416,8 @@ function renderCalendarTable(container, events) {
             <th>Date</th>
             <th>Event</th>
             <th>Impact</th>
-            <th>Forecast</th>
-            <th>Previous</th>
+            <th>Category</th>
+            <th>Source</th>
         </tr></thead><tbody>`;
 
     for (const e of events) {
@@ -430,8 +425,8 @@ function renderCalendarTable(container, events) {
             <td class="font-mono">${formatDate(e.date)}</td>
             <td>${e.event}</td>
             <td>${impactBadge(e.impact)}</td>
-            <td class="font-mono">${formatVal(e.estimate, e.unit)}</td>
-            <td class="font-mono">${formatVal(e.prev, e.unit)}</td>
+            <td><span style="text-transform: capitalize; font-size: 0.8rem; color: var(--text-secondary-muted);">${e.category.toLowerCase()}</span></td>
+            <td style="font-size: 0.8rem; color: var(--text-secondary-muted);">${e.source}</td>
         </tr>`;
     }
 

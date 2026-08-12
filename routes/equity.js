@@ -43,7 +43,7 @@ router.get('/twelvedata/time_series', async (req, res) => {
 
         if (data?.status === 'error' || !Array.isArray(data?.values)) {
             console.warn('TwelveData time series fallback triggered:', data);
-            const fallback = await tryFinnhubFallback(symbol, timeframe);
+            const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
             if (fallback) {
                 TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
                 return res.json(fallback);
@@ -52,8 +52,8 @@ router.get('/twelvedata/time_series', async (req, res) => {
         }
 
         if (timeframe === '1Y' && Array.isArray(data.values) && data.values.length < 180) {
-            console.warn(`TwelveData 1Y values too short (${data.values.length}), using Finnhub fallback`);
-            const fallback = await tryFinnhubFallback(symbol, timeframe);
+            console.warn(`TwelveData 1Y values too short (${data.values.length}), using fallback`);
+            const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
             if (fallback) {
                 TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
                 return res.json(fallback);
@@ -64,7 +64,7 @@ router.get('/twelvedata/time_series', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error("TwelveData Time Series Error:", error);
-        const fallback = await tryFinnhubFallback(symbol, timeframe);
+        const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
         if (fallback) {
             TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
             return res.json(fallback);
@@ -187,6 +187,63 @@ router.get('/finnhub/quote', async (req, res) => {
         res.status(500).json({ error: "Failed to fetch real-time quote" });
     }
 });
+
+async function tryPolygonFallback(symbol, timeframe) {
+    if (!process.env.POLYGON_API_KEY) {
+        return null;
+    }
+
+    let multiplier = 1;
+    let timespan = 'day';
+    let days = 365;
+
+    if (timeframe === '1M') {
+        multiplier = 1;
+        timespan = 'day';
+        days = 30;
+    } else if (timeframe === '1Y') {
+        multiplier = 1;
+        timespan = 'day';
+        days = 365;
+    } else if (timeframe === '5Y') {
+        multiplier = 1;
+        timespan = 'week';
+        days = 365 * 5;
+    } else if (timeframe === 'MAX') {
+        multiplier = 1;
+        timespan = 'month';
+        days = 365 * 10;
+    }
+
+    try {
+        const endDateStr = new Date().toISOString().split('T')[0];
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+        const startDateStr = startDate.toISOString().split('T')[0];
+
+        const ticker = symbol.toUpperCase();
+        const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${startDateStr}/${endDateStr}?adjusted=true&sort=asc&apiKey=${process.env.POLYGON_API_KEY}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if ((data.status === 'OK' || data.status === 'DELAYED') && data.results && data.results.length > 0) {
+            const values = data.results.map(r => ({
+                datetime: new Date(r.t).toISOString().slice(0, 10),
+                open: r.o,
+                high: r.h,
+                low: r.l,
+                close: r.c,
+                volume: r.v
+            })).reverse();
+
+            return { values };
+        }
+    } catch (err) {
+        console.warn('Polygon stock history fallback failed:', err.message);
+    }
+    return null;
+}
 
 async function tryFinnhubFallback(symbol, timeframe) {
     if (!process.env.FINNHUB_API_KEY) {
