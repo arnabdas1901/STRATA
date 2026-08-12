@@ -19,6 +19,12 @@ const SPREAD_HISTORY_CACHE = {
 const YIELD_ANALYSIS_CACHE = {};
 const ANALYSIS_CACHE_TTL = 60 * 60 * 1000;
 
+const CALENDAR_CACHE = {
+    data: null,
+    lastFetched: 0,
+    ttlMs: 6 * 60 * 60 * 1000,
+};
+
 // ── Maturity Configurations ────────────────────────────────────────────────────
 const MATURITIES = [
     { key: '3M', label: '3-Month', avMaturity: '3month', yahooTicker: '^IRX', tdSymbol: null, years: 0.25 },
@@ -369,6 +375,57 @@ Assess the curve shape (normal, flat, or inverted), what it implies for Fed poli
     } catch (error) {
         console.error('Yield AI analysis error:', error.message);
         res.status(500).json({ error: 'Failed to generate yield curve analysis.' });
+    }
+});
+
+// ── Route: GET /calendar (/api/yields/calendar) ────────────────────────────────
+router.get('/calendar', async (req, res) => {
+    const now = Date.now();
+
+    if (CALENDAR_CACHE.data && now - CALENDAR_CACHE.lastFetched < CALENDAR_CACHE.ttlMs) {
+        return res.json(CALENDAR_CACHE.data);
+    }
+
+    try {
+        const finnhubKey = process.env.FINNHUB_API_KEY;
+        if (!finnhubKey) {
+            return res.json({ events: [], error: 'Finnhub API key not configured' });
+        }
+
+        const fromDate = new Date().toISOString().split('T')[0];
+        const toDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        const url = `https://finnhub.io/api/v1/calendar/economic?from=${fromDate}&to=${toDate}&token=${finnhubKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.economicCalendar || !Array.isArray(data.economicCalendar)) {
+            return res.json({ events: [], error: 'Invalid calendar response' });
+        }
+
+        const events = data.economicCalendar
+            .filter(e => e.country === 'US' && (e.impact === 'high' || e.impact === 'medium'))
+            .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
+            .slice(0, 15)
+            .map(e => ({
+                date: e.date || '',
+                time: e.time || '',
+                event: e.event || '',
+                impact: e.impact || 'low',
+                estimate: e.estimate,
+                prev: e.prev,
+                actual: e.actual,
+                unit: e.unit || '',
+            }));
+
+        const result = { events, fetchedAt: new Date().toISOString() };
+        CALENDAR_CACHE.data = result;
+        CALENDAR_CACHE.lastFetched = now;
+        res.json(result);
+    } catch (error) {
+        console.error('Economic calendar error:', error.message);
+        if (CALENDAR_CACHE.data) return res.json(CALENDAR_CACHE.data);
+        res.status(500).json({ events: [], error: 'Failed to fetch economic calendar' });
     }
 });
 

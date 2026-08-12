@@ -31,6 +31,7 @@ async function loadYieldData() {
         // Fire async tasks
         fetchYieldAnalysis(payload);
         loadSpreadHistory();
+        loadEconomicCalendar();
 
     } catch (err) {
         console.error('Yield data fetch error:', err);
@@ -372,4 +373,68 @@ async function fetchYieldAnalysis(payload) {
     } catch (err) {
         analysisDisplay.innerText = 'Failed to load yield curve analysis due to a network error.';
     }
+}
+
+// ── Economic Calendar ───────────────────────────────────────────────────────────
+async function loadEconomicCalendar() {
+    const container = document.getElementById('econ-calendar-body');
+    if (!container) return;
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/yields/calendar`);
+        const data = await res.json();
+
+        if (!data.events || data.events.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-secondary-muted); text-align: center; padding: 20px 0;">No upcoming economic events found.</p>';
+            return;
+        }
+
+        renderCalendarTable(container, data.events);
+    } catch (err) {
+        console.warn('Economic calendar error:', err);
+        container.innerHTML = '<p style="color: var(--text-secondary-muted); text-align: center; padding: 20px 0;">Economic calendar unavailable.</p>';
+    }
+}
+
+function renderCalendarTable(container, events) {
+    const impactBadge = (impact) => {
+        if (impact === 'high') return '<span class="econ-badge econ-badge-high">🔴 HIGH</span>';
+        if (impact === 'medium') return '<span class="econ-badge econ-badge-med">🟡 MED</span>';
+        return '<span class="econ-badge econ-badge-low">LOW</span>';
+    };
+
+    const formatVal = (val, unit) => {
+        if (val == null || val === '') return '—';
+        return `${val}${unit || ''}`;
+    };
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '—';
+        try {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } catch { return dateStr; }
+    };
+
+    let html = `<table class="econ-calendar-table">
+        <thead><tr>
+            <th>Date</th>
+            <th>Event</th>
+            <th>Impact</th>
+            <th>Forecast</th>
+            <th>Previous</th>
+        </tr></thead><tbody>`;
+
+    for (const e of events) {
+        html += `<tr>
+            <td class="font-mono">${formatDate(e.date)}</td>
+            <td>${e.event}</td>
+            <td>${impactBadge(e.impact)}</td>
+            <td class="font-mono">${formatVal(e.estimate, e.unit)}</td>
+            <td class="font-mono">${formatVal(e.prev, e.unit)}</td>
+        </tr>`;
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
 }
