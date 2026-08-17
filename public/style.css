@@ -7845,6 +7845,177 @@ select {
     .econ-calendar-table { font-size: 0.78rem; }
     .econ-calendar-table td, .econ-calendar-table th { padding: 8px 6px; }
 }
+
+/* ── Yield Change Heatmap ────────────────────────────────────────────────── */
+.yield-heatmap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+}
+
+.yield-heatmap-table thead th {
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    border-bottom: 1px solid rgba(6, 182, 212, 0.15);
+    font-weight: 600;
+}
+
+.yield-heatmap-table thead th:first-child {
+    text-align: left;
+}
+
+.yield-heatmap-table tbody td {
+    padding: 10px 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    font-weight: 500;
+}
+
+.yield-heatmap-table tbody td:first-child {
+    text-align: left;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.yield-heatmap-table tbody tr:hover {
+    background: rgba(6, 182, 212, 0.04);
+}
+
+.heatmap-cell {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    min-width: 60px;
+    font-weight: 600;
+}
+
+/* ── Duration & Convexity Calculator ────────────────────────────────────────── */
+.duration-input-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+@media (max-width: 768px) {
+    .duration-input-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .duration-input-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.duration-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.duration-input-group label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary-muted);
+    font-weight: 500;
+}
+
+.duration-input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #f8fafc;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.duration-input:focus {
+    border-color: var(--neon-cyan-vibrant);
+}
+
+.duration-input::placeholder {
+    color: #475569;
+}
+
+select.duration-input {
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+}
+
+.duration-calc-btn {
+    width: 100%;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.05));
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    border-radius: 8px;
+    color: var(--neon-cyan-vibrant);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.duration-calc-btn:hover {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(6, 182, 212, 0.1));
+    border-color: rgba(6, 182, 212, 0.5);
+}
+
+.duration-results-panel {
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+}
+
+.duration-results-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 768px) {
+    .duration-results-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.duration-result-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.duration-result-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary-muted);
+}
+
+.duration-result-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f8fafc;
+}
 /* === PERFORMANCE LAYER HINTS === */
 .metric-card,
 .yields-spread-card,

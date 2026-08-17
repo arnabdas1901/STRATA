@@ -25,6 +25,30 @@ const CALENDAR_CACHE = {
     ttlMs: 6 * 60 * 60 * 1000,
 };
 
+const CREDIT_SPREAD_CACHE = {
+    data: null,
+    lastFetched: 0,
+    ttlMs: 12 * 60 * 60 * 1000,
+};
+
+const BREAKEVEN_CACHE = {
+    data: null,
+    lastFetched: 0,
+    ttlMs: 12 * 60 * 60 * 1000,
+};
+
+const HEATMAP_CACHE = {
+    data: null,
+    lastFetched: 0,
+    ttlMs: 12 * 60 * 60 * 1000,
+};
+
+const MORTGAGE_CACHE = {
+    data: null,
+    lastFetched: 0,
+    ttlMs: 24 * 60 * 60 * 1000,
+};
+
 // ── Maturity Configurations ────────────────────────────────────────────────────
 const MATURITIES = [
     { key: '3M', label: '3-Month', avMaturity: '3month', yahooTicker: '^IRX', tdSymbol: null, years: 0.25 },
@@ -514,6 +538,205 @@ router.get('/spread-history', async (req, res) => {
         console.error('Spread history fatal route error:', error);
         if (SPREAD_HISTORY_CACHE.data) return res.json(SPREAD_HISTORY_CACHE.data);
         res.status(500).json({ error: 'Failed to compute spread history', data: [] });
+    }
+});
+
+// ── Route: GET /yield-heatmap (/api/yields/yield-heatmap) ──────────────────────
+router.get('/yield-heatmap', async (req, res) => {
+    const now = Date.now();
+    if (HEATMAP_CACHE.data && now - HEATMAP_CACHE.lastFetched < HEATMAP_CACHE.ttlMs) {
+        return res.json(HEATMAP_CACHE.data);
+    }
+    try {
+        const seriesMap = { '3M': 'DGS3MO', '2Y': 'DGS2', '5Y': 'DGS5', '10Y': 'DGS10', '30Y': 'DGS30' };
+        const keys = Object.keys(seriesMap);
+        const results = await Promise.all(keys.map(k => fetchFREDSeries(seriesMap[k])));
+        const today = new Date();
+        const offsets = { '1D': 1, '1W': 7, '1M': 30, '3M': 90, 'YTD': Math.ceil((today - new Date(today.getFullYear(), 0, 1)) / 86400000) };
+        const heatmap = {};
+        for (let i = 0; i < keys.length; i++) {
+            const mat = keys[i];
+            if (results[i].error) { heatmap[mat] = { current: null, changes: {} }; continue; }
+            const obs = results[i].observations;
+            const latest = obs[obs.length - 1];
+            const currentYield = parseFloat(latest.value);
+            const latestDate = new Date(latest.date);
+            const changes = {};
+            for (const [label, days] of Object.entries(offsets)) {
+                let found = null;
+                for (let j = obs.length - 1; j >= 0; j--) {
+                    const diff = (latestDate - new Date(obs[j].date)) / 86400000;
+                    if (diff >= days - 3 && diff <= days + 3) { found = parseFloat(obs[j].value); break; }
+                }
+                changes[label] = found != null ? Math.round((currentYield - found) * 100) : null;
+            }
+            heatmap[mat] = { current: currentYield, changes };
+        }
+        const payload = { heatmap, fetchedAt: new Date().toISOString() };
+        HEATMAP_CACHE.data = payload;
+        HEATMAP_CACHE.lastFetched = now;
+        res.json(payload);
+    } catch (error) {
+        console.error('Heatmap route error:', error);
+        if (HEATMAP_CACHE.data) return res.json(HEATMAP_CACHE.data);
+        res.status(500).json({ error: 'Failed to fetch heatmap data' });
+    }
+});
+
+// ── Route: GET /mortgage-spread (/api/yields/mortgage-spread) ──────────────────
+router.get('/mortgage-spread', async (req, res) => {
+    const now = Date.now();
+    if (MORTGAGE_CACHE.data && now - MORTGAGE_CACHE.lastFetched < MORTGAGE_CACHE.ttlMs) {
+        return res.json(MORTGAGE_CACHE.data);
+    }
+    try {
+        const [mortRes, tenYRes] = await Promise.all([
+            fetchFREDSeries('MORTGAGE30US'),
+            fetchFREDSeries('DGS10')
+        ]);
+        if (mortRes.error || tenYRes.error) throw new Error('FRED fetch failed');
+        const mortObs = mortRes.observations;
+        const tenYObs = tenYRes.observations;
+        const tenYMap = new Map(tenYObs.map(o => [o.date, parseFloat(o.value)]));
+        // Mortgage data is weekly; find closest 10Y for each date
+        const findClosest10Y = (date) => {
+            if (tenYMap.has(date)) return tenYMap.get(date);
+            const d = new Date(date);
+            for (let off = 1; off <= 5; off++) {
+                const prev = new Date(d); prev.setDate(prev.getDate() - off);
+                const key = prev.toISOString().split('T')[0];
+                if (tenYMap.has(key)) return tenYMap.get(key);
+            }
+            return null;
+        };
+        const history = [];
+        const reversed = [...mortObs].reverse().slice(0, 260); // ~5 years weekly
+        for (const o of reversed) {
+            const mortRate = parseFloat(o.value);
+            const tenY = findClosest10Y(o.date);
+            if (tenY != null) {
+                history.push({ date: o.date, mortgage: mortRate, treasury10y: tenY, spread: +(mortRate - tenY).toFixed(2) });
+            }
+        }
+        const latest = history[0] || {};
+        const payload = {
+            current: { mortgage: latest.mortgage, treasury10y: latest.treasury10y, spread: latest.spread, date: latest.date },
+            history,
+            fetchedAt: new Date().toISOString()
+        };
+        MORTGAGE_CACHE.data = payload;
+        MORTGAGE_CACHE.lastFetched = now;
+        res.json(payload);
+    } catch (error) {
+        console.error('Mortgage spread route error:', error);
+        if (MORTGAGE_CACHE.data) return res.json(MORTGAGE_CACHE.data);
+        res.status(500).json({ error: 'Failed to fetch mortgage spread data' });
+    }
+});
+
+// ── Route: GET /credit-spreads (/api/yields/credit-spreads) ────────────────────
+router.get('/credit-spreads', async (req, res) => {
+    const now = Date.now();
+
+    if (CREDIT_SPREAD_CACHE.data && now - CREDIT_SPREAD_CACHE.lastFetched < CREDIT_SPREAD_CACHE.ttlMs) {
+        return res.json(CREDIT_SPREAD_CACHE.data);
+    }
+
+    try {
+        const [igRes, hyRes] = await Promise.all([
+            fetchFREDSeries('BAMLC0A0CM'),
+            fetchFREDSeries('BAMLH0A0HYM2')
+        ]);
+
+        if (igRes.error || hyRes.error) {
+            throw new Error(`Failed to fetch credit spreads. IG: ${igRes.error}, HY: ${hyRes.error}`);
+        }
+
+        const igObs = [...igRes.observations].reverse().slice(0, 365);
+        const hyObs = [...hyRes.observations].reverse().slice(0, 365);
+
+        const payload = {
+            ig: {
+                current: parseFloat(igObs[0].value),
+                date: igObs[0].date,
+                history: igObs.map(o => ({ date: o.date, value: parseFloat(o.value) }))
+            },
+            hy: {
+                current: parseFloat(hyObs[0].value),
+                date: hyObs[0].date,
+                history: hyObs.map(o => ({ date: o.date, value: parseFloat(o.value) }))
+            },
+            fetchedAt: new Date().toISOString()
+        };
+
+        CREDIT_SPREAD_CACHE.data = payload;
+        CREDIT_SPREAD_CACHE.lastFetched = now;
+        res.json(payload);
+    } catch (error) {
+        console.error('Credit spreads route error:', error);
+        if (CREDIT_SPREAD_CACHE.data) return res.json(CREDIT_SPREAD_CACHE.data);
+        res.status(500).json({ error: 'Failed to fetch credit spreads' });
+    }
+});
+
+// ── Route: GET /breakevens (/api/yields/breakevens) ────────────────────────────
+router.get('/breakevens', async (req, res) => {
+    const now = Date.now();
+
+    if (BREAKEVEN_CACHE.data && now - BREAKEVEN_CACHE.lastFetched < BREAKEVEN_CACHE.ttlMs) {
+        return res.json(BREAKEVEN_CACHE.data);
+    }
+
+    try {
+        const [nomRes, realRes, breakRes] = await Promise.all([
+            fetchFREDSeries('DGS10'),
+            fetchFREDSeries('DFII10'),
+            fetchFREDSeries('T10YIE')
+        ]);
+
+        if (nomRes.error || realRes.error || breakRes.error) {
+            throw new Error(`Failed to fetch breakevens. Nom: ${nomRes.error}, Real: ${realRes.error}, Break: ${breakRes.error}`);
+        }
+
+        const mapNom = new Map(nomRes.observations.map(o => [o.date, parseFloat(o.value)]));
+        const mapReal = new Map(realRes.observations.map(o => [o.date, parseFloat(o.value)]));
+        const mapBreak = new Map(breakRes.observations.map(o => [o.date, parseFloat(o.value)]));
+
+        // Align dates (need dates where all 3 have valid data)
+        const allDates = [...new Set([...mapNom.keys(), ...mapReal.keys(), ...mapBreak.keys()])].sort((a, b) => new Date(b) - new Date(a));
+
+        const history = [];
+        for (const date of allDates) {
+            if (mapNom.has(date) && mapReal.has(date) && mapBreak.has(date)) {
+                history.push({
+                    date,
+                    nominal: mapNom.get(date),
+                    real: mapReal.get(date),
+                    breakeven: mapBreak.get(date)
+                });
+            }
+            if (history.length >= 365) break;
+        }
+
+        if (history.length === 0) {
+            throw new Error('No overlapping dates found for breakevens');
+        }
+
+        const payload = {
+            nominal: { current: history[0].nominal, date: history[0].date },
+            realYield: { current: history[0].real, date: history[0].date },
+            breakeven: { current: history[0].breakeven, date: history[0].date },
+            history,
+            fetchedAt: new Date().toISOString()
+        };
+
+        BREAKEVEN_CACHE.data = payload;
+        BREAKEVEN_CACHE.lastFetched = now;
+        res.json(payload);
+    } catch (error) {
+        console.error('Breakevens route error:', error);
+        if (BREAKEVEN_CACHE.data) return res.json(BREAKEVEN_CACHE.data);
+        res.status(500).json({ error: 'Failed to fetch breakevens' });
     }
 });
 

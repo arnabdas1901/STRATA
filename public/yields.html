@@ -157,6 +157,45 @@
                         <div class="metric-card"><span class="metric-title">Data Date</span><span id="yield-date" class="metric-value">—</span></div>
                     </div>
 
+                    <!-- Yield Change Heatmap -->
+                    <div class="chart-container-card" style="margin-top: 24px;">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-table-cells"></i> Yield Change Heatmap</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary-muted);">Basis point changes across maturities</span>
+                        </div>
+                        <div id="yield-heatmap-body" style="padding: 16px 20px; overflow-x: auto;">
+                            <p class="pulse-text" style="color: var(--neon-cyan-vibrant); text-align: center; padding: 20px 0;">Loading heatmap…</p>
+                        </div>
+                    </div>
+
+                    <!-- Curve Butterfly Spread (2s-5s-10s) -->
+                    <div class="yields-spreads-grid" style="margin-top: 20px; grid-template-columns: repeat(3, 1fr);">
+                        <div class="yields-spread-card">
+                            <div class="yields-spread-header">
+                                <i class="fa-solid fa-butterfly" style="font-size: 0.85rem;"></i>
+                                <span>2s5s10s Butterfly</span>
+                            </div>
+                            <div id="butterfly-value" class="yields-spread-value font-mono">—</div>
+                            <div class="yields-spread-sub">2×(5Y) − 2Y − 10Y</div>
+                        </div>
+                        <div class="yields-spread-card">
+                            <div class="yields-spread-header">
+                                <i class="fa-solid fa-arrows-up-down"></i>
+                                <span>Curve Steepness</span>
+                            </div>
+                            <div id="steepness-value" class="yields-spread-value font-mono">—</div>
+                            <div class="yields-spread-sub">30Y − 2Y spread</div>
+                        </div>
+                        <div class="yields-spread-card">
+                            <div class="yields-spread-header">
+                                <i class="fa-solid fa-gauge"></i>
+                                <span>Belly Richness</span>
+                            </div>
+                            <div id="belly-signal" class="yields-spread-value font-mono">—</div>
+                            <div class="yields-spread-sub">Butterfly signal</div>
+                        </div>
+                    </div>
+
                     <!-- Yield Curve Chart -->
                     <div class="chart-container-card" style="margin-top: 24px;">
                         <div class="chart-header">
@@ -173,6 +212,33 @@
                         <div class="chart-wrapper-box"><canvas id="spreadHistoryChart"></canvas></div>
                     </div>
 
+                    <!-- Mortgage Spread Tracker -->
+                    <div class="chart-container-card" style="margin-top: 24px;">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-house-chimney"></i> 30Y Mortgage vs 10Y Treasury Spread</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary-muted);">Financial conditions & MBS stress indicator</span>
+                        </div>
+                        <div class="yields-spreads-grid" style="padding: 16px 20px;">
+                            <div class="yields-spread-card">
+                                <div class="yields-spread-header">
+                                    <i class="fa-solid fa-house"></i>
+                                    <span>30Y Fixed Mortgage</span>
+                                </div>
+                                <div id="mortgage-rate" class="yields-spread-value font-mono" style="color: #a78bfa;">—</div>
+                                <div class="yields-spread-sub">Freddie Mac PMMS</div>
+                            </div>
+                            <div class="yields-spread-card">
+                                <div class="yields-spread-header">
+                                    <i class="fa-solid fa-right-left"></i>
+                                    <span>Mortgage–10Y Spread</span>
+                                </div>
+                                <div id="mortgage-spread-value" class="yields-spread-value font-mono" style="color: #f59e0b;">—</div>
+                                <div class="yields-spread-sub">Financial stress gauge</div>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box"><canvas id="mortgageSpreadChart"></canvas></div>
+                    </div>
+
                     <!-- Economic Calendar -->
                     <div class="chart-container-card" style="margin-top: 24px;">
                         <div class="chart-header">
@@ -180,6 +246,140 @@
                         </div>
                         <div id="econ-calendar-body" style="padding: 16px 20px;">
                             <p class="pulse-text" style="color: var(--neon-cyan-vibrant); text-align: center; padding: 20px 0;">Loading economic calendar…</p>
+                        </div>
+                    </div>
+
+                    <!-- Credit Spread Monitor (IG vs HY) -->
+                    <div class="chart-container-card" style="margin-top: 24px;">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-scale-balanced"></i> Credit Spread Monitor</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary-muted);">Investment Grade vs High Yield OAS</span>
+                        </div>
+                        <div class="yields-spreads-grid" style="padding: 16px 20px;">
+                            <div class="yields-spread-card">
+                                <div class="yields-spread-header">
+                                    <i class="fa-solid fa-building-columns"></i>
+                                    <span>Investment Grade (IG)</span>
+                                </div>
+                                <div id="credit-ig-spread" class="yields-spread-value font-mono" style="color: #10b981;">—</div>
+                                <div class="yields-spread-sub">OAS vs Treasuries</div>
+                            </div>
+                            <div class="yields-spread-card">
+                                <div class="yields-spread-header">
+                                    <i class="fa-solid fa-chart-bar"></i>
+                                    <span>High Yield (HY)</span>
+                                </div>
+                                <div id="credit-hy-spread" class="yields-spread-value font-mono" style="color: #f59e0b;">—</div>
+                                <div class="yields-spread-sub">OAS vs Treasuries</div>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box"><canvas id="creditSpreadChart"></canvas></div>
+                    </div>
+
+                    <!-- Inflation Breakevens / TIPS Monitor -->
+                    <div class="chart-container-card" style="margin-top: 24px;">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-fire-flame-curved"></i> Inflation Breakevens & TIPS Monitor</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary-muted);">Market-implied inflation expectations</span>
+                        </div>
+                        <div class="yields-spreads-grid" style="padding: 16px 20px;">
+                            <div class="yields-spread-card">
+                                <div class="yields-spread-header">
+                                    <i class="fa-solid fa-temperature-arrow-up"></i>
+                                    <span>10Y Breakeven Inflation</span>
+                                </div>
+                                <div id="breakeven-rate" class="yields-spread-value font-mono" style="color: #f97316;">—</div>
+                                <div class="yields-spread-sub">Expected CPI over 10 years</div>
+                            </div>
+                            <div class="yields-spread-card">
+                                <div class="yields-spread-header">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                    <span>10Y Real Yield (TIPS)</span>
+                                </div>
+                                <div id="real-yield-rate" class="yields-spread-value font-mono" style="color: #06b6d4;">—</div>
+                                <div class="yields-spread-sub">Inflation-adjusted return</div>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box"><canvas id="breakevenChart"></canvas></div>
+                    </div>
+
+                    <!-- Duration & Convexity Calculator -->
+                    <div class="chart-container-card" style="margin-top: 24px;">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-calculator"></i> Bond Duration & Convexity Calculator</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary-muted);">Interest rate sensitivity analysis</span>
+                        </div>
+                        <div id="duration-calc-body" style="padding: 20px;">
+                            <div class="duration-input-grid">
+                                <div class="duration-input-group">
+                                    <label for="bond-face-value">Face Value ($)</label>
+                                    <input type="number" id="bond-face-value" class="duration-input" value="1000" min="100" step="100">
+                                </div>
+                                <div class="duration-input-group">
+                                    <label for="bond-coupon-rate">Coupon Rate (%)</label>
+                                    <input type="number" id="bond-coupon-rate" class="duration-input" value="5.0" min="0" step="0.125">
+                                </div>
+                                <div class="duration-input-group">
+                                    <label for="bond-ytm">Yield to Maturity (%)</label>
+                                    <input type="number" id="bond-ytm" class="duration-input" value="4.5" min="0" step="0.125">
+                                </div>
+                                <div class="duration-input-group">
+                                    <label for="bond-maturity-years">Maturity (Years)</label>
+                                    <input type="number" id="bond-maturity-years" class="duration-input" value="10" min="1" max="50" step="1">
+                                </div>
+                                <div class="duration-input-group">
+                                    <label for="bond-frequency">Coupon Frequency</label>
+                                    <select id="bond-frequency" class="duration-input">
+                                        <option value="2" selected>Semi-Annual</option>
+                                        <option value="1">Annual</option>
+                                        <option value="4">Quarterly</option>
+                                    </select>
+                                </div>
+                                <div class="duration-input-group" style="display: flex; align-items: flex-end;">
+                                    <button id="calc-duration-btn" class="duration-calc-btn"><i class="fa-solid fa-bolt"></i> Calculate</button>
+                                </div>
+                            </div>
+                            <div id="duration-results" class="duration-results-panel hidden-element">
+                                <div class="duration-results-grid">
+                                    <div class="duration-result-item">
+                                        <span class="duration-result-label">Bond Price</span>
+                                        <span id="dur-bond-price" class="duration-result-value font-mono">—</span>
+                                    </div>
+                                    <div class="duration-result-item">
+                                        <span class="duration-result-label">Macaulay Duration</span>
+                                        <span id="dur-macaulay" class="duration-result-value font-mono">—</span>
+                                    </div>
+                                    <div class="duration-result-item">
+                                        <span class="duration-result-label">Modified Duration</span>
+                                        <span id="dur-modified" class="duration-result-value font-mono">—</span>
+                                    </div>
+                                    <div class="duration-result-item">
+                                        <span class="duration-result-label">Convexity</span>
+                                        <span id="dur-convexity" class="duration-result-value font-mono">—</span>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 16px;">
+                                    <h4 style="color: var(--text-secondary-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px;">Price Sensitivity (Rate Shock)</h4>
+                                    <div class="duration-results-grid">
+                                        <div class="duration-result-item">
+                                            <span class="duration-result-label">+25 bps</span>
+                                            <span id="dur-shock-up25" class="duration-result-value font-mono">—</span>
+                                        </div>
+                                        <div class="duration-result-item">
+                                            <span class="duration-result-label">−25 bps</span>
+                                            <span id="dur-shock-dn25" class="duration-result-value font-mono">—</span>
+                                        </div>
+                                        <div class="duration-result-item">
+                                            <span class="duration-result-label">+100 bps</span>
+                                            <span id="dur-shock-up100" class="duration-result-value font-mono">—</span>
+                                        </div>
+                                        <div class="duration-result-item">
+                                            <span class="duration-result-label">−100 bps</span>
+                                            <span id="dur-shock-dn100" class="duration-result-value font-mono">—</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
