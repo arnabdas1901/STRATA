@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATA – Horizon Split & Unboxing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;user-select:none}
+        body{background:#000;overflow:hidden;color:#fff;font-family:'Inter',sans-serif}
+        canvas{display:block;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1}
+        #ui-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;z-index:10;transition:opacity .6s ease}
+        .start-btn{background:transparent;border:1px solid rgba(255,255,255,.2);color:#fff;padding:14px 40px;font-size:.95rem;font-weight:400;letter-spacing:.25em;text-transform:uppercase;border-radius:4px;cursor:pointer;transition:all .3s cubic-bezier(.16,1,.3,1)}
+        .start-btn:hover{background:rgba(255,255,255,.04);border-color:rgba(0,229,255,.8);box-shadow:0 0 40px rgba(0,229,255,.15);color:#00e5ff}
+        .start-btn:active{transform:scale(.97)}
+        .hud-panel{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(0,0,0,.9);border:1px solid rgba(0,229,255,.2);border-radius:4px;padding:10px 20px;display:flex;align-items:center;gap:16px;opacity:0;transition:opacity .5s ease}
+        .hud-panel.visible{opacity:1}
+        .hud-btn{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#888;padding:6px 12px;font-family:inherit;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;cursor:pointer;transition:all .2s}
+        .hud-btn:hover{color:#00e5ff;border-color:rgba(0,229,255,.4)}
+        .hidden{opacity:0;pointer-events:none}
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div id="ui-overlay"><button id="init-btn" class="start-btn">Activate System</button></div>
+    <div id="hud" class="hud-panel"><button class="hud-btn" onclick="triggerReplay()">Replay Animation</button></div>
+
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let W, H;
+        function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+        resize();
+        addEventListener('resize', resize);
+
+        /* ── CONFIG ── */
+        const TEXT = "S T R A T A";
+        const FONT = px => `300 ${px}px 'Inter', sans-serif`;
+        const FONT_SIZE = 96;
+        const HALF_H = 75;                          // half the unbox opening height
+        const AUDIO_PATH = "sounds/strata.wav";
+        const CYAN = [0, 229, 255];
+
+        /* ── TIMELINE DURATIONS (seconds) ── */
+        const DUR_LINE  = 0.8;
+        const DUR_SPLIT = 1.4;
+        const DUR_PAUSE = 0.15;                     // beat after split opens before sweep
+        const DUR_SWEEP = 0.8;
+        const DUR_FADE  = 0.6;                      // boundary lines fade out after sweep
+
+        /* ── STATE ── */
+        let state = 'idle';
+        let t0 = 0;
+        let voiceAudio = null;
+
+        function startSequence() {
+            voiceAudio = new Audio(AUDIO_PATH);
+            voiceAudio.load();
+            document.getElementById('ui-overlay').classList.add('hidden');
+            document.getElementById('hud').classList.remove('visible');
+            state = 'line';
+            t0 = performance.now() * 0.001;
+        }
+
+        function triggerReplay() {
+            state = 'idle';
+            document.getElementById('ui-overlay').classList.remove('hidden');
+            document.getElementById('hud').classList.remove('visible');
+        }
+
+        /* ── HELPERS ── */
+        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function getLineLen() {
+            ctx.font = FONT(FONT_SIZE);
+            return ctx.measureText(TEXT).width + 80;
+        }
+
+        // Draw bracket end-caps on the horizontal lines
+        function drawBrackets(lx, rx, topY, bottomY, alpha) {
+            if (alpha < 0.01) return;
+            const capH = 8;
+            ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.7})`;
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            // Top-left bracket
+            ctx.moveTo(lx, topY + capH); ctx.lineTo(lx, topY); ctx.lineTo(lx + capH, topY);
+            // Top-right bracket
+            ctx.moveTo(rx - capH, topY); ctx.lineTo(rx, topY); ctx.lineTo(rx, topY + capH);
+            // Bottom-left bracket
+            ctx.moveTo(lx, bottomY - capH); ctx.lineTo(lx, bottomY); ctx.lineTo(lx + capH, bottomY);
+            // Bottom-right bracket
+            ctx.moveTo(rx - capH, bottomY); ctx.lineTo(rx, bottomY); ctx.lineTo(rx, bottomY - capH);
+            ctx.stroke();
+        }
+
+        // Draw the horizontal split lines
+        function drawHLines(lx, rx, topY, bottomY, alpha) {
+            if (alpha < 0.01) return;
+            ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.85})`;
+            ctx.lineWidth = 1.2;
+            ctx.shadowColor = `rgba(${CYAN}, ${alpha * 0.5})`;
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.moveTo(lx, topY); ctx.lineTo(rx, topY);
+            ctx.moveTo(lx, bottomY); ctx.lineTo(rx, bottomY);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            drawBrackets(lx, rx, topY, bottomY, alpha);
+        }
+
+        /* ── MAIN LOOP ── */
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = performance.now() * 0.001;
+            const t = now - t0;
+            ctx.clearRect(0, 0, W, H);
+
+            const lineLen = getLineLen();
+            const lx = W / 2 - lineLen / 2;
+            const rx = W / 2 + lineLen / 2;
+
+            if (state === 'idle') return;
+
+            // ─── PHASE 1: HORIZON LINE ───
+            if (state === 'line') {
+                const p = Math.min(t / DUR_LINE, 1);
+                const len = lineLen * p;
+                ctx.strokeStyle = `rgba(${CYAN}, 0.9)`;
+                ctx.lineWidth = 1.5;
+                ctx.shadowColor = '#00e5ff';
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.moveTo(W / 2 - len / 2, H / 2);
+                ctx.lineTo(W / 2 + len / 2, H / 2);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                if (p >= 1) { state = 'split'; t0 = now; }
+            }
+
+            // ─── PHASE 2: SPLIT OPEN ───
+            else if (state === 'split') {
+                const p = Math.min(t / DUR_SPLIT, 1);
+                const ease = easeOutCubic(p);
+                const offset = HALF_H * ease;
+                const topY = H / 2 - offset;
+                const bottomY = H / 2 + offset;
+
+                // Clip & draw text
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0, topY, W, bottomY - topY);
+                ctx.clip();
+                ctx.font = FONT(FONT_SIZE);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(255,255,255,${ease * 0.9})`;
+                ctx.fillText(TEXT, W / 2, H / 2);
+                ctx.restore();
+
+                // Split lines + brackets
+                drawHLines(lx, rx, topY, bottomY, 1);
+
+                if (p >= 1) { state = 'pause'; t0 = now; }
+            }
+
+            // ─── PHASE 2.5: BRIEF BEAT ───
+            else if (state === 'pause') {
+                const topY = H / 2 - HALF_H;
+                const bottomY = H / 2 + HALF_H;
+
+                // Hold the revealed text + lines
+                ctx.font = FONT(FONT_SIZE);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.fillText(TEXT, W / 2, H / 2);
+                drawHLines(lx, rx, topY, bottomY, 1);
+
+                if (t >= DUR_PAUSE) {
+                    state = 'sweep';
+                    t0 = now;
+                    // Fire audio exactly at sweep start
+                    if (voiceAudio) voiceAudio.play().catch(() => {});
+                }
+            }
+
+            // ─── PHASE 3: SHINE SWEEP + COLOR SHIFT ───
+            else if (state === 'sweep') {
+                const p = Math.min(t / DUR_SWEEP, 1);
+                const topY = H / 2 - HALF_H;
+                const bottomY = H / 2 + HALF_H;
+
+                // Color interpolation: white → cyan
+                const r = Math.round(255 * (1 - p));
+                const g = Math.round(255 - 26 * p);   // 255 → 229
+                ctx.font = FONT(FONT_SIZE);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(${r},${g},255,0.9)`;
+                ctx.fillText(TEXT, W / 2, H / 2);
+
+                // Diagonal shine — rendered as a second pass with screen blend
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                const sx = lx - 200 + (lineLen + 400) * p;
+                const grad = ctx.createLinearGradient(sx - 60, H / 2 - 80, sx + 60, H / 2 + 80);
+                grad.addColorStop(0, 'rgba(0,229,255,0)');
+                grad.addColorStop(0.35, 'rgba(0,229,255,0.08)');
+                grad.addColorStop(0.5, 'rgba(255,255,255,0.7)');
+                grad.addColorStop(0.65, 'rgba(0,229,255,0.08)');
+                grad.addColorStop(1, 'rgba(0,229,255,0)');
+                ctx.font = FONT(FONT_SIZE);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = grad;
+                ctx.fillText(TEXT, W / 2, H / 2);
+                ctx.restore();
+
+                // Boundary lines still visible but starting to fade
+                const lineFade = 1 - p * 0.4;
+                drawHLines(lx, rx, topY, bottomY, lineFade);
+
+                if (p >= 1) { state = 'fade'; t0 = now; }
+            }
+
+            // ─── PHASE 4: BOUNDARY LINES FADE OUT + GLOW SETTLE ───
+            else if (state === 'fade') {
+                const p = Math.min(t / DUR_FADE, 1);
+                const topY = H / 2 - HALF_H;
+                const bottomY = H / 2 + HALF_H;
+
+                // Solid cyan text
+                ctx.font = FONT(FONT_SIZE);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(0,229,255,0.9)`;
+                ctx.fillText(TEXT, W / 2, H / 2);
+
+                // Soft outer glow fading in
+                ctx.shadowColor = '#00e5ff';
+                ctx.shadowBlur = 8 + 4 * p;
+                ctx.strokeStyle = `rgba(0,229,255,${0.3 * p})`;
+                ctx.lineWidth = 0.8;
+                ctx.strokeText(TEXT, W / 2, H / 2);
+                ctx.shadowBlur = 0;
+
+                // Lines fade out
+                const lineFade = 0.6 * (1 - easeOutCubic(p));
+                drawHLines(lx, rx, topY, bottomY, lineFade);
+
+                if (p >= 1) {
+                    state = 'hold';
+                    document.getElementById('hud').classList.add('visible');
+                }
+            }
+
+            // ─── PHASE 5: LIVING HOLD ───
+            else if (state === 'hold') {
+                // Subtle breathing glow
+                const pulse = 0.85 + Math.sin(now * 1.8) * 0.05;
+
+                ctx.font = FONT(FONT_SIZE);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(0,229,255,${pulse})`;
+                ctx.fillText(TEXT, W / 2, H / 2);
+
+                ctx.shadowColor = '#00e5ff';
+                ctx.shadowBlur = 10 + Math.sin(now * 1.8) * 3;
+                ctx.strokeStyle = `rgba(0,229,255,${0.25 + Math.sin(now * 1.8) * 0.05})`;
+                ctx.lineWidth = 0.8;
+                ctx.strokeText(TEXT, W / 2, H / 2);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        animate();
+        document.getElementById('init-btn').addEventListener('click', startSequence);
+    </script>
+</body>
+</html>

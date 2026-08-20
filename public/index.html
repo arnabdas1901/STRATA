@@ -18,8 +18,59 @@
             });
         }
     </script>
+    <style>
+        #boot-animation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000000;
+            z-index: 100000;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        #boot-animation-overlay.fade-out {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        #boot-canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <script>
+        (function() {
+            const lastPlay = localStorage.getItem('strata_last_boot_anim');
+            const now = Date.now();
+            const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+            
+            if (lastPlay && (now - lastPlay < oneHour)) {
+                // Skip the animation by instantly hiding overlay to avoid FOUC
+                const style = document.createElement('style');
+                style.innerHTML = '#boot-animation-overlay { display: none !important; }';
+                document.head.appendChild(style);
+                window.__skipBootAnim = true;
+            } else {
+                window.__skipBootAnim = false;
+                localStorage.setItem('strata_last_boot_anim', now);
+            }
+        })();
+    </script>
 </head>
 <body>
+
+    <div id="boot-animation-overlay">
+        <canvas id="boot-canvas"></canvas>
+    </div>
 
     <div class="app-container">
         <aside class="sidebar">
@@ -431,6 +482,240 @@
     <script type="module">
         import { loadDashboard } from './js/modules/equity.js';
         loadDashboard();
+    </script>
+    <script>
+        (function() {
+            if (window.__skipBootAnim) return;
+
+            const canvas = document.getElementById('boot-canvas');
+            const ctx = canvas.getContext('2d');
+            let W, H;
+
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            /* ── CONFIG ── */
+            const TEXT = "S T R A T A";
+            const FONT = px => `300 ${px}px 'Inter', sans-serif`;
+            const FONT_SIZE = 96;
+            const HALF_H = 65;                          // half the unbox opening height
+            const AUDIO_PATH = "sounds/strata.wav";
+            const CYAN = [0, 229, 255];
+
+            /* ── TIMELINE DURATIONS (seconds) ── */
+            const DUR_LINE  = 0.8;
+            const DUR_SPLIT = 1.4;
+            const DUR_PAUSE = 0.15;                     // beat after split opens before sweep
+            const DUR_SWEEP = 0.8;
+            const DUR_FADE  = 0.6;                      // boundary lines fade out after sweep
+
+            /* ── STATE ── */
+            let state = 'line';
+            let t0 = performance.now() * 0.001;
+            let voiceAudio = new Audio(AUDIO_PATH);
+            voiceAudio.load();
+
+            // Handle audio context unlock via click anywhere on overlay during animation
+            const overlay = document.getElementById('boot-animation-overlay');
+            overlay.addEventListener('click', () => {
+                if (voiceAudio) voiceAudio.play().then(() => voiceAudio.pause()).catch(() => {});
+            }, { once: true });
+
+            function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+            function getLineLen() {
+                ctx.font = FONT(FONT_SIZE);
+                return ctx.measureText(TEXT).width + 80;
+            }
+
+            // Draw bracket end-caps on the horizontal lines
+            function drawBrackets(lx, rx, topY, bottomY, alpha) {
+                if (alpha < 0.01) return;
+                const capH = 8;
+                ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.7})`;
+                ctx.lineWidth = 1.0;
+                ctx.beginPath();
+                // Top-left bracket
+                ctx.moveTo(lx, topY + capH); ctx.lineTo(lx, topY); ctx.lineTo(lx + capH, topY);
+                // Top-right bracket
+                ctx.moveTo(rx - capH, topY); ctx.lineTo(rx, topY); ctx.lineTo(rx, topY + capH);
+                // Bottom-left bracket
+                ctx.moveTo(lx, bottomY - capH); ctx.lineTo(lx, bottomY); ctx.lineTo(lx + capH, bottomY);
+                // Bottom-right bracket
+                ctx.moveTo(rx - capH, bottomY); ctx.lineTo(rx, bottomY); ctx.lineTo(rx, bottomY - capH);
+                ctx.stroke();
+            }
+
+            // Draw the horizontal split lines
+            function drawHLines(lx, rx, topY, bottomY, alpha) {
+                if (alpha < 0.01) return;
+                ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.85})`;
+                ctx.lineWidth = 1.2;
+                ctx.shadowColor = `rgba(${CYAN}, ${alpha * 0.5})`;
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.moveTo(lx, topY); ctx.lineTo(rx, topY);
+                ctx.moveTo(lx, bottomY); ctx.lineTo(rx, bottomY);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                drawBrackets(lx, rx, topY, bottomY, alpha);
+            }
+
+            function drawBrandText(x, y, styleMode, alpha = 1, colorProgress = 0) {
+                ctx.font = FONT(FONT_SIZE);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                if (styleMode === 'base') {
+                    // Interpolate fill color: from pure white (255,255,255) to cyber-cyan (0,229,255)
+                    const r = Math.round(255 - (255 - 0) * colorProgress);
+                    const g = Math.round(255 - (255 - 229) * colorProgress);
+                    const b = 255;
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.9})`; 
+                    ctx.fillText(TEXT, x, y);
+                } else if (styleMode === 'glow') {
+                    ctx.strokeStyle = `rgba(0, 229, 255, ${alpha * 0.85})`; // Thin cyber-blue outline
+                    ctx.lineWidth = 1.2;
+                    ctx.strokeText(TEXT, x, y);
+                }
+            }
+
+            let activeAnimationId = null;
+
+            function animate() {
+                activeAnimationId = requestAnimationFrame(animate);
+                const now = performance.now() * 0.001;
+                const t = now - t0;
+                ctx.clearRect(0, 0, W, H);
+
+                const lineLen = getLineLen();
+                const lx = W / 2 - lineLen / 2;
+                const rx = W / 2 + lineLen / 2;
+
+                // ─── PHASE 1: HORIZON LINE ───
+                if (state === 'line') {
+                    const p = Math.min(t / DUR_LINE, 1);
+                    const len = lineLen * p;
+                    ctx.strokeStyle = `rgba(${CYAN}, 0.9)`;
+                    ctx.lineWidth = 1.5;
+                    ctx.shadowColor = '#00e5ff';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(W / 2 - len / 2, H / 2);
+                    ctx.lineTo(W / 2 + len / 2, H / 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                    if (p >= 1) { state = 'split'; t0 = now; }
+                }
+
+                // ─── PHASE 2: SPLIT OPEN ───
+                else if (state === 'split') {
+                    const p = Math.min(t / DUR_SPLIT, 1);
+                    const ease = easeOutCubic(p);
+                    const offset = HALF_H * ease;
+                    const topY = H / 2 - offset;
+                    const bottomY = H / 2 + offset;
+
+                    // Clip & draw text
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(0, topY, W, bottomY - topY);
+                    ctx.clip();
+                    drawBrandText(W / 2, H / 2, 'base', ease, 0);
+                    ctx.restore();
+
+                    // Split lines + brackets
+                    drawHLines(lx, rx, topY, bottomY, 1);
+
+                    if (p >= 1) { state = 'pause'; t0 = now; }
+                }
+
+                // ─── PHASE 2.5: BRIEF BEAT ───
+                else if (state === 'pause') {
+                    const topY = H / 2 - HALF_H;
+                    const bottomY = H / 2 + HALF_H;
+
+                    drawBrandText(W / 2, H / 2, 'base', 0.9, 0);
+                    drawHLines(lx, rx, topY, bottomY, 1);
+
+                    if (t >= DUR_PAUSE) {
+                        state = 'sweep';
+                        t0 = now;
+                        // Fire audio exactly at sweep start
+                        if (voiceAudio) voiceAudio.play().catch(() => {});
+                    }
+                }
+
+                // ─── PHASE 3: SHINE SWEEP + COLOR SHIFT ───
+                else if (state === 'sweep') {
+                    const p = Math.min(t / DUR_SWEEP, 1);
+                    const topY = H / 2 - HALF_H;
+                    const bottomY = H / 2 + HALF_H;
+
+                    drawBrandText(W / 2, H / 2, 'base', 1.0, p);
+
+                    // Diagonal shine — rendered as a second pass with screen blend
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    const sx = lx - 200 + (lineLen + 400) * p;
+                    const grad = ctx.createLinearGradient(sx - 60, H / 2 - 80, sx + 60, H / 2 + 80);
+                    grad.addColorStop(0, 'rgba(0,229,255,0)');
+                    grad.addColorStop(0.35, 'rgba(0,229,255,0.08)');
+                    grad.addColorStop(0.5, 'rgba(255,255,255,0.7)');
+                    grad.addColorStop(0.65, 'rgba(0,229,255,0.08)');
+                    grad.addColorStop(1, 'rgba(0,229,255,0)');
+                    ctx.font = FONT(FONT_SIZE);
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = grad;
+                    ctx.fillText(TEXT, W / 2, H / 2);
+                    ctx.restore();
+
+                    // Boundary lines still visible but starting to fade
+                    const lineFade = 1 - p * 0.4;
+                    drawHLines(lx, rx, topY, bottomY, lineFade);
+
+                    if (p >= 1) { state = 'fade'; t0 = now; }
+                }
+
+                // ─── PHASE 4: BOUNDARY LINES FADE OUT + GLOW SETTLE ───
+                else if (state === 'fade') {
+                    const p = Math.min(t / DUR_FADE, 1);
+                    const topY = H / 2 - HALF_H;
+                    const bottomY = H / 2 + HALF_H;
+
+                    drawBrandText(W / 2, H / 2, 'base', 1.0, 1.0);
+
+                    // Soft outer glow fading in
+                    ctx.shadowColor = '#00e5ff';
+                    ctx.shadowBlur = 8 + 4 * p;
+                    drawBrandText(W / 2, H / 2, 'glow', 0.3 * p);
+                    ctx.shadowBlur = 0;
+
+                    // Lines fade out
+                    const lineFade = 0.6 * (1 - easeOutCubic(p));
+                    drawHLines(lx, rx, topY, bottomY, lineFade);
+
+                    if (p >= 1) {
+                        state = 'complete';
+                        // Fade out overlay container
+                        overlay.classList.add('fade-out');
+                        
+                        // Clean up canvas loop after overlay fades completely to save CPU/memory
+                        setTimeout(() => {
+                            cancelAnimationFrame(activeAnimationId);
+                            overlay.remove();
+                        }, 1000);
+                    }
+                }
+            }
+
+            animate();
+        })();
     </script>
 </body>
 </html>
