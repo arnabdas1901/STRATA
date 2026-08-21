@@ -534,20 +534,33 @@
             const ctx = canvas.getContext('2d');
             let W, H;
 
+            /* ── RESPONSIVE CONFIG ── */
+            const TEXT = "S T R A T A";
+            const FONT = px => `300 ${px}px 'Inter', sans-serif`;
+            const AUDIO_PATH = "sounds/strata.wav";
+            const CYAN = [0, 229, 255];
+
+            let fontSize = 96;
+            let halfH = 65;                             // half the unbox opening height
+
             function resize() {
-                W = canvas.width = window.innerWidth;
-                H = canvas.height = window.innerHeight;
+                const dpr = window.devicePixelRatio || 1;
+                W = window.innerWidth;
+                H = window.innerHeight;
+                canvas.width = W * dpr;
+                canvas.height = H * dpr;
+                ctx.scale(dpr, dpr);
+
+                // Responsive scale factor: S T R A T A at 96px is ~560px wide.
+                // We want the text to span at most 82% of the viewport width.
+                const maxTextWidth = W * 0.82;
+                const scaleFactor = Math.min(1.0, maxTextWidth / 560);
+
+                fontSize = Math.max(32, Math.round(96 * scaleFactor));
+                halfH = Math.max(24, Math.round(65 * scaleFactor));
             }
             resize();
             window.addEventListener('resize', resize);
-
-            /* ── CONFIG ── */
-            const TEXT = "S T R A T A";
-            const FONT = px => `300 ${px}px 'Inter', sans-serif`;
-            const FONT_SIZE = 96;
-            const HALF_H = 65;                          // half the unbox opening height
-            const AUDIO_PATH = "sounds/strata.wav";
-            const CYAN = [0, 229, 255];
 
             /* ── TIMELINE DURATIONS (seconds) ── */
             const DUR_LINE  = 0.8;
@@ -583,48 +596,69 @@
                 t0 = performance.now() * 0.001;
             });
 
+            /* ── EASING FUNCTIONS (Butter-smooth Transitions) ── */
             function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+            function easeInOutCubic(t) {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+            function easeOutQuart(t) { return 1 - Math.pow(1 - t, 4); }
 
             function getLineLen() {
-                ctx.font = FONT(FONT_SIZE);
+                ctx.font = FONT(fontSize);
                 return ctx.measureText(TEXT).width + 80;
             }
 
-            // Draw bracket end-caps on the horizontal lines
+            // Draw bracket end-caps on the horizontal lines with clean double-pass glow
             function drawBrackets(lx, rx, topY, bottomY, alpha) {
                 if (alpha < 0.01) return;
                 const capH = 8;
-                ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.7})`;
+                
+                // 1. Soft glow path
+                ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.15})`;
+                ctx.lineWidth = 4.0;
+                ctx.beginPath();
+                ctx.moveTo(lx, topY + capH); ctx.lineTo(lx, topY); ctx.lineTo(lx + capH, topY);
+                ctx.moveTo(rx - capH, topY); ctx.lineTo(rx, topY); ctx.lineTo(rx, topY + capH);
+                ctx.moveTo(lx, bottomY - capH); ctx.lineTo(lx, bottomY); ctx.lineTo(lx + capH, bottomY);
+                ctx.moveTo(rx - capH, bottomY); ctx.lineTo(rx, bottomY); ctx.lineTo(rx, bottomY - capH);
+                ctx.stroke();
+
+                // 2. Core crisp path
+                ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.75})`;
                 ctx.lineWidth = 1.0;
                 ctx.beginPath();
-                // Top-left bracket
                 ctx.moveTo(lx, topY + capH); ctx.lineTo(lx, topY); ctx.lineTo(lx + capH, topY);
-                // Top-right bracket
                 ctx.moveTo(rx - capH, topY); ctx.lineTo(rx, topY); ctx.lineTo(rx, topY + capH);
-                // Bottom-left bracket
                 ctx.moveTo(lx, bottomY - capH); ctx.lineTo(lx, bottomY); ctx.lineTo(lx + capH, bottomY);
-                // Bottom-right bracket
                 ctx.moveTo(rx - capH, bottomY); ctx.lineTo(rx, bottomY); ctx.lineTo(rx, bottomY - capH);
                 ctx.stroke();
             }
 
-            // Draw the horizontal split lines
+            // Draw the horizontal split lines with double-pass high performance glow
             function drawHLines(lx, rx, topY, bottomY, alpha) {
                 if (alpha < 0.01) return;
-                ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.85})`;
-                ctx.lineWidth = 1.2;
-                ctx.shadowColor = `rgba(${CYAN}, ${alpha * 0.5})`;
-                ctx.shadowBlur = 6;
+                
+                // 1. Soft glow path
+                ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.25})`;
+                ctx.lineWidth = 4.0;
                 ctx.beginPath();
                 ctx.moveTo(lx, topY); ctx.lineTo(rx, topY);
                 ctx.moveTo(lx, bottomY); ctx.lineTo(rx, bottomY);
                 ctx.stroke();
-                ctx.shadowBlur = 0;
+
+                // 2. Core crisp path
+                ctx.strokeStyle = `rgba(${CYAN}, ${alpha * 0.85})`;
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(lx, topY); ctx.lineTo(rx, topY);
+                ctx.moveTo(lx, bottomY); ctx.lineTo(rx, bottomY);
+                ctx.stroke();
+
                 drawBrackets(lx, rx, topY, bottomY, alpha);
             }
 
             function drawBrandText(x, y, styleMode, alpha = 1, colorProgress = 0) {
-                ctx.font = FONT(FONT_SIZE);
+                ctx.font = FONT(fontSize);
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
@@ -636,7 +670,13 @@
                     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.9})`; 
                     ctx.fillText(TEXT, x, y);
                 } else if (styleMode === 'glow') {
-                    ctx.strokeStyle = `rgba(0, 229, 255, ${alpha * 0.85})`; // Thin cyber-blue outline
+                    // Thick outer soft glow pass
+                    ctx.strokeStyle = `rgba(0, 229, 255, ${alpha * 0.22})`;
+                    ctx.lineWidth = 5.0;
+                    ctx.strokeText(TEXT, x, y);
+
+                    // Core sharp pass
+                    ctx.strokeStyle = `rgba(0, 229, 255, ${alpha * 0.85})`;
                     ctx.lineWidth = 1.2;
                     ctx.strokeText(TEXT, x, y);
                 }
@@ -659,24 +699,33 @@
                 // ─── PHASE 1: HORIZON LINE ───
                 if (state === 'line') {
                     const p = Math.min(t / DUR_LINE, 1);
-                    const len = lineLen * p;
-                    ctx.strokeStyle = `rgba(${CYAN}, 0.9)`;
-                    ctx.lineWidth = 1.5;
-                    ctx.shadowColor = '#00e5ff';
-                    ctx.shadowBlur = 8;
+                    const ease = easeInOutCubic(p);
+                    const len = lineLen * ease;
+                    
+                    // 1. Soft glow pass
+                    ctx.strokeStyle = `rgba(${CYAN}, 0.25)`;
+                    ctx.lineWidth = 5.0;
                     ctx.beginPath();
                     ctx.moveTo(W / 2 - len / 2, H / 2);
                     ctx.lineTo(W / 2 + len / 2, H / 2);
                     ctx.stroke();
-                    ctx.shadowBlur = 0;
+
+                    // 2. Core crisp pass
+                    ctx.strokeStyle = `rgba(${CYAN}, 0.9)`;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(W / 2 - len / 2, H / 2);
+                    ctx.lineTo(W / 2 + len / 2, H / 2);
+                    ctx.stroke();
+
                     if (p >= 1) { state = 'split'; t0 = now; }
                 }
 
                 // ─── PHASE 2: SPLIT OPEN ───
                 else if (state === 'split') {
                     const p = Math.min(t / DUR_SPLIT, 1);
-                    const ease = easeOutCubic(p);
-                    const offset = HALF_H * ease;
+                    const ease = easeOutQuart(p);
+                    const offset = halfH * ease;
                     const topY = H / 2 - offset;
                     const bottomY = H / 2 + offset;
 
@@ -696,8 +745,8 @@
 
                 // ─── PHASE 2.5: BRIEF BEAT ───
                 else if (state === 'pause') {
-                    const topY = H / 2 - HALF_H;
-                    const bottomY = H / 2 + HALF_H;
+                    const topY = H / 2 - halfH;
+                    const bottomY = H / 2 + halfH;
 
                     drawBrandText(W / 2, H / 2, 'base', 0.9, 0);
                     drawHLines(lx, rx, topY, bottomY, 1);
@@ -716,22 +765,23 @@
                 // ─── PHASE 3: SHINE SWEEP + COLOR SHIFT ───
                 else if (state === 'sweep') {
                     const p = Math.min(t / DUR_SWEEP, 1);
-                    const topY = H / 2 - HALF_H;
-                    const bottomY = H / 2 + HALF_H;
+                    const ease = easeInOutCubic(p);
+                    const topY = H / 2 - halfH;
+                    const bottomY = H / 2 + halfH;
 
-                    drawBrandText(W / 2, H / 2, 'base', 1.0, p);
+                    drawBrandText(W / 2, H / 2, 'base', 1.0, ease);
 
                     // Diagonal shine — rendered as a second pass with screen blend
                     ctx.save();
                     ctx.globalCompositeOperation = 'lighter';
-                    const sx = lx - 200 + (lineLen + 400) * p;
+                    const sx = lx - 200 + (lineLen + 400) * ease;
                     const grad = ctx.createLinearGradient(sx - 60, H / 2 - 80, sx + 60, H / 2 + 80);
                     grad.addColorStop(0, 'rgba(0,229,255,0)');
                     grad.addColorStop(0.35, 'rgba(0,229,255,0.08)');
                     grad.addColorStop(0.5, 'rgba(255,255,255,0.7)');
                     grad.addColorStop(0.65, 'rgba(0,229,255,0.08)');
                     grad.addColorStop(1, 'rgba(0,229,255,0)');
-                    ctx.font = FONT(FONT_SIZE);
+                    ctx.font = FONT(fontSize);
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillStyle = grad;
@@ -739,7 +789,7 @@
                     ctx.restore();
 
                     // Boundary lines still visible but starting to fade
-                    const lineFade = 1 - p * 0.4;
+                    const lineFade = 1 - ease * 0.4;
                     drawHLines(lx, rx, topY, bottomY, lineFade);
 
                     if (p >= 1) { state = 'fade'; t0 = now; }
@@ -748,19 +798,17 @@
                 // ─── PHASE 4: BOUNDARY LINES FADE OUT + GLOW SETTLE ───
                 else if (state === 'fade') {
                     const p = Math.min(t / DUR_FADE, 1);
-                    const topY = H / 2 - HALF_H;
-                    const bottomY = H / 2 + HALF_H;
+                    const ease = easeOutCubic(p);
+                    const topY = H / 2 - halfH;
+                    const bottomY = H / 2 + halfH;
 
                     drawBrandText(W / 2, H / 2, 'base', 1.0, 1.0);
 
                     // Soft outer glow fading in
-                    ctx.shadowColor = '#00e5ff';
-                    ctx.shadowBlur = 8 + 4 * p;
-                    drawBrandText(W / 2, H / 2, 'glow', 0.3 * p);
-                    ctx.shadowBlur = 0;
+                    drawBrandText(W / 2, H / 2, 'glow', 0.3 * ease);
 
                     // Lines fade out
-                    const lineFade = 0.6 * (1 - easeOutCubic(p));
+                    const lineFade = 0.6 * (1 - ease);
                     drawHLines(lx, rx, topY, bottomY, lineFade);
 
                     if (p >= 1) {
