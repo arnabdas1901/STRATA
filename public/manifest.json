@@ -1,0 +1,24 @@
+{
+  "name": "STRATA Analytics",
+  "short_name": "STRATA",
+  "description": "Institutional Equity & Market Intelligence Terminal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/strata-logo.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/strata-logo.webp",
+      "type": "image/webp",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

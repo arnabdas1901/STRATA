@@ -69,3 +69,17 @@ function setupPageReveal() {
     if (!content) return;
     content.classList.add('page-revealed');
 }
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then((reg) => {
+                console.log('STRATA Service Worker registered successfully, scope:', reg.scope);
+            })
+            .catch((err) => {
+                console.error('STRATA Service Worker registration failed:', err);
+            });
+    });
+}
+
