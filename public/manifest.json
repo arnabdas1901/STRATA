@@ -13,12 +13,6 @@
       "type": "image/png",
       "sizes": "192x192 512x512",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/images/strata-logo.webp",
-      "type": "image/webp",
-      "sizes": "192x192 512x512",
-      "purpose": "any maskable"
     }
   ]
 }

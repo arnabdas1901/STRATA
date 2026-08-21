@@ -5,7 +5,6 @@ const ASSETS = [
   '/style.css',
   '/js/main.js',
   '/js/utils.js',
-  '/images/strata-logo.webp',
   '/images/strata-logo.png'
 ];
 
