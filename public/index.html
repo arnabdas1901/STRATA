@@ -94,19 +94,19 @@
     </style>
     <script>
         (function() {
-            const lastPlay = localStorage.getItem('strata_last_boot_anim');
+            const lastPlay = sessionStorage.getItem('strata_last_boot_anim');
             const now = Date.now();
             const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
             
+            // Skip if played in this session within the last hour
             if (lastPlay && (now - lastPlay < oneHour)) {
-                // Skip the animation by instantly hiding overlay to avoid FOUC
                 const style = document.createElement('style');
                 style.innerHTML = '#boot-animation-overlay { display: none !important; }';
                 document.head.appendChild(style);
                 window.__skipBootAnim = true;
             } else {
                 window.__skipBootAnim = false;
-                localStorage.setItem('strata_last_boot_anim', now);
+                sessionStorage.setItem('strata_last_boot_anim', now);
             }
         })();
     </script>
@@ -126,7 +126,7 @@
                 <div class="logo-brand-block">
                     <div class="logo-title-row">
                         <span class="logo-text">STRATA</span>
-                        <img src="images/strata-logo.png" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
                     </div>
                     <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
                 </div>
@@ -188,7 +188,7 @@
                         <div class="logo-brand-block">
                             <div class="logo-title-row">
                                 <span class="top-app-logo-text">STRATA</span>
-                                <img src="images/strata-logo.png" alt="Strata" class="brand-logo-sticker-mobile" onerror="this.style.display='none'">
+                                <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile" onerror="this.style.display='none'">
                             </div>
                             <span class="top-app-tagline">REAL-TIME MARKET ANALYTICS</span>
                         </div>
