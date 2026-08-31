@@ -1,6 +1,9 @@
 import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, normalizeForexPair } from '../utils.js';
+import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let forexChartInstance = null;
+window.forexIndicatorManager = null;
+window.currentForexChartData = [];
 let currentForexPair = null;
 let activeSymbol = null;
 let activeDays = 365;
@@ -15,6 +18,7 @@ export function setupForexTracker() {
 
         if (isDetailsPage) {
             setupDetailsPageHandlers();
+            setupIndicatorsUI('forex', () => window.currentForexChartData || [], () => window.forexIndicatorManager);
             
             const params = new URLSearchParams(window.location.search);
             const symbol = params.get('symbol');
@@ -407,98 +411,178 @@ function setupConverter(base, quote, rate) {
 
 // ── Chart Rendering ────────────────────────────────────────────────────────────
 function renderForexChart(chartData, pairName, isPositive) {
-    const canvas = document.getElementById('forexHistoricalChart');
-    if (!canvas) return;
+    const container = document.getElementById('forexHistoricalChart');
+    if (!container) return;
 
+    // Clean up previous chart instance
     if (forexChartInstance) {
-        forexChartInstance.destroy();
+        if (forexChartInstance._resizeObserver) {
+            forexChartInstance._resizeObserver.disconnect();
+        }
+        forexChartInstance.remove();
+        forexChartInstance = null;
     }
+    container.innerHTML = '';
 
-    const labels = chartData.map(d => {
-        const date = new Date(d.time * 1000);
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    });
     const dataPoints = chartData.map(d => d.close);
+    const accentColor = isPositive ? '#00ffff' : '#ff0055';
 
-    const gradient = canvas.getContext('2d').createLinearGradient(0, 0, 0, 400);
-    if (isPositive) {
-        gradient.addColorStop(0, 'rgba(0, 255, 255, 0.2)');
-        gradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
-    } else {
-        gradient.addColorStop(0, 'rgba(255, 0, 85, 0.2)');
-        gradient.addColorStop(1, 'rgba(255, 0, 85, 0)');
-    }
-
-    const lineColor = isPositive ? '#00ffff' : '#ff0055';
-
-    forexChartInstance = new Chart(canvas.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: `${pairName} Close Price`,
-                data: dataPoints,
-                borderColor: lineColor,
-                backgroundColor: gradient,
-                borderWidth: 2.5,
-                pointRadius: 0,
-                pointHoverRadius: 6,
-                fill: true,
-                tension: 0.1
-            }]
+    // Create chart
+    const chart = LightweightCharts.createChart(container, {
+        layout: {
+            background: { type: 'solid', color: '#131722' },
+            textColor: '#d1d4dc',
+            fontFamily: "'JetBrains Mono', 'Inter', monospace",
+            fontSize: 11,
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
+        grid: {
+            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+        },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+            vertLine: {
+                color: 'rgba(0, 240, 255, 0.4)',
+                width: 1,
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#2563eb',
             },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(10, 14, 23, 0.95)',
-                    titleColor: 'rgba(255, 255, 255, 0.7)',
-                    bodyColor: '#00f0ff',
-                    bodyFont: { family: "'JetBrains Mono', monospace", size: 14, weight: 'bold' },
-                    borderColor: 'rgba(0, 240, 255, 0.3)',
-                    borderWidth: 1,
-                    padding: 12,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: (ctx) => `Price: ${ctx.parsed.y.toFixed(4)}`
-                    }
-                }
+            horzLine: {
+                color: 'rgba(0, 240, 255, 0.4)',
+                width: 1,
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#2563eb',
             },
-            scales: {
-                x: {
-                    display: true,
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.04)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.4)',
-                        maxTicksLimit: 6,
-                        font: { size: 11 }
-                    }
-                },
-                y: {
-                    display: true,
-                    position: 'right',
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.04)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.4)',
-                        font: { family: "'JetBrains Mono', monospace" },
-                        callback: (val) => val.toFixed(4)
-                    }
-                }
+        },
+        rightPriceScale: {
+            borderColor: 'rgba(197, 203, 206, 0.15)',
+            scaleMargins: { top: 0.1, bottom: 0.1 },
+        },
+        timeScale: {
+            borderColor: 'rgba(197, 203, 206, 0.15)',
+            timeVisible: false,
+            fixLeftEdge: true,
+            fixRightEdge: true,
+        },
+        handleScroll: { vertTouchDrag: false },
+    });
+
+    // Area series for exchange rate
+    const mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+        topColor: isPositive ? 'rgba(0, 255, 255, 0.25)' : 'rgba(255, 0, 85, 0.25)',
+        bottomColor: isPositive ? 'rgba(0, 255, 255, 0.02)' : 'rgba(255, 0, 85, 0.02)',
+        lineColor: accentColor,
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 5,
+        crosshairMarkerBorderColor: '#ffffff',
+        crosshairMarkerBorderWidth: 2,
+        crosshairMarkerBackgroundColor: accentColor,
+        priceFormat: { type: 'price', precision: 4, minMove: 0.0001 },
+    });
+
+    // Convert unix timestamps to YYYY-MM-DD for lightweight-charts
+    const lineData = chartData.map(d => {
+        const dt = new Date(d.time * 1000);
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth() + 1).padStart(2, '0');
+        const dd = String(dt.getDate()).padStart(2, '0');
+        return { time: `${yyyy}-${mm}-${dd}`, value: d.close };
+    });
+
+    // Deduplicate by date
+    const uniqueData = [];
+    const seenDates = new Set();
+    for (const item of lineData) {
+        if (!seenDates.has(item.time)) {
+            seenDates.add(item.time);
+            uniqueData.push(item);
+        }
+    }
+    mainSeries.setData(uniqueData);
+
+    // Current price line
+    const lastPrice = dataPoints[dataPoints.length - 1];
+    mainSeries.createPriceLine({
+        price: lastPrice,
+        color: accentColor,
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: '',
+    });
+
+    // Floating tooltip
+    const toolTipEl = document.createElement('div');
+    toolTipEl.className = 'lw-chart-tooltip';
+    container.appendChild(toolTipEl);
+
+    chart.subscribeCrosshairMove(param => {
+        if (!param || !param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
+            toolTipEl.style.display = 'none';
+            return;
+        }
+
+        const priceData = param.seriesData.get(mainSeries);
+        if (!priceData) { toolTipEl.style.display = 'none'; return; }
+
+        const d = typeof param.time === 'string' ? new Date(param.time) : new Date(param.time * 1000);
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        let tooltipHtml = `
+            <div class="tt-date">${dateStr}</div>
+            <div class="tt-row"><span class="tt-label">${pairName}</span><span class="tt-val">${priceData.value.toFixed(4)}</span></div>
+        `;
+        
+        if (window.forexIndicatorManager) {
+            tooltipHtml += window.forexIndicatorManager.getTooltipData(param);
+        }
+        
+        toolTipEl.innerHTML = tooltipHtml;
+        toolTipEl.style.display = 'block';
+
+        const chartRect = container.getBoundingClientRect();
+        const tooltipWidth = 160;
+        const tooltipHeight = toolTipEl.offsetHeight || 60;
+        let left = param.point.x + 16;
+        let top = param.point.y - tooltipHeight / 2;
+
+        if (left + tooltipWidth > chartRect.width) left = param.point.x - tooltipWidth - 16;
+        if (top < 0) top = 4;
+        if (top + tooltipHeight > chartRect.height) top = chartRect.height - tooltipHeight - 4;
+
+        toolTipEl.style.left = left + 'px';
+        toolTipEl.style.top = top + 'px';
+    });
+
+    // Fit content
+    chart.timeScale().fitContent();
+
+    // Responsive resize
+    const resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) {
+                chart.applyOptions({ width, height });
             }
         }
     });
+    resizeObserver.observe(container);
+
+    forexChartInstance = chart;
+    forexChartInstance._resizeObserver = resizeObserver;
+    
+    window.currentForexChartData = uniqueData;
+    window.forexIndicatorManager = new IndicatorManager(chart, mainSeries, null); // No volume series in forex
+    const menu = document.getElementById('forex-indicator-menu');
+    if (menu) {
+        menu.querySelectorAll('input').forEach(input => {
+            if (input.checked) {
+                window.forexIndicatorManager.active[input.value] = false;
+                window.forexIndicatorManager.toggle(input.value, uniqueData);
+            }
+        });
+    }
 }
 
 // ── AI Macro Profile Generation ────────────────────────────────────────────────

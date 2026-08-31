@@ -37,18 +37,6 @@ function setupMobileMenu() {
 }
 
 function enhancePageShell() {
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach((item) => {
-        item.addEventListener('mouseenter', () => {
-            item.style.transform = 'translateX(3px)';
-        });
-        item.addEventListener('mouseleave', () => {
-            if (!item.classList.contains('active')) {
-                item.style.transform = '';
-            }
-        });
-    });
-
     const heroCards = document.querySelectorAll('.ticker-hero-card, .chart-container-card, .metric-card, .news-widget');
     heroCards.forEach((card, index) => {
         card.style.animationDelay = `${index * 70}ms`;

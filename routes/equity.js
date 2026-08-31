@@ -5,10 +5,36 @@ const { requireTicker } = require('../utils/api');
 const { fetchFmpMetrics, fetchFinnhubHistory } = require('../utils/equityProviders');
 const { getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
 
+async function fetchWithTimeout(url, timeoutMs = 10000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetchWithTimeout(url, { signal: controller.signal });
+        clearTimeout(id);
+        return response;
+    } catch (err) {
+        clearTimeout(id);
+        throw err;
+    }
+}
+
 // Cache stores to protect API limits
 const TIME_SERIES_CACHE = {};
 const STATEMENTS_CACHE = {};
 const PEERS_CACHE = {};
+
+const MAX_CACHE_ENTRIES = 100;
+function enforceCacheLimit(cache) {
+    const keys = Object.keys(cache);
+    if (keys.length > MAX_CACHE_ENTRIES) {
+        // Remove oldest 20% of entries
+        const toRemove = Math.floor(keys.length * 0.2);
+        keys.sort((a, b) => (cache[a].lastFetched || 0) - (cache[b].lastFetched || 0));
+        for (let i = 0; i < toRemove; i++) {
+            delete cache[keys[i]];
+        }
+    }
+}
 
 // Company Profile Endpoint
 // ... (omitted profile endpoint as it's not changing, target starting from time_series) ...
@@ -38,7 +64,7 @@ router.get('/twelvedata/time_series', async (req, res) => {
     }
 
     try {
-        const response = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${config.interval}&outputsize=${config.outputsize}&apikey=${process.env.TWELVEDATA_API_KEY}`);
+        const response = await fetchWithTimeout(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${config.interval}&outputsize=${config.outputsize}&apikey=${process.env.TWELVEDATA_API_KEY}`);
         const data = await response.json();
 
         if (data?.status === 'error' || !Array.isArray(data?.values)) {
@@ -46,6 +72,7 @@ router.get('/twelvedata/time_series', async (req, res) => {
             const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
             if (fallback) {
                 TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
+                enforceCacheLimit(TIME_SERIES_CACHE);
                 return res.json(fallback);
             }
             return res.status(500).json({ error: 'No time series values returned', raw: data });
@@ -56,17 +83,20 @@ router.get('/twelvedata/time_series', async (req, res) => {
             const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
             if (fallback) {
                 TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
+                enforceCacheLimit(TIME_SERIES_CACHE);
                 return res.json(fallback);
             }
         }
 
         TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: data };
+        enforceCacheLimit(TIME_SERIES_CACHE);
         res.json(data);
     } catch (error) {
         console.error("TwelveData Time Series Error:", error);
         const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
         if (fallback) {
             TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
+            enforceCacheLimit(TIME_SERIES_CACHE);
             return res.json(fallback);
         }
         res.status(500).json({ error: "Failed to fetch historical data" });
@@ -87,10 +117,11 @@ router.get('/finnhub/profile', async (req, res) => {
     }
 
     try {
-        const response = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
+        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
         if (data && !data.error && data.name) {
             PROFILE_CACHE[cacheKey] = { lastFetched: now, data };
+            enforceCacheLimit(PROFILE_CACHE);
         }
         res.json(data);
     } catch (error) {
@@ -111,7 +142,7 @@ router.get('/finnhub/metrics', async (req, res) => {
     }
 
     try {
-        const response = await fetch(
+        const response = await fetchWithTimeout(
             `https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${process.env.FINNHUB_API_KEY}`
         );
         const data = await response.json();
@@ -156,6 +187,7 @@ router.get('/finnhub/metrics', async (req, res) => {
 
         if (data && !data.error) {
             METRICS_CACHE[cacheKey] = { lastFetched: now, data };
+            enforceCacheLimit(METRICS_CACHE);
         }
         res.json(data);
     } catch (error) {
@@ -176,10 +208,11 @@ router.get('/finnhub/quote', async (req, res) => {
     }
 
     try {
-        const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
+        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
         if (data && typeof data.c === 'number' && data.c > 0) {
             QUOTE_CACHE[cacheKey] = { lastFetched: now, data };
+            enforceCacheLimit(QUOTE_CACHE);
         }
         res.json(data);
     } catch (error) {
@@ -224,7 +257,7 @@ async function tryPolygonFallback(symbol, timeframe) {
         const ticker = symbol.toUpperCase();
         const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${startDateStr}/${endDateStr}?adjusted=true&sort=asc&apiKey=${process.env.POLYGON_API_KEY}`;
         
-        const response = await fetch(url);
+        const response = await fetchWithTimeout(url);
         const data = await response.json();
 
         if ((data.status === 'OK' || data.status === 'DELAYED') && data.results && data.results.length > 0) {
@@ -310,6 +343,7 @@ router.get('/twelvedata/statements', async (req, res) => {
     res.json = (payload) => {
         if (payload && !payload.error) {
             STATEMENTS_CACHE[cacheKey] = { lastFetched: now, data: payload };
+            enforceCacheLimit(STATEMENTS_CACHE);
         }
         return originalJson(payload);
     };
@@ -319,7 +353,7 @@ router.get('/twelvedata/statements', async (req, res) => {
         let data = null;
 
         if (process.env.TWELVEDATA_API_KEY) {
-            const response = await fetch(`https://api.twelvedata.com/${type}?symbol=${encodeURIComponent(symbol)}&apikey=${process.env.TWELVEDATA_API_KEY}`);
+            const response = await fetchWithTimeout(`https://api.twelvedata.com/${type}?symbol=${encodeURIComponent(symbol)}&apikey=${process.env.TWELVEDATA_API_KEY}`);
             data = await response.json();
             if (data?.status === 'error' || !data || data?.code >= 400) {
                 twelvedataFailed = true;
@@ -335,7 +369,7 @@ router.get('/twelvedata/statements', async (req, res) => {
                     const fmpTypeMap = { balance_sheet: 'balance-sheet-statement', cash_flow: 'cash-flow-statement', income_statement: 'income-statement' };
                     const fmpType = fmpTypeMap[type];
                     const fmpUrl = `https://financialmodelingprep.com/api/v3/${fmpType}/${encodeURIComponent(symbol)}?limit=1&apikey=${fmpKey}`;
-                    const fmpResponse = await fetch(fmpUrl);
+                    const fmpResponse = await fetchWithTimeout(fmpUrl);
                     const fmpData = await fmpResponse.json();
 
                     if (Array.isArray(fmpData) && fmpData.length > 0 && !fmpData[0]?.['Error Message']) {
@@ -377,7 +411,7 @@ router.get('/twelvedata/statements', async (req, res) => {
                     const avFuncMap = { balance_sheet: 'BALANCE_SHEET', cash_flow: 'CASH_FLOW', income_statement: 'INCOME_STATEMENT' };
                     const avFunc = avFuncMap[type];
                     const avUrl = `https://www.alphavantage.co/query?function=${avFunc}&symbol=${encodeURIComponent(symbol)}&apikey=${process.env.ALPHAVANTAGE_API_KEY}`;
-                    const avResponse = await fetch(avUrl);
+                    const avResponse = await fetchWithTimeout(avUrl);
                     const avData = await avResponse.json();
 
                     if (avData.annualReports && avData.annualReports.length > 0) {
@@ -517,7 +551,7 @@ router.get('/finnhub/news', async (req, res) => {
     }
 
     try {
-        const response = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${process.env.FINNHUB_API_KEY}`);
+        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/news?category=general&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
         
         if (Array.isArray(data)) {
@@ -540,7 +574,7 @@ router.get('/finnhub/recommendations', async (req, res) => {
     if (!symbol) return;
 
     try {
-        const response = await fetch(`https://finnhub.io/api/v1/stock/recommendation?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
+        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/recommendation?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
         res.json(data);
     } catch (error) {
@@ -561,9 +595,9 @@ router.post('/company-profile-ai', async (req, res) => {
     try {
         const finnhubToken = process.env.FINNHUB_API_KEY;
         const [profileRes, quoteRes, metricsRes] = await Promise.all([
-            fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`),
-            fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`),
-            fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${finnhubToken}`),
+            fetchWithTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`),
+            fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`),
+            fetchWithTimeout(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${finnhubToken}`),
         ]);
 
         const profile = await profileRes.json();
@@ -605,21 +639,21 @@ router.get('/finnhub/peers-detailed', async (req, res) => {
 
     try {
         const finnhubToken = process.env.FINNHUB_API_KEY;
-        const peersRes = await fetch(`https://finnhub.io/api/v1/stock/peers?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`);
+        const peersRes = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/peers?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`);
         const peerSymbols = await peersRes.json();
 
         if (!Array.isArray(peerSymbols) || peerSymbols.length === 0) {
             return res.json([]);
         }
 
-        const targetPeers = peerSymbols.filter(s => s !== symbol).slice(0, 4);
+        const targetPeers = peerSymbols.filter(s => s !== symbol).slice(0, 3);
 
         const peerData = await Promise.all(targetPeers.map(async (peer) => {
             try {
                 const [qRes, mRes, pRes] = await Promise.all([
-                    fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(peer)}&token=${finnhubToken}`),
-                    fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(peer)}&metric=all&token=${finnhubToken}`),
-                    fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(peer)}&token=${finnhubToken}`)
+                    fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(peer)}&token=${finnhubToken}`),
+                    fetchWithTimeout(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(peer)}&metric=all&token=${finnhubToken}`),
+                    fetchWithTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(peer)}&token=${finnhubToken}`)
                 ]);
                 const q = await qRes.json();
                 const m = await mRes.json();
@@ -641,6 +675,7 @@ router.get('/finnhub/peers-detailed', async (req, res) => {
 
         const result = peerData.filter(Boolean);
         PEERS_CACHE[cacheKey] = { lastFetched: now, data: result };
+        enforceCacheLimit(PEERS_CACHE);
         res.json(result);
     } catch (error) {
         console.error("Detailed peers fetch error:", error);
@@ -657,12 +692,12 @@ router.get('/fmp/movers', async (req, res) => {
         return res.json(MOVERS_CACHE.data);
     }
 
-    const fmpKey = process.env.FMP_API_KEY;
+    const fmpKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY;
 
     try {
         const [gainersRes, losersRes] = await Promise.all([
-            fetch(`https://financialmodelingprep.com/api/v3/stock_market/gainers?apikey=${fmpKey}`),
-            fetch(`https://financialmodelingprep.com/api/v3/stock_market/losers?apikey=${fmpKey}`)
+            fetchWithTimeout(`https://financialmodelingprep.com/api/v3/stock_market/gainers?apikey=${fmpKey}`),
+            fetchWithTimeout(`https://financialmodelingprep.com/api/v3/stock_market/losers?apikey=${fmpKey}`)
         ]);
 
         const gainersRaw = await gainersRes.json();
@@ -692,6 +727,7 @@ router.get('/fmp/movers', async (req, res) => {
     } catch (error) {
         console.warn("FMP Movers API call warning:", error.message);
         const fallback = {
+            _isFallback: true,
             gainers: [
                 { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 128.50, changesPercentage: 5.42, volume: 48200000 },
                 { symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.10, changesPercentage: 4.18, volume: 32600000 },
@@ -720,10 +756,10 @@ router.get('/fmp/sectors', async (req, res) => {
         return res.json(SECTOR_CACHE.data);
     }
 
-    const fmpKey = process.env.FMP_API_KEY;
+    const fmpKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY;
 
     try {
-        const response = await fetch(`https://financialmodelingprep.com/api/v3/sector-performance?apikey=${fmpKey}`);
+        const response = await fetchWithTimeout(`https://financialmodelingprep.com/api/v3/sector-performance?apikey=${fmpKey}`);
         const rawData = await response.json();
 
         if (Array.isArray(rawData) && rawData.length > 0) {
@@ -740,6 +776,7 @@ router.get('/fmp/sectors', async (req, res) => {
     } catch (error) {
         console.warn("FMP Sector API warning:", error.message);
         const fallback = {
+            _isFallback: true,
             sectors: [
                 { sector: 'Technology', changesPercentage: 1.84 },
                 { sector: 'Energy', changesPercentage: 1.45 },
@@ -755,6 +792,91 @@ router.get('/fmp/sectors', async (req, res) => {
             ]
         };
         return res.json(fallback);
+    }
+});
+
+const EARNINGS_CACHE = {};
+
+router.get('/finnhub/earnings', async (req, res) => {
+    const symbol = requireTicker(req, res);
+    if (!symbol) return;
+
+    const cacheKey = symbol.toUpperCase();
+    const now = Date.now();
+    if (EARNINGS_CACHE[cacheKey] && (now - EARNINGS_CACHE[cacheKey].lastFetched < 6 * 60 * 60 * 1000)) {
+        return res.json(EARNINGS_CACHE[cacheKey].data);
+    }
+
+    try {
+        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/earnings?symbol=${encodeURIComponent(symbol)}&limit=8&token=${process.env.FINNHUB_API_KEY}`);
+        const data = await response.json();
+        if (Array.isArray(data)) {
+            EARNINGS_CACHE[cacheKey] = { lastFetched: now, data };
+            enforceCacheLimit(EARNINGS_CACHE);
+        }
+        res.json(data);
+    } catch (error) {
+        console.error('Finnhub Earnings Error:', error);
+        res.status(500).json({ error: 'Failed to fetch earnings data' });
+    }
+});
+
+const DIVIDENDS_CACHE = {};
+
+router.get('/finnhub/dividends', async (req, res) => {
+    const symbol = requireTicker(req, res);
+    if (!symbol) return;
+
+    const cacheKey = symbol.toUpperCase();
+    const now = Date.now();
+    if (DIVIDENDS_CACHE[cacheKey] && (now - DIVIDENDS_CACHE[cacheKey].lastFetched < 12 * 60 * 60 * 1000)) {
+        return res.json(DIVIDENDS_CACHE[cacheKey].data);
+    }
+
+    try {
+        const toDate = new Date().toISOString().split('T')[0];
+        const fromDate = new Date();
+        fromDate.setFullYear(fromDate.getFullYear() - 5);
+        const fromDateStr = fromDate.toISOString().split('T')[0];
+        
+        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/dividend?symbol=${encodeURIComponent(symbol)}&from=${fromDateStr}&to=${toDate}&token=${process.env.FINNHUB_API_KEY}`);
+        const data = await response.json();
+        if (Array.isArray(data)) {
+            DIVIDENDS_CACHE[cacheKey] = { lastFetched: now, data };
+            enforceCacheLimit(DIVIDENDS_CACHE);
+        }
+        res.json(data);
+    } catch (error) {
+        console.error('Finnhub Dividends Error:', error);
+        res.status(500).json({ error: 'Failed to fetch dividend data' });
+    }
+});
+
+const INSIDER_CACHE = {};
+
+router.get('/finnhub/insider', async (req, res) => {
+    const symbol = requireTicker(req, res);
+    if (!symbol) return;
+
+    const cacheKey = symbol.toUpperCase();
+    const now = Date.now();
+    if (INSIDER_CACHE[cacheKey] && (now - INSIDER_CACHE[cacheKey].lastFetched < 6 * 60 * 60 * 1000)) {
+        return res.json(INSIDER_CACHE[cacheKey].data);
+    }
+
+    try {
+        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/insider-transactions?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
+        const data = await response.json();
+        if (data && Array.isArray(data.data)) {
+            INSIDER_CACHE[cacheKey] = { lastFetched: now, data: data.data.slice(0, 20) };
+            enforceCacheLimit(INSIDER_CACHE);
+            res.json(data.data.slice(0, 20));
+        } else {
+            res.json([]);
+        }
+    } catch (error) {
+        console.error('Finnhub Insider Error:', error);
+        res.status(500).json({ error: 'Failed to fetch insider transactions' });
     }
 });
 

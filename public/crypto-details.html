@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://unpkg.com/lightweight-charts@5/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
 
@@ -31,43 +31,43 @@
             </div>
             <nav class="nav-menu">
                 <a class="nav-item" href="index.html">
-                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i>
                     <span>Equity Analysis</span>
                 </a>
                 <a class="nav-item" href="calculators.html">
-                    <i class="fa-solid fa-calculator"></i>
+                    <i class="fa-solid fa-calculator" aria-hidden="true"></i>
                     <span>Financial Calculators</span>
                 </a>
                 <a class="nav-item" href="portfolio.html">
-                    <i class="fa-solid fa-pie-chart"></i>
+                    <i class="fa-solid fa-pie-chart" aria-hidden="true"></i>
                     <span>Mock Portfolio</span>
                 </a>
                 <a class="nav-item" href="ai.html">
-                    <i class="fa-solid fa-brain"></i>
+                    <i class="fa-solid fa-brain" aria-hidden="true"></i>
                     <span>AI Analyst</span>
                 </a>
                 <a class="nav-item active" href="crypto.html">
-                    <i class="fa-solid fa-coins"></i>
+                    <i class="fa-solid fa-coins" aria-hidden="true"></i>
                     <span>Crypto Analysis</span>
                 </a>
                 <a class="nav-item" href="commodities.html">
-                    <i class="fa-solid fa-wheat-awn"></i>
+                    <i class="fa-solid fa-wheat-awn" aria-hidden="true"></i>
                     <span>Commodities</span>
                 </a>
                 <a class="nav-item" href="macro.html">
-                    <i class="fa-solid fa-earth-americas"></i>
+                    <i class="fa-solid fa-earth-americas" aria-hidden="true"></i>
                     <span>Global Inflation</span>
                 </a>
                 <a class="nav-item" href="yields.html">
-                    <i class="fa-solid fa-landmark"></i>
+                    <i class="fa-solid fa-landmark" aria-hidden="true"></i>
                     <span>Fixed Income</span>
                 </a>
                 <a class="nav-item" href="forex.html">
-                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i>
                     <span>Currencies</span>
                 </a>
                 <a class="nav-item" href="stress.html">
-                    <i class="fa-solid fa-shield-halved"></i>
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
             </nav>
@@ -80,7 +80,7 @@
             <header class="top-header-bar">
                 <div class="top-brand-group">
                     <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
-                        <i class="fa-solid fa-bars"></i>
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
                     </button>
                     <a href="index.html" class="top-app-brand">
                         <div class="logo-brand-block">
@@ -106,7 +106,7 @@
 
                 <div class="search-wrapper">
                     <div class="search-bar-container">
-                        <i class="fa-solid fa-search search-icon"></i>
+                        <i class="fa-solid fa-search search-icon" aria-hidden="true"></i>
                         <input type="text" id="crypto-search-input" aria-label="Search Cryptocurrencies" placeholder="Enter coin name or symbol (e.g. BTC, Ethereum, Solana)..." autocomplete="off">
                         <button id="crypto-search-btn" class="primary-btn">Search Crypto</button>
                     </div>
@@ -187,7 +187,7 @@
                     <div class="crypto-ath-atl-grid">
                         <div class="crypto-distance-card ath">
                             <div class="distance-header">
-                                <span class="distance-label"><i class="fa-solid fa-arrow-trend-up"></i> All-Time High</span>
+                                <span class="distance-label"><i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i> All-Time High</span>
                                 <span id="crypto-ath-price" class="distance-price">--</span>
                             </div>
                             <div class="distance-meta">
@@ -200,7 +200,7 @@
                         </div>
                         <div class="crypto-distance-card atl">
                             <div class="distance-header">
-                                <span class="distance-label"><i class="fa-solid fa-arrow-trend-down"></i> All-Time Low</span>
+                                <span class="distance-label"><i class="fa-solid fa-arrow-trend-down" aria-hidden="true"></i> All-Time Low</span>
                                 <span id="crypto-atl-price" class="distance-price">--</span>
                             </div>
                             <div class="distance-meta">
@@ -216,7 +216,7 @@
                     <!-- Section 5: Supply Breakdown Card -->
                     <div class="crypto-supply-card">
                         <div class="card-section-header">
-                            <i class="fa-solid fa-layer-group"></i>
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
                             <h3>Supply Breakdown</h3>
                         </div>
                         <div class="supply-visual">
@@ -244,7 +244,7 @@
                     <!-- Section 6: Community Sentiment Bar -->
                     <div class="crypto-sentiment-card">
                         <div class="card-section-header">
-                            <i class="fa-solid fa-users"></i>
+                            <i class="fa-solid fa-users" aria-hidden="true"></i>
                             <h3>Community Sentiment</h3>
                         </div>
                         <div class="sentiment-visual">
@@ -299,10 +299,10 @@
                             <div class="chart-controls-row">
                                 <div class="chart-mode-toggle" id="crypto-chart-mode-toggle">
                                     <button class="chart-mode-btn active" data-mode="price" title="Price Chart">
-                                        <i class="fa-solid fa-dollar-sign"></i>
+                                        <i class="fa-solid fa-dollar-sign" aria-hidden="true"></i>
                                     </button>
                                     <button class="chart-mode-btn" data-mode="mcap" title="Market Cap Chart">
-                                        <i class="fa-solid fa-chart-pie"></i>
+                                        <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
                                     </button>
                                 </div>
                                 <div class="chart-timeframe-selectors">
@@ -311,10 +311,20 @@
                                     <button class="tf-btn" data-tf="90">90D</button>
                                     <button class="tf-btn active" data-tf="365">1Y</button>
                                 </div>
+                                <div class="indicator-dropdown">
+                                    <button class="indicator-btn" id="crypto-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
+                                    <div class="indicator-menu" id="crypto-indicator-menu">
+                                        <label><input type="checkbox" value="sma"> SMA (20)</label>
+                                        <label><input type="checkbox" value="ema"> EMA (20)</label>
+                                        <label><input type="checkbox" value="bb"> Bollinger Bands</label>
+                                        <label><input type="checkbox" value="rsi"> RSI (14)</label>
+                                        <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="chart-wrapper-box">
-                            <canvas id="cryptoHistoricalChart"></canvas>
+                            <div id="cryptoHistoricalChart"></div>
                         </div>
                     </div>
 
@@ -381,10 +391,10 @@
                     <!-- Section 11: About Section -->
                     <div class="crypto-about-card">
                         <div class="card-section-header">
-                            <i class="fa-solid fa-circle-info"></i>
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                             <h3>About</h3>
                             <button id="crypto-about-toggle" class="about-toggle-btn" aria-label="Toggle description text">
-                                <i class="fa-solid fa-chevron-down"></i>
+                                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
                             </button>
                         </div>
                         <div id="crypto-about-text" class="crypto-about-content collapsed">No description available.</div>
@@ -399,7 +409,7 @@
                     <!-- Section 12: Converter Widget -->
                     <div class="crypto-converter-card">
                         <div class="card-section-header">
-                            <i class="fa-solid fa-right-left"></i>
+                            <i class="fa-solid fa-right-left" aria-hidden="true"></i>
                             <h3>Converter</h3>
                         </div>
                         <div class="converter-row">
@@ -407,7 +417,7 @@
                                 <label for="crypto-converter-usd">USD</label>
                                 <input type="number" id="crypto-converter-usd" value="1000" min="0" step="any">
                             </div>
-                            <span class="converter-equals"><i class="fa-solid fa-arrows-left-right"></i></span>
+                            <span class="converter-equals"><i class="fa-solid fa-arrows-left-right" aria-hidden="true"></i></span>
                             <div class="converter-field">
                                 <label id="crypto-converter-symbol" for="crypto-converter-coin">COIN</label>
                                 <input type="number" id="crypto-converter-coin" value="0" min="0" step="any">

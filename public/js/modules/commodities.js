@@ -1,7 +1,10 @@
 import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast } from '../utils.js';
+import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let commoditiesData = [];
 let commodityChartInstance = null;
+window.commodityIndicatorManager = null;
+window.currentCommodityChartData = [];
 let activeCommodity = null;
 let activeTimeframe = '1Y';
 let activeSector = 'all';
@@ -44,6 +47,7 @@ export function initCommoditiesDashboard() {
     
     if (isDetailsPage) {
         setupDetailsUIListeners();
+        setupIndicatorsUI('commodity', () => window.currentCommodityChartData || [], () => window.commodityIndicatorManager);
         
         const params = new URLSearchParams(window.location.search);
         const symbol = params.get('symbol');
@@ -430,80 +434,179 @@ function updateAnalytics(chartData, currentPrice, unit) {
 }
 
 function renderCommodityChart(chartData, name, isPositive) {
-    const ctx = document.getElementById('commodity-chart');
-    if (!ctx) return;
+    const container = document.getElementById('commodity-chart');
+    if (!container) return;
 
+    // Clean up previous chart instance
     if (commodityChartInstance) {
-        commodityChartInstance.destroy();
+        if (commodityChartInstance._resizeObserver) {
+            commodityChartInstance._resizeObserver.disconnect();
+        }
+        commodityChartInstance.remove();
+        commodityChartInstance = null;
     }
+    container.innerHTML = '';
 
-    const labels = chartData.map((d) => {
-        const date = new Date(d.time * 1000);
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    });
-    const dataPoints = chartData.map((d) => d.close);
+    const dataPoints = chartData.map(d => d.close);
+    const accentColor = isPositive ? '#10b981' : '#ef4444';
 
-    const lineColor = isPositive ? '#10b981' : '#ef4444';
-    const gradientStart = isPositive ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)';
-    const gradientEnd = isPositive ? 'rgba(16, 185, 129, 0)' : 'rgba(239, 68, 68, 0)';
-
-    const chartCtx = ctx.getContext('2d');
-    const gradient = chartCtx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, gradientStart);
-    gradient.addColorStop(1, gradientEnd);
-
-    commodityChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: `${name} Price`,
-                data: dataPoints,
-                borderColor: lineColor,
-                backgroundColor: gradient,
-                borderWidth: 2,
-                pointRadius: 0,
-                pointHoverRadius: 5,
-                pointHoverBackgroundColor: lineColor,
-                fill: true,
-                tension: 0.15,
-            }],
+    // Create chart
+    const chart = LightweightCharts.createChart(container, {
+        layout: {
+            background: { type: 'solid', color: '#131722' },
+            textColor: '#d1d4dc',
+            fontFamily: "'JetBrains Mono', 'Inter', monospace",
+            fontSize: 11,
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#0d1326',
-                    titleColor: '#94a3b8',
-                    bodyColor: '#f8fafc',
-                    borderColor: '#1e2d54',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: false,
-                    callbacks: {
-                        title: (items) => items[0]?.label || '',
-                        label: (context) => formatCommodityPrice(context.parsed.y),
-                    },
-                },
+        grid: {
+            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+        },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+            vertLine: {
+                color: 'rgba(6, 182, 212, 0.4)',
+                width: 1,
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#2563eb',
             },
-            scales: {
-                x: {
-                    grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-                    ticks: { color: '#64748b', maxTicksLimit: 8, font: { size: 11 } },
-                },
-                y: {
-                    position: 'right',
-                    grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-                    ticks: {
-                        color: '#64748b',
-                        font: { family: 'JetBrains Mono, monospace', size: 11 },
-                        callback: (value) => formatCommodityPrice(value),
-                    },
-                },
+            horzLine: {
+                color: 'rgba(6, 182, 212, 0.4)',
+                width: 1,
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#2563eb',
             },
         },
+        rightPriceScale: {
+            borderColor: 'rgba(197, 203, 206, 0.15)',
+            scaleMargins: { top: 0.1, bottom: 0.1 },
+        },
+        timeScale: {
+            borderColor: 'rgba(197, 203, 206, 0.15)',
+            timeVisible: false,
+            fixLeftEdge: true,
+            fixRightEdge: true,
+        },
+        handleScroll: { vertTouchDrag: false },
     });
+
+    // Area series for commodity price
+    const mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+        topColor: isPositive ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+        bottomColor: isPositive ? 'rgba(16, 185, 129, 0.02)' : 'rgba(239, 68, 68, 0.02)',
+        lineColor: accentColor,
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 5,
+        crosshairMarkerBorderColor: '#ffffff',
+        crosshairMarkerBorderWidth: 2,
+        crosshairMarkerBackgroundColor: accentColor,
+        priceFormat: {
+            type: 'custom',
+            formatter: (val) => formatCommodityPrice(val),
+        },
+    });
+
+    // Convert unix timestamps to YYYY-MM-DD for lightweight-charts
+    const lineData = chartData.map(d => {
+        const dt = new Date(d.time * 1000);
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth() + 1).padStart(2, '0');
+        const dd = String(dt.getDate()).padStart(2, '0');
+        return { time: `${yyyy}-${mm}-${dd}`, value: d.close };
+    });
+
+    // Deduplicate by date
+    const uniqueData = [];
+    const seenDates = new Set();
+    for (const item of lineData) {
+        if (!seenDates.has(item.time)) {
+            seenDates.add(item.time);
+            uniqueData.push(item);
+        }
+    }
+    mainSeries.setData(uniqueData);
+
+    // Current price line
+    const lastPrice = dataPoints[dataPoints.length - 1];
+    mainSeries.createPriceLine({
+        price: lastPrice,
+        color: accentColor,
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: '',
+    });
+
+    // Floating tooltip
+    const toolTipEl = document.createElement('div');
+    toolTipEl.className = 'lw-chart-tooltip';
+    container.appendChild(toolTipEl);
+
+    chart.subscribeCrosshairMove(param => {
+        if (!param || !param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
+            toolTipEl.style.display = 'none';
+            return;
+        }
+
+        const priceData = param.seriesData.get(mainSeries);
+        if (!priceData) { toolTipEl.style.display = 'none'; return; }
+
+        const d = typeof param.time === 'string' ? new Date(param.time) : new Date(param.time * 1000);
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        let tooltipHtml = `
+            <div class="tt-date">${dateStr}</div>
+            <div class="tt-row"><span class="tt-label">${name}</span><span class="tt-val">${formatCommodityPrice(priceData.value)}</span></div>
+        `;
+
+        if (window.commodityIndicatorManager) {
+            tooltipHtml += window.commodityIndicatorManager.getTooltipData(param);
+        }
+
+        toolTipEl.innerHTML = tooltipHtml;
+        toolTipEl.style.display = 'block';
+
+        const chartRect = container.getBoundingClientRect();
+        const tooltipWidth = 160;
+        const tooltipHeight = toolTipEl.offsetHeight || 60;
+        let left = param.point.x + 16;
+        let top = param.point.y - tooltipHeight / 2;
+
+        if (left + tooltipWidth > chartRect.width) left = param.point.x - tooltipWidth - 16;
+        if (top < 0) top = 4;
+        if (top + tooltipHeight > chartRect.height) top = chartRect.height - tooltipHeight - 4;
+
+        toolTipEl.style.left = left + 'px';
+        toolTipEl.style.top = top + 'px';
+    });
+
+    // Fit content
+    chart.timeScale().fitContent();
+
+    // Responsive resize
+    const resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) {
+                chart.applyOptions({ width, height });
+            }
+        }
+    });
+    resizeObserver.observe(container);
+
+    commodityChartInstance = chart;
+    commodityChartInstance._resizeObserver = resizeObserver;
+
+    window.currentCommodityChartData = uniqueData;
+    window.commodityIndicatorManager = new IndicatorManager(chart, mainSeries, null); // No volume series in commodities
+    const menu = document.getElementById('commodity-indicator-menu');
+    if (menu) {
+        menu.querySelectorAll('input').forEach(input => {
+            if (input.checked) {
+                window.commodityIndicatorManager.active[input.value] = false;
+                window.commodityIndicatorManager.toggle(input.value, uniqueData);
+            }
+        });
+    }
 }

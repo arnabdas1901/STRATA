@@ -31,43 +31,43 @@
             </div>
             <nav class="nav-menu">
                 <a class="nav-item" href="index.html">
-                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i>
                     <span>Equity Analysis</span>
                 </a>
                 <a class="nav-item" href="calculators.html">
-                    <i class="fa-solid fa-calculator"></i>
+                    <i class="fa-solid fa-calculator" aria-hidden="true"></i>
                     <span>Financial Calculators</span>
                 </a>
                 <a class="nav-item" href="portfolio.html">
-                    <i class="fa-solid fa-pie-chart"></i>
+                    <i class="fa-solid fa-pie-chart" aria-hidden="true"></i>
                     <span>Mock Portfolio</span>
                 </a>
                 <a class="nav-item" href="ai.html">
-                    <i class="fa-solid fa-brain"></i>
+                    <i class="fa-solid fa-brain" aria-hidden="true"></i>
                     <span>AI Analyst</span>
                 </a>
                 <a class="nav-item" href="crypto.html">
-                    <i class="fa-solid fa-coins"></i>
+                    <i class="fa-solid fa-coins" aria-hidden="true"></i>
                     <span>Crypto Analysis</span>
                 </a>
                 <a class="nav-item" href="commodities.html">
-                    <i class="fa-solid fa-wheat-awn"></i>
+                    <i class="fa-solid fa-wheat-awn" aria-hidden="true"></i>
                     <span>Commodities</span>
                 </a>
                 <a class="nav-item" href="macro.html">
-                    <i class="fa-solid fa-earth-americas"></i>
+                    <i class="fa-solid fa-earth-americas" aria-hidden="true"></i>
                     <span>Global Inflation</span>
                 </a>
                 <a class="nav-item" href="yields.html">
-                    <i class="fa-solid fa-landmark"></i>
+                    <i class="fa-solid fa-landmark" aria-hidden="true"></i>
                     <span>Fixed Income</span>
                 </a>
                 <a class="nav-item" href="forex.html">
-                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i>
                     <span>Currencies</span>
                 </a>
                 <a class="nav-item active" href="stress.html">
-                    <i class="fa-solid fa-shield-halved"></i>
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
             </nav>
@@ -80,7 +80,7 @@
             <header class="top-header-bar">
                 <div class="top-brand-group">
                     <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
-                        <i class="fa-solid fa-bars"></i>
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
                     </button>
                     <a href="index.html" class="top-app-brand">
                         <div class="logo-brand-block">
@@ -106,7 +106,7 @@
 
                 <div class="stress-input-grid">
                     <div class="stress-inputs-card">
-                        <h3><i class="fa-solid fa-sliders"></i> Portfolio Configuration</h3>
+                        <h3><i class="fa-solid fa-sliders" aria-hidden="true"></i> Portfolio Configuration</h3>
                         <div class="input-field-group">
                             <label for="stress-capital-input">Initial Capital ($)</label>
                             <input type="number" id="stress-capital-input" value="100000" min="1000" step="1000" placeholder="e.g., 100000">
@@ -124,15 +124,15 @@
                             </select>
                         </div>
                         <button id="stress-import-btn" class="secondary-btn fluid-btn" style="margin-top: 8px;">
-                            <i class="fa-solid fa-download"></i> Import from Portfolio Builder
+                            <i class="fa-solid fa-download" aria-hidden="true"></i> Import from Portfolio Builder
                         </button>
                         <button id="stress-to-portfolio-btn" class="secondary-btn fluid-btn" style="margin-top: 6px;">
-                            <i class="fa-solid fa-arrow-left"></i> Back to Portfolio Builder
+                            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to Portfolio Builder
                         </button>
                     </div>
 
                     <div class="stress-inputs-card">
-                        <h3><i class="fa-solid fa-flask-vial"></i> Simulation Parameters</h3>
+                        <h3><i class="fa-solid fa-flask-vial" aria-hidden="true"></i> Simulation Parameters</h3>
                         <div class="input-field-group">
                             <label for="stress-scenario-select">Stress Scenario</label>
                             <select id="stress-scenario-select">
@@ -164,10 +164,10 @@
                         </div>
                         <div class="stress-btn-row" style="display: flex; gap: 12px; margin-top: 8px;">
                             <button id="stress-run-btn" class="primary-btn" style="flex: 1; margin: 0;">
-                                <i class="fa-solid fa-bolt"></i> Execute Stress Test
+                                <i class="fa-solid fa-bolt" aria-hidden="true"></i> Execute Stress Test
                             </button>
                             <button id="stress-compare-btn" class="secondary-btn" style="flex: 1; margin: 0;">
-                                <i class="fa-solid fa-table-columns"></i> Compare Scenarios
+                                <i class="fa-solid fa-table-columns" aria-hidden="true"></i> Compare Scenarios
                             </button>
                         </div>
                     </div>
@@ -232,7 +232,7 @@
 
                     <!-- Scenario Comparison Matrix (Toggled dynamically) -->
                     <div id="stress-comparison-card" class="stress-section-card hidden-element">
-                        <h3><i class="fa-solid fa-table-columns"></i> Scenario Comparison Matrix</h3>
+                        <h3><i class="fa-solid fa-table-columns" aria-hidden="true"></i> Scenario Comparison Matrix</h3>
                         <p class="section-desc">Side-by-side performance of current allocation under all historical crisis scenarios.</p>
                         <div class="forex-data-table-container" style="margin-bottom: 24px;">
                             <table class="forex-data-table">
@@ -257,12 +257,12 @@
                     </div>
 
                     <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-layer-group"></i> Active Allocation Profile</h3>
+                        <h3><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Active Allocation Profile</h3>
                         <div id="stress-allocation-chips" class="stress-chips-row"></div>
                     </div>
 
                     <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Historical Scenario Impact</h3>
+                        <h3><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historical Scenario Impact</h3>
                         <p class="section-desc" id="stress-scenario-desc">Simulating portfolio performance under the selected crisis event.</p>
                         <div class="stress-scenario-grid">
                             <div class="chart-wrapper-box" style="height: 340px;">
@@ -274,7 +274,7 @@
                     </div>
 
                     <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-dice"></i> Monte Carlo Probability Distribution</h3>
+                        <h3><i class="fa-solid fa-dice" aria-hidden="true"></i> Monte Carlo Probability Distribution</h3>
                         <p class="section-desc">Simulated portfolio trajectories with correlated asset returns using Cholesky decomposition.</p>
                         <div class="chart-wrapper-box" style="height: 400px;">
                             <canvas id="stressMonteCarloChart"></canvas>
@@ -283,7 +283,7 @@
 
                     <!-- Tail Risk & Extreme Event Analysis -->
                     <div class="stress-section-card" id="stress-tail-risk-card">
-                        <h3><i class="fa-solid fa-triangle-exclamation"></i> Tail Risk & Extreme Event Analysis</h3>
+                        <h3><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Tail Risk & Extreme Event Analysis</h3>
                         <p class="section-desc">Detailed examination of the lower tail outcomes and worst case simulation paths.</p>
                         <div class="stress-scenario-grid" style="margin-bottom: 24px;">
                             <div class="chart-wrapper-box" style="height: 340px; flex: 1.3;">
@@ -308,7 +308,7 @@
                                 </div>
                             </div>
                         </div>
-                        <h4 style="margin-bottom: 12px; color: #f8fafc;"><i class="fa-solid fa-skull-crossbones"></i> Worst 5 Simulated Outcomes</h4>
+                        <h4 style="margin-bottom: 12px; color: #f8fafc;"><i class="fa-solid fa-skull-crossbones" aria-hidden="true"></i> Worst 5 Simulated Outcomes</h4>
                         <div class="forex-data-table-container">
                             <table class="forex-data-table">
                                 <thead>
@@ -329,7 +329,7 @@
 
                     <!-- Asset Correlation Matrix -->
                     <div class="stress-section-card" id="stress-correlation-card">
-                        <h3><i class="fa-solid fa-grip"></i> Asset Correlation Matrix</h3>
+                        <h3><i class="fa-solid fa-grip" aria-hidden="true"></i> Asset Correlation Matrix</h3>
                         <p class="section-desc">Correlation structure used in Cholesky decomposition for Monte Carlo path generation.</p>
                         <div class="forex-data-table-container" style="margin-bottom: 12px;">
                             <table class="forex-data-table" style="background: transparent;">
@@ -348,20 +348,20 @@
                     </div>
 
                     <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-gauge-high"></i> Quantitative Risk Metrics</h3>
+                        <h3><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> Quantitative Risk Metrics</h3>
                         <div id="stress-risk-metrics" class="metric-summary-grid">
                         </div>
                     </div>
 
                     <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-robot"></i> AI Risk Assessment</h3>
+                        <h3><i class="fa-solid fa-robot" aria-hidden="true"></i> AI Risk Assessment</h3>
                         <div id="stress-ai-commentary" class="stress-ai-output">
                             <span class="terminal-prompt">Risk assessment will appear after running a stress test.</span>
                         </div>
                     </div>
 
 
-                    <p class="projection-disclaimer"><i class="fa-solid fa-circle-info"></i> <strong>Disclaimer:</strong> Stress tests use historical drawdown data and Monte Carlo simulations based on trailing volatility estimates. Past performance does not guarantee future results. This is for educational purposes only—not investment advice.</p>
+                    <p class="projection-disclaimer"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> <strong>Disclaimer:</strong> Stress tests use historical drawdown data and Monte Carlo simulations based on trailing volatility estimates. Past performance does not guarantee future results. This is for educational purposes only—not investment advice.</p>
 
                 </div>
             </section>

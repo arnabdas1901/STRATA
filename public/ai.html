@@ -31,43 +31,43 @@
             </div>
             <nav class="nav-menu">
                 <a class="nav-item" href="index.html">
-                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i>
                     <span>Equity Analysis</span>
                 </a>
                 <a class="nav-item" href="calculators.html">
-                    <i class="fa-solid fa-calculator"></i>
+                    <i class="fa-solid fa-calculator" aria-hidden="true"></i>
                     <span>Financial Calculators</span>
                 </a>
                 <a class="nav-item" href="portfolio.html">
-                    <i class="fa-solid fa-pie-chart"></i>
+                    <i class="fa-solid fa-pie-chart" aria-hidden="true"></i>
                     <span>Mock Portfolio</span>
                 </a>
                 <a class="nav-item active" href="ai.html">
-                    <i class="fa-solid fa-brain"></i>
+                    <i class="fa-solid fa-brain" aria-hidden="true"></i>
                     <span>AI Analyst</span>
                 </a>
                 <a class="nav-item" href="crypto.html">
-                    <i class="fa-solid fa-coins"></i>
+                    <i class="fa-solid fa-coins" aria-hidden="true"></i>
                     <span>Crypto Analysis</span>
                 </a>
                 <a class="nav-item" href="commodities.html">
-                    <i class="fa-solid fa-wheat-awn"></i>
+                    <i class="fa-solid fa-wheat-awn" aria-hidden="true"></i>
                     <span>Commodities</span>
                 </a>
                 <a class="nav-item" href="macro.html">
-                    <i class="fa-solid fa-earth-americas"></i>
+                    <i class="fa-solid fa-earth-americas" aria-hidden="true"></i>
                     <span>Global Inflation</span>
                 </a>
                 <a class="nav-item" href="yields.html">
-                    <i class="fa-solid fa-landmark"></i>
+                    <i class="fa-solid fa-landmark" aria-hidden="true"></i>
                     <span>Fixed Income</span>
                 </a>
                 <a class="nav-item" href="forex.html">
-                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i>
                     <span>Currencies</span>
                 </a>
                 <a class="nav-item" href="stress.html">
-                    <i class="fa-solid fa-shield-halved"></i>
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
             </nav>
@@ -80,7 +80,7 @@
             <header class="top-header-bar">
                 <div class="top-brand-group">
                     <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
-                        <i class="fa-solid fa-bars"></i>
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
                     </button>
                     <a href="index.html" class="top-app-brand">
                         <div class="logo-brand-block">
@@ -127,14 +127,14 @@
                                 </optgroup>
                             </select>
                         </div>
-                        <button id="execute-ai-btn" class="primary-btn execution-btn"><i class="fa-solid fa-microchip"></i> Execute Deep Scan</button>
-                        <button id="run-all-frames-btn" class="secondary-btn run-all-btn" title="Run all 8 analytical frames sequentially"><i class="fa-solid fa-layer-group"></i> Run All Frames</button>
+                        <button id="execute-ai-btn" class="primary-btn execution-btn"><i class="fa-solid fa-microchip" aria-hidden="true"></i> Execute Deep Scan</button>
+                        <button id="run-all-frames-btn" class="secondary-btn run-all-btn" title="Run all 8 analytical frames sequentially"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Run All Frames</button>
                     </div>
                 </div>
 
                 <!-- Quick Ticker Strip -->
                 <div class="ai-quick-tickers" id="ai-quick-tickers">
-                    <span class="qt-label"><i class="fa-solid fa-bolt"></i> Quick:</span>
+                    <span class="qt-label"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Quick:</span>
                     <button class="qt-badge" data-ticker="AAPL">AAPL</button>
                     <button class="qt-badge" data-ticker="NVDA">NVDA</button>
                     <button class="qt-badge" data-ticker="MSFT">MSFT</button>
@@ -148,7 +148,7 @@
                 <!-- Data Context Panel (hidden until scan runs) -->
                 <div id="ai-data-context-card" class="ai-data-context-card hidden-element">
                     <div class="ai-context-header" id="ai-context-header-toggle">
-                        <div class="ai-context-title"><i class="fa-solid fa-database"></i> Market Data Context</div>
+                        <div class="ai-context-title"><i class="fa-solid fa-database" aria-hidden="true"></i> Market Data Context</div>
                         <i class="fa-solid fa-chevron-down ai-context-toggle" id="ai-context-chevron"></i>
                     </div>
                     <div class="ai-context-body" id="ai-context-body">
@@ -164,7 +164,7 @@
                         <div class="window-buttons"><span></span><span></span><span></span></div>
                         <div class="terminal-title">quant-engine-v4.0.1 // core_analysis_stream</div>
                         <div class="terminal-actions">
-                            <button class="terminal-copy-btn" id="ai-copy-btn" title="Copy analysis to clipboard"><i class="fa-regular fa-copy"></i> Copy</button>
+                            <button class="terminal-copy-btn" id="ai-copy-btn" title="Copy analysis to clipboard"><i class="fa-regular fa-copy" aria-hidden="true"></i> Copy</button>
                         </div>
                     </div>
                     <!-- Tab bar for multi-frame mode (hidden until Run All Frames used) -->
@@ -175,14 +175,14 @@
                     <!-- Follow-up Question Bar (hidden until analysis complete) -->
                     <div id="ai-followup-bar" class="ai-followup-bar hidden-element">
                         <input type="text" id="ai-followup-input" placeholder="Ask a follow-up question about this analysis…" autocomplete="off">
-                        <button id="ai-followup-btn" class="primary-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                        <button id="ai-followup-btn" class="primary-btn"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
                     </div>
                     <div class="ai-terminal-footer" id="ai-terminal-footer">
                         <span id="ai-word-count"></span>
                         <span id="ai-scan-timestamp"></span>
                     </div>
                     <div class="gemini-integration-notice">
-                        <i class="fa-solid fa-robot gemini-icon"></i>
+                        <i class="fa-solid fa-robot gemini-icon" aria-hidden="true"></i>
                         <span>Powered by Groq free tier (Llama 3.3 70B). ~1,000 AI scans/day, 30/min — your 2–3/day usage is well within limits. Educational only—not investment advice.</span>
                     </div>
                 </div>

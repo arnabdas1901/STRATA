@@ -122,7 +122,7 @@ export function formatLargeCurrency(value) {
     if (absNum >= 1e12) return `${sign}$${(absNum / 1e12).toFixed(2)}T`;
     if (absNum >= 1e9) return `${sign}$${(absNum / 1e9).toFixed(2)}B`;
     if (absNum >= 1e6) return `${sign}$${(absNum / 1e6).toFixed(2)}M`;
-    return `${sign}$${absNum.toLocaleString('en-US')}`;
+    return `${sign}$${absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function showToast(message) {

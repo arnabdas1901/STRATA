@@ -1,6 +1,8 @@
-import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, formatLargeCurrency, setupTabs } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, escapeHtml, formatLargeCurrency, setupTabs } from '../utils.js';
+import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let equityChartInstance = null;
+let equityIndicatorManager = null;
 let rawHistoricalData = [];
 let activeEquityTicker = null;
 let rawNewsArticles = []; // Global store for loaded news articles
@@ -16,6 +18,7 @@ export function loadDashboard() {
             setupSearch();
             setupTimeframeSelectors();
             setupChartModeToggle();
+            setupIndicatorsUI('equity', () => rawHistoricalData, () => equityIndicatorManager);
             
             const params = new URLSearchParams(window.location.search);
             const symbol = params.get('symbol');
@@ -52,7 +55,13 @@ function setupSearch() {
     const searchBtn = document.getElementById('equity-search-btn');
     const searchInput = document.getElementById('equity-search-input');
 
+    let lastSearchTime = 0;
+
     const handleSearch = () => {
+        const now = Date.now();
+        if (now - lastSearchTime < 500) return;
+        lastSearchTime = now;
+
         if (!searchInput) return;
         const ticker = searchInput.value.trim().toUpperCase();
         if (ticker) {
@@ -178,6 +187,13 @@ async function executeEquityAnalysis(ticker) {
             // Hydrate background components
             updateUI(profile, quote, metrics, balanceSheet, cashFlow, incomeStatement, recommendations, peersDetailed);
         });
+
+        // Stage 3: Extended data (Earnings, Dividends, Insider) — deferred to avoid rate limits
+        setTimeout(() => {
+            fetchAndRenderEarnings(ticker);
+            fetchAndRenderDividends(ticker);
+            fetchAndRenderInsider(ticker);
+        }, 2000);
 
     } catch (error) {
         console.error("Market Data Fetch Error:", error);
@@ -590,12 +606,12 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
     if (incomeTable) {
         const incData = income?.income_statement?.[0] || {};
         incomeTable.innerHTML = `
-            <tr><td>Total Revenue</td><td class="num-col font-mono">${formatLargeCurrency(incData.total_revenue || incData.totalRevenue || 0)}</td></tr>
-            <tr><td>Cost of Revenue</td><td class="num-col font-mono">${formatLargeCurrency(incData.cost_of_revenue || incData.costOfRevenue || 0)}</td></tr>
-            <tr><td>Gross Profit</td><td class="num-col font-mono">${formatLargeCurrency(incData.gross_profit || incData.grossProfit || 0)}</td></tr>
-            <tr><td>Operating Income</td><td class="num-col font-mono">${formatLargeCurrency(incData.operating_income || incData.operatingIncome || 0)}</td></tr>
-            <tr><td>EBITDA</td><td class="num-col font-mono">${formatLargeCurrency(incData.ebitda || 0)}</td></tr>
-            <tr><td>Net Income</td><td class="num-col font-mono">${formatLargeCurrency(incData.net_income || incData.netIncome || 0)}</td></tr>
+            <tr><td>Total Revenue</td><td class="num-col font-mono">${formatLargeCurrency(incData.total_revenue ?? incData.totalRevenue ?? null)}</td></tr>
+            <tr><td>Cost of Revenue</td><td class="num-col font-mono">${formatLargeCurrency(incData.cost_of_revenue ?? incData.costOfRevenue ?? null)}</td></tr>
+            <tr><td>Gross Profit</td><td class="num-col font-mono">${formatLargeCurrency(incData.gross_profit ?? incData.grossProfit ?? null)}</td></tr>
+            <tr><td>Operating Income</td><td class="num-col font-mono">${formatLargeCurrency(incData.operating_income ?? incData.operatingIncome ?? null)}</td></tr>
+            <tr><td>EBITDA</td><td class="num-col font-mono">${formatLargeCurrency(incData.ebitda ?? null)}</td></tr>
+            <tr><td>Net Income</td><td class="num-col font-mono">${formatLargeCurrency(incData.net_income ?? incData.netIncome ?? null)}</td></tr>
             <tr><td>EPS (Diluted)</td><td class="num-col font-mono">${incData.eps_diluted ? '$' + parseFloat(incData.eps_diluted).toFixed(2) : '--'}</td></tr>
         `;
     }
@@ -605,13 +621,13 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
     if (bsTable) {
         const bsData = bs?.balance_sheet?.[0] || {};
         bsTable.innerHTML = `
-            <tr><td>Cash & Equivalents</td><td class="num-col font-mono">${formatLargeCurrency(bsData.cash_and_equivalents || bsData.cashAndEquivalents || 0)}</td></tr>
-            <tr><td>Total Current Assets</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_current_assets || bsData.totalCurrentAssets || 0)}</td></tr>
-            <tr><td>Total Assets</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_assets || bsData.totalAssets || 0)}</td></tr>
-            <tr><td>Short-term Debt</td><td class="num-col font-mono">${formatLargeCurrency(bsData.short_term_debt || bsData.shortTermDebt || 0)}</td></tr>
-            <tr><td>Long-term Debt</td><td class="num-col font-mono">${formatLargeCurrency(bsData.long_term_debt || bsData.longTermDebt || 0)}</td></tr>
-            <tr><td>Total Liabilities</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_liabilities || bsData.totalLiabilities || 0)}</td></tr>
-            <tr><td>Total Shareholders' Equity</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_shareholders_equity || bsData.totalEquity || bsData.totalShareholdersEquity || 0)}</td></tr>
+            <tr><td>Cash & Equivalents</td><td class="num-col font-mono">${formatLargeCurrency(bsData.cash_and_equivalents ?? bsData.cashAndEquivalents ?? null)}</td></tr>
+            <tr><td>Total Current Assets</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_current_assets ?? bsData.totalCurrentAssets ?? null)}</td></tr>
+            <tr><td>Total Assets</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_assets ?? bsData.totalAssets ?? null)}</td></tr>
+            <tr><td>Short-term Debt</td><td class="num-col font-mono">${formatLargeCurrency(bsData.short_term_debt ?? bsData.shortTermDebt ?? null)}</td></tr>
+            <tr><td>Long-term Debt</td><td class="num-col font-mono">${formatLargeCurrency(bsData.long_term_debt ?? bsData.longTermDebt ?? null)}</td></tr>
+            <tr><td>Total Liabilities</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_liabilities ?? bsData.totalLiabilities ?? null)}</td></tr>
+            <tr><td>Total Shareholders' Equity</td><td class="num-col font-mono">${formatLargeCurrency(bsData.total_shareholders_equity ?? bsData.totalEquity ?? bsData.totalShareholdersEquity ?? null)}</td></tr>
         `;
     }
 
@@ -619,16 +635,16 @@ function updateUI(profile, quote, metrics, bs, cf, income, recommendations, peer
     const cfTable = document.getElementById('cashflow-table-body');
     if (cfTable) {
         const cfData = cf?.cash_flow?.[0] || {};
-        const ocf = cfData.operating_cash_flow || cfData.operatingCashFlow || 0;
-        const capex = cfData.capital_expenditures || cfData.capitalExpenditures || cfData.capitalExpenditure || 0;
-        const fcf = ocf - capex;
+        const ocf = cfData.operating_cash_flow ?? cfData.operatingCashFlow ?? null;
+        const capex = cfData.capital_expenditures ?? cfData.capitalExpenditures ?? cfData.capitalExpenditure ?? null;
+        const fcf = (ocf != null && capex != null) ? ocf - capex : null;
         cfTable.innerHTML = `
             <tr><td>Operating Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(ocf)}</td></tr>
             <tr><td>Capital Expenditures</td><td class="num-col font-mono">${formatLargeCurrency(capex)}</td></tr>
             <tr><td>Free Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(fcf)}</td></tr>
-            <tr><td>Investing Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(cfData.investing_cash_flow || cfData.investingCashFlow || 0)}</td></tr>
-            <tr><td>Financing Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(cfData.financing_cash_flow || cfData.financingCashFlow || 0)}</td></tr>
-            <tr><td>Net Change in Cash</td><td class="num-col font-mono">${formatLargeCurrency(cfData.net_change_in_cash || cfData.netChangeInCash || 0)}</td></tr>
+            <tr><td>Investing Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(cfData.investing_cash_flow ?? cfData.investingCashFlow ?? null)}</td></tr>
+            <tr><td>Financing Cash Flow</td><td class="num-col font-mono">${formatLargeCurrency(cfData.financing_cash_flow ?? cfData.financingCashFlow ?? null)}</td></tr>
+            <tr><td>Net Change in Cash</td><td class="num-col font-mono">${formatLargeCurrency(cfData.net_change_in_cash ?? cfData.netChangeInCash ?? null)}</td></tr>
         `;
     }
 }
@@ -647,262 +663,229 @@ function animateCardReveals() {
 }
 
 function renderEquityChart(data) {
-    const canvas = document.getElementById('equityHistoricalChart');
-    if (!canvas || !data || data.length === 0) return;
+    const container = document.getElementById('equityHistoricalChart');
+    if (!container || !data || data.length === 0) return;
 
-    const ctx = canvas.getContext('2d');
+    // Clean up previous chart instance
+    if (equityChartInstance) {
+        if (equityChartInstance._resizeObserver) {
+            equityChartInstance._resizeObserver.disconnect();
+        }
+        equityChartInstance.remove();
+        equityChartInstance = null;
+    }
+    container.innerHTML = '';
+
+    const isCandlestick = chartMode === 'candlestick';
     const prices = data.map(v => parseFloat(v.close));
-    const volumes = data.map(v => parseFloat(v.volume || 0));
     const isPositive = prices[prices.length - 1] >= prices[0];
-    const color = isPositive ? '#10b981' : '#ef4444';
+    const accentColor = isPositive ? '#10b981' : '#ef4444';
 
-    // Volume colors: green if up day, red if down
-    const volumeColors = data.map((v, i) => {
-        if (i === 0) return 'rgba(16, 185, 129, 0.2)';
-        const prevClose = parseFloat(data[i - 1].close);
-        const currClose = parseFloat(v.close);
-        return currClose >= prevClose ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+    // Create chart
+    const chart = LightweightCharts.createChart(container, {
+        layout: {
+            background: { type: 'solid', color: '#131722' },
+            textColor: '#d1d4dc',
+            fontFamily: "'JetBrains Mono', 'Inter', monospace",
+            fontSize: 11,
+        },
+        grid: {
+            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+        },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+            vertLine: {
+                color: 'rgba(6, 182, 212, 0.4)',
+                width: 1,
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#2563eb',
+            },
+            horzLine: {
+                color: 'rgba(6, 182, 212, 0.4)',
+                width: 1,
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#2563eb',
+            },
+        },
+        rightPriceScale: {
+            borderColor: 'rgba(197, 203, 206, 0.15)',
+            scaleMargins: { top: 0.1, bottom: 0.25 },
+        },
+        timeScale: {
+            borderColor: 'rgba(197, 203, 206, 0.15)',
+            timeVisible: false,
+            fixLeftEdge: true,
+            fixRightEdge: true,
+        },
+        handleScroll: { vertTouchDrag: false },
     });
 
-    if (equityChartInstance) {
-        equityChartInstance.destroy();
+    // Main price series
+    let mainSeries;
+    if (isCandlestick) {
+        mainSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+            upColor: '#10b981',
+            downColor: '#ef4444',
+            borderUpColor: '#10b981',
+            borderDownColor: '#ef4444',
+            wickUpColor: 'rgba(16, 185, 129, 0.7)',
+            wickDownColor: 'rgba(239, 68, 68, 0.7)',
+        });
+        const candleData = data.map(v => ({
+            time: v.datetime,
+            open: parseFloat(v.open || v.close),
+            high: parseFloat(v.high || v.close),
+            low: parseFloat(v.low || v.close),
+            close: parseFloat(v.close),
+        }));
+        mainSeries.setData(candleData);
+    } else {
+        mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+            topColor: isPositive ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)',
+            bottomColor: isPositive ? 'rgba(16, 185, 129, 0.02)' : 'rgba(239, 68, 68, 0.02)',
+            lineColor: accentColor,
+            lineWidth: 2,
+            crosshairMarkerVisible: true,
+            crosshairMarkerRadius: 5,
+            crosshairMarkerBorderColor: '#ffffff',
+            crosshairMarkerBorderWidth: 2,
+            crosshairMarkerBackgroundColor: accentColor,
+        });
+        const lineData = data.map(v => ({
+            time: v.datetime,
+            value: parseFloat(v.close),
+        }));
+        mainSeries.setData(lineData);
     }
 
-    const isCandlestick = chartMode === 'candlestick' && typeof Chart.controllers?.candlestick !== 'undefined';
+    // Current price line
+    const lastPrice = prices[prices.length - 1];
+    mainSeries.createPriceLine({
+        price: lastPrice,
+        color: accentColor,
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: '',
+    });
 
-    if (isCandlestick) {
-        // ── CANDLESTICK MODE ──
-        const ohlcData = data.map(v => ({
-            x: new Date(v.datetime).getTime(),
-            o: parseFloat(v.open || v.close),
-            h: parseFloat(v.high || v.close),
-            l: parseFloat(v.low || v.close),
-            c: parseFloat(v.close)
-        }));
+    // Volume histogram series
+    const volumeData = data.map((v, i) => {
+        const currClose = parseFloat(v.close);
+        const prevClose = i > 0 ? parseFloat(data[i - 1].close) : currClose;
+        return {
+            time: v.datetime,
+            value: parseFloat(v.volume || 0),
+            color: currClose >= prevClose ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+        };
+    });
 
-        equityChartInstance = new Chart(ctx, {
-            type: 'candlestick',
-            data: {
-                datasets: [
-                    {
-                        label: 'OHLC',
-                        data: ohlcData,
-                        color: {
-                            up: 'rgba(16, 185, 129, 1)',
-                            down: 'rgba(239, 68, 68, 1)',
-                            unchanged: 'rgba(148, 163, 184, 0.8)'
-                        },
-                        borderColor: {
-                            up: 'rgba(16, 185, 129, 1)',
-                            down: 'rgba(239, 68, 68, 1)',
-                            unchanged: 'rgba(148, 163, 184, 0.8)'
-                        },
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Volume',
-                        data: data.map((v, i) => ({
-                            x: new Date(v.datetime).getTime(),
-                            y: parseFloat(v.volume || 0)
-                        })),
-                        type: 'bar',
-                        backgroundColor: volumeColors,
-                        borderColor: 'rgba(255,255,255,0.02)',
-                        borderWidth: 1,
-                        barPercentage: 0.6,
-                        categoryPercentage: 0.8,
-                        yAxisID: 'yVolume'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'index',
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(3, 7, 18, 0.97)',
-                        titleColor: 'rgba(255, 255, 255, 0.85)',
-                        bodyColor: '#ffffff',
-                        bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
-                        borderColor: 'rgba(37, 99, 235, 0.45)',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: false,
-                        callbacks: {
-                            title: function(items) {
-                                if (!items.length) return '';
-                                const d = new Date(items[0].parsed.x);
-                                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                            },
-                            label: function(context) {
-                                if (context.dataset.label === 'OHLC') {
-                                    const p = context.raw;
-                                    return [
-                                        `Open:  $${p.o.toFixed(2)}`,
-                                        `High:  $${p.h.toFixed(2)}`,
-                                        `Low:   $${p.l.toFixed(2)}`,
-                                        `Close: $${p.c.toFixed(2)}`
-                                    ];
-                                } else if (context.dataset.label === 'Volume') {
-                                    return `Volume: ${context.parsed.y.toLocaleString()}`;
-                                }
-                                return '';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        type: 'timeseries',
-                        time: {
-                            unit: 'day',
-                            displayFormats: { day: 'MMM dd' }
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.4)',
-                            maxTicksLimit: 8,
-                            source: 'auto'
-                        }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            font: { family: "'JetBrains Mono', monospace" },
-                            callback: (val) => `$${val.toFixed(2)}`
-                        }
-                    },
-                    yVolume: {
-                        type: 'linear',
-                        display: false,
-                        position: 'left',
-                        grid: { drawOnChartArea: false },
-                        min: 0,
-                        max: Math.max(...volumes) * 4
-                    }
-                },
-                animation: { duration: 800, easing: 'easeOutQuart' }
-            }
-        });
-    } else {
-        // ── LINE MODE (original) ──
-        const labels = data.map(v => {
-            const date = new Date(v.datetime);
-            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
-        });
+    const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'volume',
+    });
+    volumeSeries.priceScale().applyOptions({
+        scaleMargins: { top: 0.8, bottom: 0 },
+    });
+    volumeSeries.setData(volumeData);
 
-        const priceGradient = ctx.createLinearGradient(0, 0, 0, 320);
-        if (isPositive) {
-            priceGradient.addColorStop(0, 'rgba(16, 185, 129, 0.34)');
-            priceGradient.addColorStop(0.45, 'rgba(6, 182, 212, 0.16)');
-            priceGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-        } else {
-            priceGradient.addColorStop(0, 'rgba(239, 68, 68, 0.32)');
-            priceGradient.addColorStop(0.45, 'rgba(236, 72, 153, 0.14)');
-            priceGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+    // Floating OHLC tooltip (Zerodha-style)
+    const toolTipEl = document.createElement('div');
+    toolTipEl.className = 'lw-chart-tooltip';
+    container.appendChild(toolTipEl);
+
+    chart.subscribeCrosshairMove(param => {
+        if (!param || !param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
+            toolTipEl.style.display = 'none';
+            return;
         }
 
-        equityChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Close Price',
-                        data: prices,
-                        borderColor: color,
-                        backgroundColor: priceGradient,
-                        borderWidth: 2.5,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: color,
-                        pointBorderColor: '#f8fafc',
-                        pointBorderWidth: 1.5,
-                        fill: true,
-                        tension: 0.22,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Volume',
-                        data: volumes,
-                        type: 'bar',
-                        backgroundColor: volumeColors,
-                        hoverBackgroundColor: volumeColors.map(c => c.replace('0.3', '0.6').replace('0.2', '0.5')),
-                        borderColor: 'rgba(255,255,255,0.02)',
-                        borderWidth: 1,
-                        barPercentage: 0.72,
-                        categoryPercentage: 0.82,
-                        yAxisID: 'yVolume'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'index' },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(3, 7, 18, 0.97)',
-                        titleColor: 'rgba(255, 255, 255, 0.85)',
-                        bodyColor: '#ffffff',
-                        bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
-                        borderColor: 'rgba(37, 99, 235, 0.45)',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                const val = context.parsed.y;
-                                if (context.dataset.label === 'Close Price') {
-                                    return `Price: $${val.toFixed(2)}`;
-                                } else if (context.dataset.label === 'Volume') {
-                                    return `Volume: ${val.toLocaleString()}`;
-                                }
-                                return `${context.dataset.label}: ${val}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-                        ticks: { color: 'rgba(255, 255, 255, 0.4)', maxTicksLimit: 8 }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            font: { family: "'JetBrains Mono', monospace" },
-                            callback: (val) => `$${val.toFixed(2)}`
-                        }
-                    },
-                    yVolume: {
-                        type: 'linear',
-                        display: false,
-                        position: 'left',
-                        grid: { drawOnChartArea: false },
-                        min: 0,
-                        max: Math.max(...volumes) * 4
-                    }
-                },
-                animation: { duration: 1000, easing: 'easeOutQuart' }
+        const priceData = param.seriesData.get(mainSeries);
+        const volData = param.seriesData.get(volumeSeries);
+        if (!priceData) { toolTipEl.style.display = 'none'; return; }
+
+        let tooltipHtml = '';
+        const d = typeof param.time === 'string' ? new Date(param.time) : new Date(param.time * 1000);
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const volStr = volData ? volData.value.toLocaleString() : '—';
+
+        if (isCandlestick && priceData.open !== undefined) {
+            const chg = priceData.close - priceData.open;
+            const chgPct = ((chg / priceData.open) * 100).toFixed(2);
+            const chgClass = chg >= 0 ? 'tt-positive' : 'tt-negative';
+            tooltipHtml = `
+                <div class="tt-date">${dateStr}</div>
+                <div class="tt-row"><span class="tt-label">O</span><span class="tt-val">$${priceData.open.toFixed(2)}</span></div>
+                <div class="tt-row"><span class="tt-label">H</span><span class="tt-val">$${priceData.high.toFixed(2)}</span></div>
+                <div class="tt-row"><span class="tt-label">L</span><span class="tt-val">$${priceData.low.toFixed(2)}</span></div>
+                <div class="tt-row"><span class="tt-label">C</span><span class="tt-val ${chgClass}">$${priceData.close.toFixed(2)}</span></div>
+                <div class="tt-row"><span class="tt-label">Chg</span><span class="tt-val ${chgClass}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)} (${chg >= 0 ? '+' : ''}${chgPct}%)</span></div>
+                <div class="tt-row tt-vol"><span class="tt-label">Vol</span><span class="tt-val">${volStr}</span></div>
+            `;
+        } else {
+            const val = priceData.value !== undefined ? priceData.value : priceData.close;
+            tooltipHtml = `
+                <div class="tt-date">${dateStr}</div>
+                <div class="tt-row"><span class="tt-label">Price</span><span class="tt-val">$${val.toFixed(2)}</span></div>
+                <div class="tt-row tt-vol"><span class="tt-label">Vol</span><span class="tt-val">${volStr}</span></div>
+            `;
+        }
+
+        if (equityIndicatorManager) {
+            tooltipHtml += equityIndicatorManager.getTooltipData(param);
+        }
+
+        toolTipEl.innerHTML = tooltipHtml;
+        toolTipEl.style.display = 'block';
+
+        const chartRect = container.getBoundingClientRect();
+        const tooltipWidth = 160;
+        const tooltipHeight = toolTipEl.offsetHeight || 120;
+        let left = param.point.x + 16;
+        let top = param.point.y - tooltipHeight / 2;
+
+        if (left + tooltipWidth > chartRect.width) left = param.point.x - tooltipWidth - 16;
+        if (top < 0) top = 4;
+        if (top + tooltipHeight > chartRect.height) top = chartRect.height - tooltipHeight - 4;
+
+        toolTipEl.style.left = left + 'px';
+        toolTipEl.style.top = top + 'px';
+    });
+
+    // Fit content
+    chart.timeScale().fitContent();
+
+    // Responsive resize
+    const resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) {
+                chart.applyOptions({ width, height });
+            }
+        }
+    });
+    resizeObserver.observe(container);
+
+    equityChartInstance = chart;
+    // Store the observer so we can clean it up later
+    equityChartInstance._resizeObserver = resizeObserver;
+
+    // Initialize IndicatorManager
+    equityIndicatorManager = new IndicatorManager(chart, mainSeries, volumeSeries);
+    // Re-apply checked indicators if redrawing
+    const menu = document.getElementById('equity-indicator-menu');
+    if (menu) {
+        menu.querySelectorAll('input').forEach(input => {
+            if (input.checked) {
+                equityIndicatorManager.active[input.value] = false;
+                equityIndicatorManager.toggle(input.value, data);
             }
         });
     }
 }
+
+
 
 function setupChartModeToggle() {
     const toggle = document.getElementById('chart-mode-toggle');
@@ -1041,11 +1024,11 @@ function renderNewsGrid(newsItems) {
                 <div class="news-thumbnail" style="background-image: url('${imageUrl}')"></div>
                 <div class="news-content">
                     <div class="news-meta">
-                        <span class="news-source">${item.source}</span>
+                        <span class="news-source">${escapeHtml(item.source)}</span>
                         <span class="news-date">${date}</span>
                     </div>
-                    <h4 class="news-headline">${item.headline}</h4>
-                    <p class="news-summary">${item.summary ? item.summary.substring(0, 100) + '...' : ''}</p>
+                    <h4 class="news-headline">${escapeHtml(item.headline)}</h4>
+                    <p class="news-summary">${item.summary ? escapeHtml(item.summary.substring(0, 100)) + '...' : ''}</p>
                     ${tickerPills ? `<div class="news-ticker-pills">${tickerPills}</div>` : ''}
                 </div>
             </a>
@@ -1207,7 +1190,16 @@ async function fetchMarketMovers() {
         const response = await fetchWithTimeout(`${BACKEND_URL}/api/fmp/movers`);
         const data = await safeJsonParse(response);
 
-        if (!data) return;
+        if (!data) {
+            if (gainersTbody) gainersTbody.innerHTML = '<tr><td colspan="4" class="table-empty-state">Market movers unavailable</td></tr>';
+            if (losersTbody) losersTbody.innerHTML = '<tr><td colspan="4" class="table-empty-state">Market movers unavailable</td></tr>';
+            return;
+        }
+
+        if (data._isFallback) {
+            const badge = document.querySelector('.movers-fallback-badge');
+            if (badge) badge.style.display = 'inline-flex';
+        }
 
         const formatVol = (num) => {
             if (!num || isNaN(num)) return '--';
@@ -1455,5 +1447,131 @@ async function computeMarketSentiment(indexPayload, moversPayload, sectorPayload
         console.warn('Failed to compute market sentiment:', err);
         scoreEl.textContent = '--';
         labelEl.textContent = 'Unavailable';
+    }
+}
+
+// --- Earnings History ---
+async function fetchAndRenderEarnings(ticker) {
+    const tbody = document.getElementById('earnings-table-body');
+    if (!tbody) return;
+
+    try {
+        const response = await fetchWithTimeout(`${BACKEND_URL}/api/finnhub/earnings?symbol=${encodeURIComponent(ticker)}`);
+        const data = await safeJsonParse(response);
+
+        if (!Array.isArray(data) || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="table-empty-state">No earnings data available.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(e => {
+            const quarter = `${e.period || '--'}`;
+            const actual = e.actual != null ? `$${parseFloat(e.actual).toFixed(2)}` : '--';
+            const estimate = e.estimate != null ? `$${parseFloat(e.estimate).toFixed(2)}` : '--';
+            const surprise = e.surprisePercent != null ? parseFloat(e.surprisePercent).toFixed(2) + '%' : '--';
+            const surpriseClass = e.surprisePercent > 0 ? 'pos-change' : (e.surprisePercent < 0 ? 'neg-change' : '');
+            const icon = e.surprisePercent > 0 ? '▲' : (e.surprisePercent < 0 ? '▼' : '');
+            return `
+                <tr>
+                    <td class="font-mono">${escapeHtml(quarter)}</td>
+                    <td class="num-col font-mono">${actual}</td>
+                    <td class="num-col font-mono">${estimate}</td>
+                    <td class="num-col font-mono ${surpriseClass}">${icon} ${surprise}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        console.warn('Failed to load earnings:', err);
+        tbody.innerHTML = '<tr><td colspan="4" class="table-empty-state">Failed to load earnings data.</td></tr>';
+    }
+}
+
+// --- Dividend History ---
+async function fetchAndRenderDividends(ticker) {
+    const tbody = document.getElementById('dividends-table-body');
+    const summaryEl = document.getElementById('dividends-summary');
+    if (!tbody) return;
+
+    try {
+        const response = await fetchWithTimeout(`${BACKEND_URL}/api/finnhub/dividends?symbol=${encodeURIComponent(ticker)}`);
+        const data = await safeJsonParse(response);
+
+        if (!Array.isArray(data) || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="table-empty-state">No dividend history — this company may not pay dividends.</td></tr>';
+            if (summaryEl) summaryEl.innerHTML = '';
+            return;
+        }
+
+        // Summary card
+        if (summaryEl && data.length > 0) {
+            const latestDiv = data[0];
+            const annualTotal = data.filter(d => {
+                const yr = new Date(d.payDate || d.date).getFullYear();
+                return yr === new Date().getFullYear() || yr === new Date().getFullYear() - 1;
+            }).reduce((sum, d) => sum + (d.amount || 0), 0);
+            summaryEl.innerHTML = `
+                <div class="kpi-summary-bar" style="margin-bottom: 16px;">
+                    <div class="kpi-item"><span class="kpi-label">Latest Dividend</span><span class="kpi-value font-mono">$${parseFloat(latestDiv.amount || 0).toFixed(4)}</span></div>
+                    <div class="kpi-item"><span class="kpi-label">Annual Total</span><span class="kpi-value font-mono">$${annualTotal.toFixed(4)}</span></div>
+                    <div class="kpi-item"><span class="kpi-label">Frequency</span><span class="kpi-value font-mono">${data.length >= 16 ? 'Quarterly' : data.length >= 8 ? 'Semi-Annual' : 'Annual'}</span></div>
+                </div>
+            `;
+        }
+
+        tbody.innerHTML = data.slice(0, 20).map(d => {
+            const exDate = d.date ? new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--';
+            const payDate = d.payDate ? new Date(d.payDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--';
+            const amount = d.amount != null ? `$${parseFloat(d.amount).toFixed(4)}` : '--';
+            return `
+                <tr>
+                    <td class="font-mono">${exDate}</td>
+                    <td class="font-mono">${payDate}</td>
+                    <td class="num-col font-mono">${amount}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        console.warn('Failed to load dividends:', err);
+        tbody.innerHTML = '<tr><td colspan="3" class="table-empty-state">Failed to load dividend data.</td></tr>';
+    }
+}
+
+// --- Insider Transactions ---
+async function fetchAndRenderInsider(ticker) {
+    const tbody = document.getElementById('insider-table-body');
+    if (!tbody) return;
+
+    try {
+        const response = await fetchWithTimeout(`${BACKEND_URL}/api/finnhub/insider?symbol=${encodeURIComponent(ticker)}`);
+        const data = await safeJsonParse(response);
+
+        if (!Array.isArray(data) || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="table-empty-state">No insider transactions found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(t => {
+            const name = escapeHtml(t.name || 'Unknown');
+            const date = t.transactionDate ? new Date(t.transactionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--';
+            const type = (t.transactionType || t.transactionCode || '--');
+            const isBuy = type.toLowerCase().includes('buy') || type.toLowerCase().includes('purchase') || type === 'P';
+            const isSell = type.toLowerCase().includes('sell') || type.toLowerCase().includes('sale') || type === 'S';
+            const typeLabel = isBuy ? 'Buy' : (isSell ? 'Sell' : type);
+            const typeClass = isBuy ? 'pos-change' : (isSell ? 'neg-change' : '');
+            const shares = t.share != null ? Math.abs(t.share).toLocaleString() : '--';
+            const value = (t.share != null && t.transactionPrice != null) ? formatLargeCurrency(Math.abs(t.share * t.transactionPrice)) : '--';
+            return `
+                <tr>
+                    <td>${name}</td>
+                    <td class="font-mono">${date}</td>
+                    <td class="font-mono ${typeClass}"><strong>${escapeHtml(typeLabel)}</strong></td>
+                    <td class="num-col font-mono">${shares}</td>
+                    <td class="num-col font-mono">${value}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        console.warn('Failed to load insider transactions:', err);
+        tbody.innerHTML = '<tr><td colspan="5" class="table-empty-state">Failed to load insider data.</td></tr>';
     }
 }

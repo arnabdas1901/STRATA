@@ -46,11 +46,46 @@ function fmtPct(value) {
 function wireInflationSlider(sliderId, displayId) {
     const slider = document.getElementById(sliderId);
     const display = document.getElementById(displayId);
-    if (slider && display) {
-        slider.addEventListener('input', () => {
-            display.textContent = `${slider.value}%`;
-        });
-    }
+    if (!slider || !display) return;
+    slider.addEventListener('input', (e) => {
+        display.textContent = e.target.value + '%';
+        if (window.runCalc) window.runCalc();
+    });
+}
+
+function createDualInput(id, label, value, min, max, step, prefix = '', suffix = '') {
+    return `
+        <div class="dual-input-group">
+            <div class="dual-input-header">
+                <label>${label}</label>
+                <div class="input-wrapper">
+                    ${prefix ? `<span class="prefix">${prefix}</span>` : ''}
+                    <input type="number" id="${id}" value="${value}" min="${min}" max="${max}" step="${step}">
+                    ${suffix ? `<span class="suffix">${suffix}</span>` : ''}
+                </div>
+            </div>
+            <input type="range" class="custom-range-slider" id="${id}-slider" min="${min}" max="${max}" step="${step}" value="${value}">
+        </div>
+    `;
+}
+
+function syncDualInput(id) {
+    const input = document.getElementById(id);
+    const slider = document.getElementById(`${id}-slider`);
+    if (!input || !slider) return;
+
+    input.addEventListener('input', (e) => {
+        let val = parseFloat(e.target.value);
+        if (!isNaN(val)) {
+            slider.value = val;
+            if (window.runCalc) window.runCalc();
+        }
+    });
+
+    slider.addEventListener('input', (e) => {
+        input.value = e.target.value;
+        if (window.runCalc) window.runCalc();
+    });
 }
 
 // ─── Input Rendering ────────────────────────────────────────────────
@@ -61,26 +96,12 @@ function renderCalcInputs(type) {
 
     if (type === 'sip') {
         wrapper.innerHTML = `
-            <div class="input-field-group">
-                <label>Monthly Investment ($)</label>
-                <input type="number" id="calc-sip-amount" value="500" min="0" step="100">
-            </div>
-            <div class="input-field-group">
-                <label>Initial Lump Sum ($)</label>
-                <input type="number" id="calc-sip-lumpsum" value="0" min="0" step="500">
-            </div>
-            <div class="input-field-group">
-                <label>Expected Return Rate (Annual %)</label>
-                <input type="number" id="calc-sip-rate" value="12" min="0" max="100" step="0.5">
-            </div>
-            <div class="input-field-group">
-                <label>Annual Step-Up (%)</label>
-                <input type="number" id="calc-sip-stepup" value="10" min="0" max="100" step="1">
-            </div>
-            <div class="input-field-group">
-                <label>Time Period (Years)</label>
-                <input type="number" id="calc-sip-years" value="10" min="1" max="50" step="1">
-            </div>
+            ${createDualInput('calc-sip-amount', 'Monthly Investment', 500, 0, 50000, 100, '$')}
+            ${createDualInput('calc-sip-lumpsum', 'Initial Lump Sum', 0, 0, 500000, 1000, '$')}
+            ${createDualInput('calc-sip-rate', 'Expected Return Rate', 12, 0, 40, 0.5, '', '%')}
+            ${createDualInput('calc-sip-stepup', 'Annual Step-Up', 10, 0, 100, 1, '', '%')}
+            ${createDualInput('calc-sip-years', 'Time Period', 10, 1, 50, 1, '', 'Yrs')}
+            
             <div class="input-field-group inflation-input-group">
                 <label><i class="fa-solid fa-chart-line"></i> Inflation Rate (Annual %)</label>
                 <div class="range-input-row">
@@ -94,26 +115,21 @@ function renderCalcInputs(type) {
                     <i class="fa-solid fa-arrow-trend-up calc-def-icon sip-icon"></i>
                     <span class="calc-def-term">Systematic Investment Plan (SIP)</span>
                 </div>
-                <p class="calc-def-text">A Systematic Investment Plan is a structured investment strategy that enables investors to allocate a <strong>predetermined capital amount</strong> at fixed periodic intervals — typically monthly — into mutual funds, index funds, or other market-linked securities. By distributing investments across multiple market cycles, SIPs leverage <strong>dollar-cost averaging (DCA)</strong>, which mitigates the impact of short-term volatility by purchasing more units when prices are low and fewer when prices are high.</p>
-                <p class="calc-def-text" style="margin-top: 8px;">The projection model employs the <strong>future value of an annuity-due formula</strong>, compounding monthly contributions at the specified annual rate of return. Over extended horizons, the exponential nature of compound interest causes returns to substantially outpace the principal invested — a phenomenon often referred to as the <strong>"snowball effect"</strong> of wealth accumulation.</p>
-                <p class="calc-def-formula"><i class="fa-solid fa-lightbulb"></i> Key Insight: Starting early matters more than investing large amounts. A 10-year head start can outperform double the monthly contribution begun later.</p>
+                <p class="calc-def-text">A Systematic Investment Plan is a structured investment strategy that enables investors to allocate a <strong>predetermined capital amount</strong> at fixed periodic intervals...</p>
             </div>
         `;
+        syncDualInput('calc-sip-amount');
+        syncDualInput('calc-sip-lumpsum');
+        syncDualInput('calc-sip-rate');
+        syncDualInput('calc-sip-stepup');
+        syncDualInput('calc-sip-years');
         wireInflationSlider('calc-sip-inflation', 'calc-sip-inflation-val');
     } else if (type === 'emi') {
         wrapper.innerHTML = `
-            <div class="input-field-group">
-                <label>Loan Amount ($)</label>
-                <input type="number" id="calc-emi-amount" value="50000" min="0" step="1000">
-            </div>
-            <div class="input-field-group">
-                <label>Interest Rate (Annual %)</label>
-                <input type="number" id="calc-emi-rate" value="7.5" min="0" max="50" step="0.25">
-            </div>
-            <div class="input-field-group">
-                <label>Loan Tenure (Years)</label>
-                <input type="number" id="calc-emi-years" value="5" min="1" max="30" step="1">
-            </div>
+            ${createDualInput('calc-emi-amount', 'Loan Amount', 50000, 1000, 2000000, 1000, '$')}
+            ${createDualInput('calc-emi-rate', 'Interest Rate', 7.5, 0.1, 30, 0.1, '', '%')}
+            ${createDualInput('calc-emi-years', 'Loan Tenure', 5, 1, 40, 1, '', 'Yrs')}
+            
             <div class="input-field-group inflation-input-group">
                 <label><i class="fa-solid fa-chart-line"></i> Inflation Rate (Annual %)</label>
                 <div class="range-input-row">
@@ -127,30 +143,20 @@ function renderCalcInputs(type) {
                     <i class="fa-solid fa-building-columns calc-def-icon emi-icon"></i>
                     <span class="calc-def-term">Equated Monthly Installment (EMI)</span>
                 </div>
-                <p class="calc-def-text">An Equated Monthly Installment is a fixed repayment amount paid by a borrower to a lending institution on a specified date each calendar month. The EMI is computed using an <strong>amortization schedule</strong>, where each payment is composed of two components: <strong>interest on the outstanding principal</strong> (which decreases over time) and a <strong>principal repayment portion</strong> (which increases correspondingly). This structure ensures the debt is fully retired by the end of the loan tenure.</p>
-                <p class="calc-def-text" style="margin-top: 8px;">The calculator applies the <strong>standard reducing-balance amortization formula</strong>, which accounts for monthly compounding of the stated annual interest rate. The resulting EMI remains constant throughout the tenure, providing borrowers with predictable cash-flow obligations. The total interest paid — the true <strong>cost of borrowing</strong> — is the difference between the aggregate of all EMIs and the original principal amount.</p>
-                <p class="calc-def-formula"><i class="fa-solid fa-lightbulb"></i> Key Insight: Even a 0.5% reduction in interest rate or a shorter tenure can save thousands in total interest paid over the life of the loan.</p>
+                <p class="calc-def-text">An Equated Monthly Installment is a fixed repayment amount paid by a borrower to a lending institution on a specified date each calendar month...</p>
             </div>
         `;
+        syncDualInput('calc-emi-amount');
+        syncDualInput('calc-emi-rate');
+        syncDualInput('calc-emi-years');
         wireInflationSlider('calc-emi-inflation', 'calc-emi-inflation-val');
     } else if (type === 'swp') {
         wrapper.innerHTML = `
-            <div class="input-field-group">
-                <label>Total Investment ($)</label>
-                <input type="number" id="calc-swp-amount" value="100000" min="0" step="1000">
-            </div>
-            <div class="input-field-group">
-                <label>Withdrawal Per Month ($)</label>
-                <input type="number" id="calc-swp-withdraw" value="1000" min="0" step="100">
-            </div>
-            <div class="input-field-group">
-                <label>Expected Return Rate (Annual %)</label>
-                <input type="number" id="calc-swp-rate" value="8" min="0" max="50" step="0.5">
-            </div>
-            <div class="input-field-group">
-                <label>Time Period (Years)</label>
-                <input type="number" id="calc-swp-years" value="5" min="1" max="50" step="1">
-            </div>
+            ${createDualInput('calc-swp-amount', 'Total Investment', 100000, 1000, 5000000, 1000, '$')}
+            ${createDualInput('calc-swp-withdraw', 'Withdrawal Per Month', 1000, 100, 50000, 100, '$')}
+            ${createDualInput('calc-swp-rate', 'Expected Return Rate', 8, 0, 30, 0.5, '', '%')}
+            ${createDualInput('calc-swp-years', 'Time Period', 5, 1, 50, 1, '', 'Yrs')}
+            
             <div class="input-field-group inflation-input-group">
                 <label><i class="fa-solid fa-chart-line"></i> Inflation Rate (Annual %)</label>
                 <div class="range-input-row">
@@ -164,42 +170,24 @@ function renderCalcInputs(type) {
                     <i class="fa-solid fa-wallet calc-def-icon swp-icon"></i>
                     <span class="calc-def-term">Systematic Withdrawal Plan (SWP)</span>
                 </div>
-                <p class="calc-def-text">A Systematic Withdrawal Plan is a structured <strong>decumulation strategy</strong> that enables investors to withdraw a fixed amount from their invested corpus at regular intervals while the remaining balance continues to accrue returns at the prevailing rate. Functionally the <strong>inverse of a SIP</strong>, an SWP is a cornerstone of retirement income planning — converting a lump-sum portfolio into a predictable, pension-like cash-flow stream without requiring full liquidation of holdings.</p>
-                <p class="calc-def-text" style="margin-top: 8px;">The projection engine uses an <strong>iterative month-over-month simulation model</strong>: each period, the outstanding balance is compounded at the monthly equivalent of the annual return rate, after which the fixed withdrawal is deducted. The critical variable is the <strong>sustainable withdrawal rate</strong> — if monthly withdrawals exceed the portfolio's growth, the corpus will deplete before the planned horizon; if returns outpace withdrawals, the investor retains residual capital.</p>
-                <p class="calc-def-formula"><i class="fa-solid fa-lightbulb"></i> Key Insight: The widely cited "4% rule" suggests withdrawing 4% of your portfolio annually to sustain a 30-year retirement, though actual sustainability depends on market conditions.</p>
+                <p class="calc-def-text">A Systematic Withdrawal Plan is a structured <strong>decumulation strategy</strong> that enables investors to withdraw a fixed amount from their invested corpus at regular intervals...</p>
             </div>
         `;
+        syncDualInput('calc-swp-amount');
+        syncDualInput('calc-swp-withdraw');
+        syncDualInput('calc-swp-rate');
+        syncDualInput('calc-swp-years');
         wireInflationSlider('calc-swp-inflation', 'calc-swp-inflation-val');
     } else if (type === 'fire') {
         wrapper.innerHTML = `
-            <div class="input-field-group">
-                <label>Current Age (Years)</label>
-                <input type="number" id="calc-fire-current-age" value="30" min="1" max="80" step="1">
-            </div>
-            <div class="input-field-group">
-                <label>Target Retirement Age (Years)</label>
-                <input type="number" id="calc-fire-retire-age" value="50" min="2" max="80" step="1">
-            </div>
-            <div class="input-field-group">
-                <label>Current Savings / Corpus ($)</label>
-                <input type="number" id="calc-fire-corpus" value="50000" min="0" step="1000">
-            </div>
-            <div class="input-field-group">
-                <label>Monthly Savings Contribution ($)</label>
-                <input type="number" id="calc-fire-monthly" value="1000" min="0" step="100">
-            </div>
-            <div class="input-field-group">
-                <label>Annual Living Expenses Today ($)</label>
-                <input type="number" id="calc-fire-expenses" value="40000" min="0" step="1000">
-            </div>
-            <div class="input-field-group">
-                <label>Pre-Retirement Annual Return (%)</label>
-                <input type="number" id="calc-fire-pre-rate" value="10" min="0" max="40" step="0.5">
-            </div>
-            <div class="input-field-group">
-                <label>Post-Retirement Annual Return (%)</label>
-                <input type="number" id="calc-fire-post-rate" value="7" min="0" max="40" step="0.5">
-            </div>
+            ${createDualInput('calc-fire-current-age', 'Current Age', 30, 18, 80, 1, '', 'Yrs')}
+            ${createDualInput('calc-fire-retire-age', 'Target Retirement Age', 50, 20, 80, 1, '', 'Yrs')}
+            ${createDualInput('calc-fire-corpus', 'Current Savings / Corpus', 50000, 0, 2000000, 1000, '$')}
+            ${createDualInput('calc-fire-monthly', 'Monthly Savings Contribution', 1000, 0, 50000, 100, '$')}
+            ${createDualInput('calc-fire-expenses', 'Annual Living Expenses Today', 40000, 1000, 500000, 1000, '$')}
+            ${createDualInput('calc-fire-pre-rate', 'Pre-Retirement Annual Return', 10, 0, 30, 0.5, '', '%')}
+            ${createDualInput('calc-fire-post-rate', 'Post-Retirement Annual Return', 7, 0, 30, 0.5, '', '%')}
+            
             <div class="input-field-group inflation-input-group">
                 <label><i class="fa-solid fa-chart-line"></i> Inflation Rate (Annual %)</label>
                 <div class="range-input-row">
@@ -213,10 +201,16 @@ function renderCalcInputs(type) {
                     <i class="fa-solid fa-fire calc-def-icon fire-icon" style="color: #ff6b6b;"></i>
                     <span class="calc-def-term">Financial Independence Retire Early (FIRE)</span>
                 </div>
-                <p class="calc-def-text">The FIRE Planner is an advanced <strong>life-cycle capital mapping model</strong> that calculates the savings accumulation phase up to retirement, followed by a decumulation (withdrawal) phase. It helps plan the exact transition point where passive portfolio growth can sustain your inflation-adjusted living expenses indefinitely.</p>
-                <p class="calc-def-text" style="margin-top: 8px;">The accumulation curve grows exponentially based on pre-retirement rate assumption. Upon reaching retirement, the model projects annual expenses rising with inflation, and simulates month-by-month withdrawals compounded at post-retirement yields up to age 85.</p>
+                <p class="calc-def-text">The FIRE Planner is an advanced <strong>life-cycle capital mapping model</strong> that calculates the savings accumulation phase up to retirement, followed by a decumulation (withdrawal) phase...</p>
             </div>
         `;
+        syncDualInput('calc-fire-current-age');
+        syncDualInput('calc-fire-retire-age');
+        syncDualInput('calc-fire-corpus');
+        syncDualInput('calc-fire-monthly');
+        syncDualInput('calc-fire-expenses');
+        syncDualInput('calc-fire-pre-rate');
+        syncDualInput('calc-fire-post-rate');
         wireInflationSlider('calc-fire-inflation', 'calc-fire-inflation-val');
     }
     window.runCalc = calculateCurrent;
@@ -251,6 +245,7 @@ function calculateSIP() {
     const yearLabels = [];
     const yearInvestedCumulative = [];
     const yearGainsCumulative = [];
+    const tableRows = [];
 
     for (let y = 1; y <= years; y++) {
         for (let m = 0; m < 12; m++) {
@@ -264,10 +259,19 @@ function calculateSIP() {
         yearLabels.push(`Yr ${y}`);
         yearInvestedCumulative.push(Math.round(totalInvested));
         yearGainsCumulative.push(Math.max(0, Math.round(balance - totalInvested)));
+        
+        tableRows.push([
+            `Year ${y}`,
+            fmtCurrency(Math.round(totalInvested)),
+            fmtCurrency(Math.max(0, Math.round(balance - totalInvested))),
+            fmtCurrency(Math.round(balance))
+        ]);
 
         // Step up monthly contribution for the next year
         currentMonthly = currentMonthly * (1 + stepUpPct / 100);
     }
+    
+    renderDataTable(['Year', 'Invested Amount', 'Est. Returns', 'Total Value'], tableRows);
 
     const nominalFV = balance;
     const estReturns = nominalFV - totalInvested;
@@ -380,6 +384,7 @@ function calculateEMI() {
     const yearLabels = [];
     const yearPrincipalData = [];
     const yearInterestData = [];
+    const tableRows = [];
 
     for (let y = 1; y <= years; y++) {
         let yearPrincipalPaid = 0;
@@ -394,7 +399,16 @@ function calculateEMI() {
         yearLabels.push(`Yr ${y}`);
         yearPrincipalData.push(Math.round(Math.max(0, yearPrincipalPaid)));
         yearInterestData.push(Math.round(Math.max(0, yearInterestPaid)));
+        
+        tableRows.push([
+            `Year ${y}`,
+            fmtCurrency(Math.max(0, yearPrincipalPaid)),
+            fmtCurrency(Math.max(0, yearInterestPaid)),
+            fmtCurrency(Math.max(0, remainingPrincipal))
+        ]);
     }
+    
+    renderDataTable(['Year', 'Principal Paid', 'Interest Paid', 'Remaining Balance'], tableRows);
 
     // Interest-to-principal ratio
     const interestToPrincipal = P > 0 ? (totalInterest / P) * 100 : 0;
@@ -490,14 +504,22 @@ function calculateSWP() {
     let depleted = false;
     const yearLabels = [];
     const yearBalanceData = [];
+    const tableRows = [];
 
     for (let y = 1; y <= years; y++) {
+        let yearWithdrawn = 0;
+        let yearInterest = 0;
+        
         if (!depleted) {
             for (let m = 0; m < 12; m++) {
                 const interest = balance * monthlyRate;
                 totalReturnsEarned += interest;
+                yearInterest += interest;
+                
                 balance = balance + interest - W;
                 totalWithdrawn += W;
+                yearWithdrawn += W;
+                
                 if (balance <= 0) {
                     balance = 0;
                     depleted = true;
@@ -508,7 +530,16 @@ function calculateSWP() {
         }
         yearLabels.push(`Yr ${y}`);
         yearBalanceData.push(Math.round(Math.max(0, balance)));
+        
+        tableRows.push([
+            `Year ${y}`,
+            fmtCurrency(yearWithdrawn),
+            fmtCurrency(yearInterest),
+            fmtCurrency(balance)
+        ]);
     }
+
+    renderDataTable(['Year', 'Withdrawn', 'Returns Earned', 'Remaining Balance'], tableRows);
 
     const nominalBalance = balance;
     const inflationAdjustedBalance = nominalBalance / Math.pow(1 + inflationRate / 100, years);
@@ -738,14 +769,32 @@ function calculateFIRE() {
     corpusBalanceData.push(Math.round(balance));
     principalInvestedData.push(Math.round(totalSavingsInvested));
 
+    const tableRows = [];
+    tableRows.push([
+        `Age ${currentAge} (Start)`,
+        fmtCurrency(initialSavings),
+        '$0',
+        fmtCurrency(initialSavings)
+    ]);
+
     for (let y = 1; y <= yearsToRetire; y++) {
+        let yearSaved = 0;
+        let startBal = balance;
         for (let m = 0; m < 12; m++) {
             balance = (balance + monthlySavings) * (1 + preMonthlyRate);
             totalSavingsInvested += monthlySavings;
+            yearSaved += monthlySavings;
         }
         ageLabels.push(currentAge + y);
         corpusBalanceData.push(Math.round(balance));
         principalInvestedData.push(Math.round(totalSavingsInvested));
+        
+        tableRows.push([
+            `Age ${currentAge + y} (Accum.)`,
+            `+${fmtCurrency(yearSaved)} (In)`,
+            `+${fmtCurrency(Math.max(0, balance - startBal - yearSaved))} (Gain)`,
+            fmtCurrency(balance)
+        ]);
     }
 
     const corpusAtRetirement = balance;
@@ -766,11 +815,14 @@ function calculateFIRE() {
     for (let y = 1; y <= yearsInRetirement; y++) {
         const currentYearExpenses = currentExpenses;
         const monthlyWithdrawal = currentYearExpenses / 12;
+        let yearWithdrawn = 0;
+        let startBal = decumBalance;
         
         for (let m = 0; m < 12; m++) {
             if (decumBalance > 0) {
                 decumBalance = (decumBalance * (1 + postMonthlyRate)) - monthlyWithdrawal;
                 totalWithdrawn += monthlyWithdrawal;
+                yearWithdrawn += monthlyWithdrawal;
                 if (decumBalance < 0) {
                     decumBalance = 0;
                 }
@@ -785,11 +837,20 @@ function calculateFIRE() {
         corpusBalanceData.push(Math.round(decumBalance));
         principalInvestedData.push(Math.round(investedAtRetirement));
 
+        tableRows.push([
+            `Age ${retireAge + y} (Retire)`,
+            `-${fmtCurrency(yearWithdrawn)} (Out)`,
+            `+${fmtCurrency(Math.max(0, decumBalance - startBal + yearWithdrawn))} (Gain)`,
+            fmtCurrency(decumBalance)
+        ]);
+
         if (decumBalance <= 0 && !depleted) {
             depleted = true;
             depletionAge = retireAge + y;
         }
     }
+
+    renderDataTable(['Age', 'Cash Flow', 'Investment Gains', 'Net Worth'], tableRows);
 
     const fireProgress = fireNumber > 0 ? (corpusAtRetirement / fireNumber) * 100 : 0;
 
@@ -870,6 +931,56 @@ function calculateFIRE() {
             ],
             stacked: false
         }
+        }
     );
 }
 
+// ─── Data Table & Export ────────────────────────────────────────────
+
+function renderDataTable(headers, rows) {
+    const thead = document.getElementById('calc-table-head');
+    const tbody = document.getElementById('calc-table-body');
+    if (!thead || !tbody) return;
+
+    let headerHtml = '<tr>';
+    headers.forEach(h => {
+        headerHtml += `<th>${h}</th>`;
+    });
+    headerHtml += '</tr>';
+    thead.innerHTML = headerHtml;
+
+    let bodyHtml = '';
+    rows.forEach(row => {
+        bodyHtml += '<tr>';
+        row.forEach(cell => {
+            bodyHtml += `<td>${cell}</td>`;
+        });
+        bodyHtml += '</tr>';
+    });
+    tbody.innerHTML = bodyHtml;
+}
+
+window.exportCalcToPDF = function() {
+    const btn = document.querySelector('.export-pdf-btn');
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+    
+    const element = document.querySelector('.calculator-visualization-card');
+    
+    // Temporarily hide the button from the PDF output
+    const originalDisplay = btn ? btn.style.display : 'flex';
+    if (btn) btn.style.display = 'none';
+
+    html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: `STRATA_Projection_${activeCalcType.toUpperCase()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(element).save().then(() => {
+        if (btn) {
+            btn.style.display = originalDisplay;
+            btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Download Report';
+        }
+        showToast('PDF Report generated successfully');
+    });
+};

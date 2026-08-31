@@ -14,10 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js" defer></script>
+    <script src="https://unpkg.com/lightweight-charts@5/dist/lightweight-charts.standalone.production.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -35,43 +32,43 @@
             </div>
             <nav class="nav-menu">
                 <a class="nav-item active" href="index.html">
-                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i>
                     <span>Equity Analysis</span>
                 </a>
                 <a class="nav-item" href="calculators.html">
-                    <i class="fa-solid fa-calculator"></i>
+                    <i class="fa-solid fa-calculator" aria-hidden="true"></i>
                     <span>Financial Calculators</span>
                 </a>
                 <a class="nav-item" href="portfolio.html">
-                    <i class="fa-solid fa-pie-chart"></i>
+                    <i class="fa-solid fa-pie-chart" aria-hidden="true"></i>
                     <span>Mock Portfolio</span>
                 </a>
                 <a class="nav-item" href="ai.html">
-                    <i class="fa-solid fa-brain"></i>
+                    <i class="fa-solid fa-brain" aria-hidden="true"></i>
                     <span>AI Analyst</span>
                 </a>
                 <a class="nav-item" href="crypto.html">
-                    <i class="fa-solid fa-coins"></i>
+                    <i class="fa-solid fa-coins" aria-hidden="true"></i>
                     <span>Crypto Analysis</span>
                 </a>
                 <a class="nav-item" href="commodities.html">
-                    <i class="fa-solid fa-wheat-awn"></i>
+                    <i class="fa-solid fa-wheat-awn" aria-hidden="true"></i>
                     <span>Commodities</span>
                 </a>
                 <a class="nav-item" href="macro.html">
-                    <i class="fa-solid fa-earth-americas"></i>
+                    <i class="fa-solid fa-earth-americas" aria-hidden="true"></i>
                     <span>Global Inflation</span>
                 </a>
                 <a class="nav-item" href="yields.html">
-                    <i class="fa-solid fa-landmark"></i>
+                    <i class="fa-solid fa-landmark" aria-hidden="true"></i>
                     <span>Fixed Income</span>
                 </a>
                 <a class="nav-item" href="forex.html">
-                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i>
                     <span>Currencies</span>
                 </a>
                 <a class="nav-item" href="stress.html">
-                    <i class="fa-solid fa-shield-halved"></i>
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
             </nav>
@@ -84,7 +81,7 @@
             <header class="top-header-bar">
                 <div class="top-brand-group">
                     <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
-                        <i class="fa-solid fa-bars"></i>
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
                     </button>
                     <a href="index.html" class="top-app-brand">
                         <div class="logo-brand-block">
@@ -109,7 +106,7 @@
 
                 <div class="search-wrapper">
                     <div class="search-bar-container">
-                        <i class="fa-solid fa-search search-icon"></i>
+                        <i class="fa-solid fa-search search-icon" aria-hidden="true"></i>
                         <input type="text" id="equity-search-input" aria-label="Search US Ticker Symbol" placeholder="" autocomplete="off">
                         <button id="equity-search-btn" class="primary-btn">Analyze Asset</button>
                     </div>
@@ -134,9 +131,9 @@
                                     <div class="ticker-badges">
                                         <span id="company-ticker-badge" class="badge">AAPL</span>
                                         <span id="company-exchange-badge" class="badge secondary">NASDAQ</span>
-                                        <span id="company-industry-badge" class="badge industry-badge"><i class="fa-solid fa-industry"></i> <span id="industry-badge-text">Technology</span></span>
+                                        <span id="company-industry-badge" class="badge industry-badge"><i class="fa-solid fa-industry" aria-hidden="true"></i> <span id="industry-badge-text">Technology</span></span>
                                         <button id="equity-ai-btn" class="badge primary-btn" style="background-color: #7c3aed; border-color: #7c3aed; color: #ffffff; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;">
-                                            <i class="fa-solid fa-brain"></i> 🤖 Analyze with AI
+                                            <i class="fa-solid fa-brain" aria-hidden="true"></i> 🤖 Analyze with AI
                                         </button>
                                     </div>
                                 </div>
@@ -153,10 +150,10 @@
 
                     <!-- Company Info Bar -->
                     <div class="company-info-bar equity-reveal-card" id="company-info-bar" style="display:none;">
-                        <div class="info-bar-item" id="info-country"><i class="fa-solid fa-globe"></i> <span>--</span></div>
-                        <div class="info-bar-item" id="info-ipo"><i class="fa-solid fa-calendar-day"></i> IPO: <span>--</span></div>
-                        <div class="info-bar-item" id="info-shares"><i class="fa-solid fa-layer-group"></i> Shares: <span>--</span></div>
-                        <div class="info-bar-item" id="info-website"><i class="fa-solid fa-arrow-up-right-from-square"></i> <a href="#" target="_blank" rel="noopener noreferrer">Website</a></div>
+                        <div class="info-bar-item" id="info-country"><i class="fa-solid fa-globe" aria-hidden="true"></i> <span>--</span></div>
+                        <div class="info-bar-item" id="info-ipo"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i> IPO: <span>--</span></div>
+                        <div class="info-bar-item" id="info-shares"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Shares: <span>--</span></div>
+                        <div class="info-bar-item" id="info-website"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> <a href="#" target="_blank" rel="noopener noreferrer">Website</a></div>
                     </div>
 
                     <!-- Price Chart -->
@@ -166,10 +163,10 @@
                             <div class="chart-controls-row">
                                 <div class="chart-mode-toggle" id="chart-mode-toggle">
                                     <button class="chart-mode-btn active" data-mode="line" title="Line Chart">
-                                        <i class="fa-solid fa-chart-line"></i>
+                                        <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
                                     </button>
                                     <button class="chart-mode-btn" data-mode="candlestick" title="Candlestick Chart">
-                                        <i class="fa-solid fa-chart-column"></i>
+                                        <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
                                     </button>
                                 </div>
                                 <div class="chart-timeframe-selectors">
@@ -178,10 +175,20 @@
                                     <button class="tf-btn" data-tf="5Y">5Y</button>
                                     <button class="tf-btn" data-tf="MAX">MAX</button>
                                 </div>
+                                <div class="indicator-dropdown">
+                                    <button class="indicator-btn" id="equity-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
+                                    <div class="indicator-menu" id="equity-indicator-menu">
+                                        <label><input type="checkbox" value="sma"> SMA (20)</label>
+                                        <label><input type="checkbox" value="ema"> EMA (20)</label>
+                                        <label><input type="checkbox" value="bb"> Bollinger Bands</label>
+                                        <label><input type="checkbox" value="rsi"> RSI (14)</label>
+                                        <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="chart-wrapper-box">
-                            <canvas id="equityHistoricalChart"></canvas>
+                            <div id="equityHistoricalChart"></div>
                         </div>
                     </div>
 
@@ -245,14 +252,14 @@
                     <!-- Analyst Recommendations -->
                     <div class="equity-analyst-card equity-reveal-card" id="equity-analyst-card">
                         <div class="card-section-header">
-                            <i class="fa-solid fa-users-between-lines"></i>
+                            <i class="fa-solid fa-users-between-lines" aria-hidden="true"></i>
                             <h3>Analyst Consensus</h3>
                         </div>
                         <div id="analyst-reco-content" class="analyst-reco-content">
                             <p class="empty-notice">Loading analyst recommendations...</p>
                         </div>
                         <div id="analyst-trend-chart-wrap" class="analyst-trend-wrap" style="display:none;">
-                            <h4 class="analyst-trend-title"><i class="fa-solid fa-chart-bar"></i> Recommendation Trend (6 Months)</h4>
+                            <h4 class="analyst-trend-title"><i class="fa-solid fa-chart-bar" aria-hidden="true"></i> Recommendation Trend (6 Months)</h4>
                             <div class="analyst-trend-bars" id="analyst-trend-bars"></div>
                         </div>
                     </div>
@@ -260,7 +267,7 @@
                     <!-- Peer Comparison Card -->
                     <div class="equity-peers-card equity-reveal-card">
                         <div class="card-section-header">
-                            <i class="fa-solid fa-network-wired"></i>
+                            <i class="fa-solid fa-network-wired" aria-hidden="true"></i>
                             <h3>Sector Peer Comparison</h3>
                         </div>
                         <p class="section-desc">Comparison of key metrics against sector competitors.</p>
@@ -285,7 +292,7 @@
                     <!-- KPI Summary Bar (Key Statistics) -->
                     <div class="equity-kpi-container equity-reveal-card">
                         <div class="kpi-bar-header">
-                            <i class="fa-solid fa-chart-simple"></i>
+                            <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
                             <span>Key Statistics</span>
                         </div>
                         <div id="equity-kpi-bar" class="portfolio-kpi-bar">
@@ -334,6 +341,9 @@
                             <button class="panel-tab-btn" data-tab="tab-income">Income Statement</button>
                             <button class="panel-tab-btn" data-tab="tab-balance">Balance Sheet</button>
                             <button class="panel-tab-btn" data-tab="tab-cashflow">Cash Flow</button>
+                            <button class="panel-tab-btn" data-tab="tab-earnings">Earnings</button>
+                            <button class="panel-tab-btn" data-tab="tab-dividends">Dividends</button>
+                            <button class="panel-tab-btn" data-tab="tab-insider">Insider Activity</button>
                         </div>
                         <div class="tab-panels-viewport">
                             <!-- Corporate Profile + AI Summary -->
@@ -341,9 +351,9 @@
                                 <p id="corporate-description-text" class="narrative-p">Perform a financial ticker query to construct internal narrative summaries.</p>
                                 <div class="ai-profile-section">
                                     <div class="ai-profile-header">
-                                        <h4><i class="fa-solid fa-robot"></i> AI Executive Summary</h4>
+                                        <h4><i class="fa-solid fa-robot" aria-hidden="true"></i> AI Executive Summary</h4>
                                         <button id="generate-ai-profile-btn" class="secondary-btn" style="padding: 6px 14px; font-size: 0.82rem;">
-                                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                                            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Generate
                                         </button>
                                     </div>
                                     <div id="ai-profile-output" class="ai-profile-output">
@@ -386,6 +396,46 @@
                                         </thead>
                                         <tbody id="cashflow-table-body">
                                             <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Earnings -->
+                            <div id="tab-earnings" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Quarter</th><th>Actual EPS</th><th>Estimate</th><th>Surprise</th></tr>
+                                        </thead>
+                                        <tbody id="earnings-table-body">
+                                            <tr><td colspan="4" class="table-empty-state">No active data queries processed.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Dividends -->
+                            <div id="tab-dividends" class="tab-panel">
+                                <div id="dividends-summary" class="dividends-summary-section"></div>
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Ex-Date</th><th>Payment Date</th><th>Amount</th></tr>
+                                        </thead>
+                                        <tbody id="dividends-table-body">
+                                            <tr><td colspan="3" class="table-empty-state">No active data queries processed.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Insider Activity -->
+                            <div id="tab-insider" class="tab-panel">
+                                <div class="financial-table-wrapper">
+                                    <table class="financial-data-table">
+                                        <thead>
+                                            <tr><th>Name</th><th>Date</th><th>Type</th><th>Shares</th><th>Value</th></tr>
+                                        </thead>
+                                        <tbody id="insider-table-body">
+                                            <tr><td colspan="5" class="table-empty-state">No active data queries processed.</td></tr>
                                         </tbody>
                                     </table>
                                 </div>

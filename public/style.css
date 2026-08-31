@@ -247,6 +247,10 @@ select {
     transform: translateX(2px);
 }
 
+.nav-item:hover:not(.active) {
+    transform: translateX(3px);
+}
+
 .nav-item:active {
     transform: translateX(1px);
 }
@@ -611,7 +615,7 @@ select {
     display: flex;
     flex-direction: column;
     text-decoration: none;
-    transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), border-color var(--transition-speed) ease;
     box-shadow: 0 18px 40px rgba(2, 6, 23, 0.33);
 }
 
@@ -876,6 +880,75 @@ select {
 .chart-header h3 { font-size: 1.1rem; font-weight: 600; }
 .chart-timeframe-selectors { display: flex; gap: 6px; background-color: var(--bg-input-slate); padding: 4px; border-radius: 6px; }
 
+/* Indicator Dropdown UI */
+.indicator-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.indicator-btn {
+    background-color: var(--bg-input-slate);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary-muted);
+    padding: 7px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.indicator-btn:hover {
+    color: var(--text-primary-white);
+    background: rgba(37, 99, 235, 0.12);
+}
+
+.indicator-menu {
+    position: absolute;
+    top: 110%;
+    right: 0;
+    width: 180px;
+    background: rgba(10, 14, 26, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(37, 99, 235, 0.35);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+    padding: 8px;
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.indicator-menu.show {
+    display: flex;
+}
+
+.indicator-menu label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary-white);
+    font-size: 0.8rem;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.indicator-menu label:hover {
+    background: rgba(37, 99, 235, 0.2);
+}
+
+.indicator-menu input[type="checkbox"] {
+    accent-color: var(--neon-blue-accent);
+    cursor: pointer;
+}
+
 .tf-btn {
     background: none;
     border: none;
@@ -899,7 +972,73 @@ select {
     box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
 }
 
-.chart-wrapper-box { position: relative; height: 420px; width: 100%; max-width: 100%; }
+.chart-wrapper-box { position: relative; height: 420px; width: 100%; max-width: 100%; overflow: hidden; }
+
+/* TradingView Lightweight Charts — Floating Tooltip (Zerodha-style) */
+.lw-chart-tooltip {
+    display: none;
+    position: absolute;
+    z-index: 100;
+    pointer-events: none;
+    min-width: 140px;
+    max-width: 190px;
+    padding: 10px 13px;
+    background: rgba(10, 14, 26, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(37, 99, 235, 0.35);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(6, 182, 212, 0.08);
+    font-family: 'JetBrains Mono', 'Inter', monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: #d1d4dc;
+}
+
+.lw-chart-tooltip .tt-date {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    letter-spacing: 0.03em;
+}
+
+.lw-chart-tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5px 0;
+}
+
+.lw-chart-tooltip .tt-label {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.7rem;
+    font-weight: 500;
+    min-width: 28px;
+}
+
+.lw-chart-tooltip .tt-val {
+    color: #f0f0f0;
+    font-weight: 600;
+    text-align: right;
+    font-size: 0.73rem;
+}
+
+.lw-chart-tooltip .tt-val.tt-positive { color: #10b981; }
+.lw-chart-tooltip .tt-val.tt-negative { color: #ef4444; }
+
+.lw-chart-tooltip .tt-row.tt-vol {
+    margin-top: 4px;
+    padding-top: 5px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.lw-chart-tooltip .tt-row.tt-vol .tt-val {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 400;
+    font-size: 0.68rem;
+}
 
 /* Valuation Ratios Framework */
 .ratios-container-card {
@@ -1320,6 +1459,196 @@ select {
 .metric-card-success .metric-title i {
     color: #10b981;
     margin-right: 4px;
+}
+
+/* Dual Input Group (Synced Sliders) */
+.dual-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dual-input-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dual-input-header label {
+    font-size: 0.85rem;
+    color: var(--text-secondary-muted);
+    font-weight: 500;
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(17, 24, 39, 0.9);
+    border: 1px solid var(--border-cyan-glow);
+    border-radius: 8px;
+    padding: 0 10px;
+    height: 38px;
+    transition: all 0.2s ease;
+}
+
+.input-wrapper:focus-within {
+    border-color: var(--neon-blue-accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.input-wrapper .prefix, .input-wrapper .suffix {
+    color: var(--text-secondary-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.input-wrapper input {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--text-primary-white) !important;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: right;
+    width: 90px;
+    padding: 0 4px !important;
+    outline: none !important;
+    min-height: auto !important;
+}
+
+.input-wrapper input::-webkit-outer-spin-button,
+.input-wrapper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.custom-range-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: rgba(37, 99, 235, 0.2);
+    border-radius: 3px;
+    outline: none;
+    padding: 0;
+    margin: 6px 0 12px 0;
+}
+
+.custom-range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--neon-cyan-vibrant);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+    transition: transform 0.1s;
+}
+
+.custom-range-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+}
+
+.custom-range-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--neon-cyan-vibrant);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+}
+
+/* Calculator Data Table */
+.calc-table-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.calc-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.calc-table-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary-white);
+}
+
+.export-pdf-btn {
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--neon-cyan-vibrant);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.export-pdf-btn:hover {
+    background: rgba(37, 99, 235, 0.3);
+    color: #fff;
+}
+
+.calc-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    background: rgba(10, 14, 26, 0.4);
+}
+
+.calc-table-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.calc-table-container::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+}
+
+.calc-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    text-align: right;
+}
+
+.calc-data-table th, .calc-data-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.calc-data-table th {
+    position: sticky;
+    top: 0;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(8px);
+    color: var(--text-secondary-muted);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 10;
+}
+
+.calc-data-table th:first-child, .calc-data-table td:first-child {
+    text-align: left;
+}
+
+.calc-data-table tbody tr:hover {
+    background: rgba(37, 99, 235, 0.05);
 }
 
 .calc-inputs-form { display: flex; flex-direction: column; gap: 16px; }
@@ -2944,7 +3273,7 @@ select {
 
     .sidebar {
         width: min(84vw, 320px);
-        z-index: 130;
+        z-index: 200;
     }
 
     .logo-container {
@@ -2974,7 +3303,7 @@ select {
         border-radius: 0;
         margin-bottom: 8px;
         padding: 2px 0;
-        z-index: 120;
+        z-index: 190;
         gap: 10px;
         width: 100%;
     }
@@ -3134,7 +3463,7 @@ select {
     }
 
     .ticker-hero-card {
-        flex-direction: row;
+        flex-direction: column;
         justify-content: space-between;
         align-items: center;
         padding: 10px 12px;
@@ -8032,4 +8361,32 @@ select.duration-input {
 
 .main-content {
     contain: layout style;
+}
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.skeleton-loader {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+.chart-skeleton { height: 300px; }
+.metric-skeleton { height: 80px; }
+
+/* Keyboard focus indicators for accessibility */
+.nav-item:focus-visible,
+.panel-tab-btn:focus-visible,
+.equity-tab-btn:focus-visible,
+.tf-btn:focus-visible,
+.chart-mode-btn:focus-visible {
+    outline: 2px solid rgba(56, 189, 248, 0.8);
+    outline-offset: 2px;
+}
+button:focus-visible {
+    outline: 2px solid rgba(56, 189, 248, 0.6);
+    outline-offset: 2px;
 }

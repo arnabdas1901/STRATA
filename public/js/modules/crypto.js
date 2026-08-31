@@ -1,6 +1,8 @@
-import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, escapeHtml, formatLargeCurrency, setupTabs } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, formatLargeCurrency, setupTabs } from '../utils.js';
+import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let cryptoChartInstance = null;
+window.cryptoIndicatorManager = null;
 let activeCryptoId = null;
 let currentCryptoPrice = 0; // for converter
 let cryptoChartMode = 'price'; // 'price' or 'mcap'
@@ -15,6 +17,7 @@ export function setupCryptoTracker() {
         setupSearch();
         setupCryptoTimeframeSelectors();
         setupCryptoChartModeToggle();
+        setupIndicatorsUI('crypto', () => window.currentCryptoChartData || [], () => window.cryptoIndicatorManager);
         setupTabs('#dashboard-crypto');
         setupAboutToggle();
         setupConverter();
@@ -700,143 +703,230 @@ function setupConverter() {
 
 function renderCryptoChart(history) {
     const isMcapMode = cryptoChartMode === 'mcap';
-    const prices = isMcapMode ? (history?.market_caps || history?.prices || []) : (history?.prices || []);
-    const volumes = history?.total_volumes || [];
-    
-    const labels = prices.map(([timestamp]) => {
-        const date = new Date(timestamp);
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    });
+    const rawPrices = isMcapMode ? (history?.market_caps || history?.prices || []) : (history?.prices || []);
+    const rawVolumes = history?.total_volumes || [];
 
-    const dataPoints = prices.map(([, price]) => price);
-    const volumePoints = volumes.map(([, volume]) => volume || 0);
+    if (!rawPrices || rawPrices.length === 0) return;
 
-    const canvas = document.getElementById('cryptoHistoricalChart');
-    if (!canvas) return;
+    const container = document.getElementById('cryptoHistoricalChart');
+    if (!container) return;
 
-    const isPositive = dataPoints[dataPoints.length - 1] >= dataPoints[0];
-    const color = isPositive ? '#10b981' : '#ef4444';
-    
-    const ctx = canvas.getContext('2d');
-    const priceGradient = ctx.createLinearGradient(0, 0, 0, 300);
-    if (isPositive) {
-        priceGradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
-        priceGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-    } else {
-        priceGradient.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
-        priceGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
-    }
-
-    const volumeColors = prices.map((p, i) => {
-        if (i === 0) return 'rgba(16, 185, 129, 0.2)';
-        const prevClose = prices[i - 1][1];
-        const currClose = p[1];
-        return currClose >= prevClose ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
-    });
-
+    // Clean up previous chart instance
     if (cryptoChartInstance) {
-        cryptoChartInstance.destroy();
+        if (cryptoChartInstance._resizeObserver) {
+            cryptoChartInstance._resizeObserver.disconnect();
+        }
+        cryptoChartInstance.remove();
+        cryptoChartInstance = null;
+    }
+    container.innerHTML = '';
+
+    const dataPoints = rawPrices.map(([, price]) => price);
+    const isPositive = dataPoints[dataPoints.length - 1] >= dataPoints[0];
+    const accentColor = isPositive ? '#10b981' : '#ef4444';
+
+    // Create chart
+    const chart = LightweightCharts.createChart(container, {
+        layout: {
+            background: { type: 'solid', color: '#131722' },
+            textColor: '#d1d4dc',
+            fontFamily: "'JetBrains Mono', 'Inter', monospace",
+            fontSize: 11,
+        },
+        grid: {
+            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+        },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+            vertLine: {
+                color: 'rgba(6, 182, 212, 0.4)',
+                width: 1,
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#2563eb',
+            },
+            horzLine: {
+                color: 'rgba(6, 182, 212, 0.4)',
+                width: 1,
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#2563eb',
+            },
+        },
+        rightPriceScale: {
+            borderColor: 'rgba(197, 203, 206, 0.15)',
+            scaleMargins: { top: 0.1, bottom: 0.25 },
+        },
+        timeScale: {
+            borderColor: 'rgba(197, 203, 206, 0.15)',
+            timeVisible: false,
+            fixLeftEdge: true,
+            fixRightEdge: true,
+        },
+        handleScroll: { vertTouchDrag: false },
+    });
+
+    // Price/MCap area series
+    const mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+        topColor: isPositive ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)',
+        bottomColor: isPositive ? 'rgba(16, 185, 129, 0.02)' : 'rgba(239, 68, 68, 0.02)',
+        lineColor: accentColor,
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 5,
+        crosshairMarkerBorderColor: '#ffffff',
+        crosshairMarkerBorderWidth: 2,
+        crosshairMarkerBackgroundColor: accentColor,
+        priceFormat: isMcapMode
+            ? { type: 'custom', formatter: (val) => val >= 1e12 ? '$' + (val/1e12).toFixed(2) + 'T' : val >= 1e9 ? '$' + (val/1e9).toFixed(2) + 'B' : val >= 1e6 ? '$' + (val/1e6).toFixed(1) + 'M' : '$' + val.toLocaleString() }
+            : { type: 'custom', formatter: (val) => '$' + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+    });
+
+    // Convert CoinGecko timestamps to YYYY-MM-DD format for lightweight-charts
+    const priceData = rawPrices.map(([timestamp, price]) => {
+        const d = new Date(timestamp);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return { time: `${yyyy}-${mm}-${dd}`, value: price };
+    });
+
+    // Deduplicate by time (CoinGecko can return multiple points per day)
+    const uniquePriceData = [];
+    const seenDates = new Set();
+    for (const item of priceData) {
+        if (!seenDates.has(item.time)) {
+            seenDates.add(item.time);
+            uniquePriceData.push(item);
+        }
+    }
+    mainSeries.setData(uniquePriceData);
+
+    // Current price line
+    const lastPrice = dataPoints[dataPoints.length - 1];
+    mainSeries.createPriceLine({
+        price: lastPrice,
+        color: accentColor,
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: '',
+    });
+
+    // Volume histogram series
+    const volumeData = rawVolumes.map(([timestamp, volume], i) => {
+        const d = new Date(timestamp);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const currPrice = i < rawPrices.length ? rawPrices[i][1] : 0;
+        const prevPrice = i > 0 && i - 1 < rawPrices.length ? rawPrices[i - 1][1] : currPrice;
+        return {
+            time: `${yyyy}-${mm}-${dd}`,
+            value: volume || 0,
+            color: currPrice >= prevPrice ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+        };
+    });
+
+    // Deduplicate volume data too
+    const uniqueVolumeData = [];
+    const seenVolDates = new Set();
+    for (const item of volumeData) {
+        if (!seenVolDates.has(item.time)) {
+            seenVolDates.add(item.time);
+            uniqueVolumeData.push(item);
+        }
     }
 
-    cryptoChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: isMcapMode ? 'Market Cap' : 'Close Price',
-                    data: dataPoints,
-                    borderColor: color,
-                    backgroundColor: priceGradient,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    pointHoverRadius: 6,
-                    fill: true,
-                    tension: 0.15,
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Volume',
-                    data: volumePoints,
-                    type: 'bar',
-                    backgroundColor: volumeColors,
-                    hoverBackgroundColor: volumeColors.map(c => c.replace('0.3', '0.6').replace('0.2', '0.5')),
-                    barPercentage: 0.7,
-                    categoryPercentage: 0.8,
-                    yAxisID: 'yVolume'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: 'index',
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(10, 14, 23, 0.95)',
-                    titleColor: 'rgba(255, 255, 255, 0.7)',
-                    bodyColor: '#ffffff',
-                    bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    borderWidth: 1,
-                    padding: 12,
-                    callbacks: {
-                        label: function(context) {
-                            const val = context.parsed.y;
-                            if (context.dataset.label === 'Close Price') {
-                                return `Price: $${val.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-                            } else if (context.dataset.label === 'Market Cap') {
-                                return `MCap: $${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-                            } else if (context.dataset.label === 'Volume') {
-                                return `Volume: $${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-                            }
-                            return `${context.dataset.label}: ${val}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.05)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.4)',
-                        maxTicksLimit: 8
-                    }
-                },
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.05)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        font: { family: "'JetBrains Mono', monospace" },
-                        callback: (val) => isMcapMode ? '$' + (val >= 1e9 ? (val/1e9).toFixed(1) + 'B' : val >= 1e6 ? (val/1e6).toFixed(1) + 'M' : val.toLocaleString()) : '$' + val.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                    }
-                },
-                yVolume: {
-                    type: 'linear',
-                    display: false,
-                    position: 'left',
-                    grid: {
-                        drawOnChartArea: false
-                    },
-                    min: 0,
-                    max: volumePoints.length > 0 ? Math.max(...volumePoints) * 4 : 100
-                }
+    const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'volume',
+    });
+    volumeSeries.priceScale().applyOptions({
+        scaleMargins: { top: 0.8, bottom: 0 },
+    });
+    volumeSeries.setData(uniqueVolumeData);
+
+    // Floating tooltip (Zerodha-style)
+    const toolTipEl = document.createElement('div');
+    toolTipEl.className = 'lw-chart-tooltip';
+    container.appendChild(toolTipEl);
+
+    chart.subscribeCrosshairMove(param => {
+        if (!param || !param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
+            toolTipEl.style.display = 'none';
+            return;
+        }
+
+        const pricePoint = param.seriesData.get(mainSeries);
+        const volPoint = param.seriesData.get(volumeSeries);
+        if (!pricePoint) { toolTipEl.style.display = 'none'; return; }
+
+        const d = typeof param.time === 'string' ? new Date(param.time) : new Date(param.time * 1000);
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const val = pricePoint.value;
+        const volStr = volPoint ? '$' + volPoint.value.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—';
+
+        let priceStr;
+        if (isMcapMode) {
+            priceStr = val >= 1e12 ? '$' + (val/1e12).toFixed(2) + 'T' : val >= 1e9 ? '$' + (val/1e9).toFixed(2) + 'B' : val >= 1e6 ? '$' + (val/1e6).toFixed(1) + 'M' : '$' + val.toLocaleString();
+        } else {
+            priceStr = '$' + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        let tooltipHtml = `
+            <div class="tt-date">${dateStr}</div>
+            <div class="tt-row"><span class="tt-label">${isMcapMode ? 'MCap' : 'Price'}</span><span class="tt-val">${priceStr}</span></div>
+            <div class="tt-row tt-vol"><span class="tt-label">Vol</span><span class="tt-val">${volStr}</span></div>
+        `;
+        
+        if (window.cryptoIndicatorManager) {
+            tooltipHtml += window.cryptoIndicatorManager.getTooltipData(param);
+        }
+        toolTipEl.innerHTML = tooltipHtml;
+        toolTipEl.style.display = 'block';
+
+        const chartRect = container.getBoundingClientRect();
+        const tooltipWidth = 160;
+        const tooltipHeight = toolTipEl.offsetHeight || 80;
+        let left = param.point.x + 16;
+        let top = param.point.y - tooltipHeight / 2;
+
+        if (left + tooltipWidth > chartRect.width) left = param.point.x - tooltipWidth - 16;
+        if (top < 0) top = 4;
+        if (top + tooltipHeight > chartRect.height) top = chartRect.height - tooltipHeight - 4;
+
+        toolTipEl.style.left = left + 'px';
+        toolTipEl.style.top = top + 'px';
+    });
+
+    // Fit content
+    chart.timeScale().fitContent();
+
+    // Responsive resize
+    const resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) {
+                chart.applyOptions({ width, height });
             }
         }
     });
+    resizeObserver.observe(container);
+
+    cryptoChartInstance = chart;
+    cryptoChartInstance._resizeObserver = resizeObserver;
+
+    window.currentCryptoChartData = uniquePriceData;
+    window.cryptoIndicatorManager = new IndicatorManager(chart, mainSeries, volumeSeries);
+    const menu = document.getElementById('crypto-indicator-menu');
+    if (menu) {
+        menu.querySelectorAll('input').forEach(input => {
+            if (input.checked) {
+                window.cryptoIndicatorManager.active[input.value] = false;
+                window.cryptoIndicatorManager.toggle(input.value, uniquePriceData);
+            }
+        });
+    }
 }
 
 // ─── Timeframe Selectors (verbatim from original) ──────────────────────────────

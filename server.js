@@ -41,14 +41,16 @@ app.use(cors({
 app.use(express.json());
 
 // Prevent browser caching of JS/CSS so changes are always reflected
-app.use((req, res, next) => {
-    if (req.path.endsWith('.js') || req.path.endsWith('.css')) {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-    }
-    next();
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.use((req, res, next) => {
+        if (req.path.endsWith('.js') || req.path.endsWith('.css')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+        next();
+    });
+}
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -85,7 +87,8 @@ app.use((error, req, res, next) => {
     if (error?.message === 'CORS origin not allowed') {
         return res.status(error.statusCode || 403).json({ error: error.message });
     }
-    return next(error);
+    console.error('Unhandled error:', error);
+    res.status(error.statusCode || 500).json({ error: error.message || 'Internal Server Error' });
 });
 
 // Start the server on port 3000
