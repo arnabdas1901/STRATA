@@ -134,17 +134,40 @@ async function executeEquityAnalysis(ticker) {
             fetchWithTimeout(`${BACKEND_URL}/api/twelvedata/time_series?symbol=${encodeURIComponent(ticker)}&timeframe=1Y`).catch(() => null)
         ]);
 
-        const profile = await safeJsonParse(profileRes);
-        const quote = await safeJsonParse(quoteRes);
+        const rawProfile = await safeJsonParse(profileRes);
+        const rawQuote = await safeJsonParse(quoteRes);
         const metrics = await safeJsonParse(metricsRes);
         const chartData = await safeJsonParse(chartRes);
 
-        if (profile?.error || quote?.error || !profile?.name) {
-            throw new Error(profile?.error || quote?.error || 'Invalid ticker symbol or data unavailable');
+        const profile = (rawProfile && !rawProfile.error && rawProfile.name) ? rawProfile : {
+            ticker: ticker.toUpperCase(),
+            name: `${ticker.toUpperCase()} Asset`,
+            currency: 'USD',
+            exchange: 'US Markets',
+            finnhubIndustry: 'Equities',
+            logo: `https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/${ticker.toUpperCase()}.png`,
+            weburl: `https://finance.yahoo.com/quote/${ticker.toUpperCase()}`
+        };
+
+        const quote = (rawQuote && !rawQuote.error && typeof rawQuote.c === 'number' && rawQuote.c > 0) ? rawQuote : (
+            (chartData && chartData.values && chartData.values.length > 0) ? {
+                c: parseFloat(chartData.values[0].close),
+                d: parseFloat(chartData.values[0].close) - parseFloat(chartData.values[0].open || chartData.values[0].close),
+                dp: ((parseFloat(chartData.values[0].close) - parseFloat(chartData.values[0].open || chartData.values[0].close)) / parseFloat(chartData.values[0].open || 1)) * 100,
+                h: parseFloat(chartData.values[0].high || chartData.values[0].close),
+                l: parseFloat(chartData.values[0].low || chartData.values[0].close),
+                o: parseFloat(chartData.values[0].open || chartData.values[0].close),
+                pc: parseFloat(chartData.values[0].open || chartData.values[0].close),
+                t: Math.floor(Date.now() / 1000)
+            } : null
+        );
+
+        if (!quote && (!rawProfile || !rawProfile.name)) {
+            throw new Error(rawProfile?.error || rawQuote?.error || 'Invalid ticker symbol or data unavailable');
         }
 
         // Immediately update Hero Card and Chart
-        updateUI(profile, quote, metrics, null, null, null, null, null);
+        updateUI(profile, quote || { c: 0, d: 0, dp: 0, h: 0, l: 0, o: 0, pc: 0 }, metrics, null, null, null, null, null);
         
         const aiBtn = document.getElementById('equity-ai-btn');
         if (aiBtn) {
@@ -928,7 +951,7 @@ async function fetchLiveIndexValues() {
         const statusDot = document.getElementById('market-status-dot');
         const statusText = document.getElementById('market-status-text');
         if (statusDot && statusText) {
-            const state = payload?.sp500?.marketState || payload?.nasdaq?.marketState || 'CLOSED';
+            const state = payload?.sp500?.marketState || payload?.nasdaq?.marketState || 'REGULAR';
             const stateMap = {
                 'REGULAR': { text: 'Market Open', cls: 'status-open' },
                 'PRE': { text: 'Pre-Market', cls: 'status-pre' },
@@ -937,49 +960,67 @@ async function fetchLiveIndexValues() {
                 'PREPRE': { text: 'Market Closed', cls: 'status-closed' },
                 'CLOSED': { text: 'Market Closed', cls: 'status-closed' }
             };
-            const info = stateMap[state] || stateMap['CLOSED'];
+            const info = stateMap[state] || stateMap['REGULAR'];
             statusText.textContent = info.text;
             statusDot.className = `market-status-dot ${info.cls}`;
             const strip = document.getElementById('market-status-strip');
             if (strip) strip.className = `market-status-strip ${info.cls}`;
         }
 
-        const formatIndexValue = (value) => parseFloat(value).toFixed(2);
-        const formatChange = (value, percentage) => `${value >= 0 ? '+' : ''}${parseFloat(value).toFixed(2)} (${parseFloat(percentage).toFixed(2)}%)`;
+        const formatIndexValue = (value) => {
+            const num = parseFloat(value);
+            return Number.isFinite(num) ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '--';
+        };
+        const formatChange = (value, percentage) => {
+            const valNum = parseFloat(value);
+            const pctNum = parseFloat(percentage);
+            if (!Number.isFinite(valNum) || !Number.isFinite(pctNum)) return '--';
+            const sign = valNum >= 0 ? '+' : '';
+            return `${sign}${valNum.toFixed(2)} (${sign}${pctNum.toFixed(2)}%)`;
+        };
         const formatSource = (item, fallback) => {
             const symbol = item.symbol || item.requestedSymbol || fallback;
             return item.source ? `${symbol} - ${item.source}` : symbol;
         };
 
-        if (payload?.sp500) {
+        if (payload?.sp500 && payload.sp500.price != null) {
             spValue && (spValue.innerText = formatIndexValue(payload.sp500.price));
             spSource && (spSource.innerText = formatSource(payload.sp500, 'S&P 500'));
             if (spChange) {
                 spChange.innerText = formatChange(payload.sp500.change, payload.sp500.changePercent);
                 spChange.className = 'index-change ' + (payload.sp500.change >= 0 ? 'pos-change' : 'neg-change');
             }
+        } else if (spSource) {
+            spSource.innerText = 'Unavailable';
         }
 
-        if (payload?.nasdaq) {
+        if (payload?.nasdaq && payload.nasdaq.price != null) {
             nasValue && (nasValue.innerText = formatIndexValue(payload.nasdaq.price));
             nasSource && (nasSource.innerText = formatSource(payload.nasdaq, 'NASDAQ'));
             if (nasChange) {
                 nasChange.innerText = formatChange(payload.nasdaq.change, payload.nasdaq.changePercent);
                 nasChange.className = 'index-change ' + (payload.nasdaq.change >= 0 ? 'pos-change' : 'neg-change');
             }
+        } else if (nasSource) {
+            nasSource.innerText = 'Unavailable';
         }
 
-        if (payload?.dowjones) {
+        if (payload?.dowjones && payload.dowjones.price != null) {
             dowValue && (dowValue.innerText = formatIndexValue(payload.dowjones.price));
             dowSource && (dowSource.innerText = formatSource(payload.dowjones, 'DOW'));
             if (dowChange) {
                 dowChange.innerText = formatChange(payload.dowjones.change, payload.dowjones.changePercent);
                 dowChange.className = 'index-change ' + (payload.dowjones.change >= 0 ? 'pos-change' : 'neg-change');
             }
+        } else if (dowSource) {
+            dowSource.innerText = 'Unavailable';
         }
         return payload;
     } catch (error) {
         console.warn('Failed to load live index values:', error);
+        if (spSource) spSource.innerText = 'Unavailable';
+        if (nasSource) nasSource.innerText = 'Unavailable';
+        if (dowSource) dowSource.innerText = 'Unavailable';
         return null;
     }
 }
@@ -1375,22 +1416,35 @@ async function computeMarketSentiment(indexPayload, moversPayload, sectorPayload
         // 1. INDEX MOMENTUM (weight: 40%)
         // Average the percent changes of S&P 500, NASDAQ, DOW
         const indexData = indexPayload;
+        const changes = [];
         if (indexData) {
-            const changes = [];
-            if (indexData.sp500?.changePercent) changes.push(parseFloat(indexData.sp500.changePercent));
-            if (indexData.nasdaq?.changePercent) changes.push(parseFloat(indexData.nasdaq.changePercent));
-            if (indexData.dowjones?.changePercent) changes.push(parseFloat(indexData.dowjones.changePercent));
+            const extractPct = (item) => {
+                if (!item) return null;
+                const val = parseFloat(item.changePercent);
+                return Number.isFinite(val) ? val : null;
+            };
 
-            if (changes.length) {
-                const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
-                // Map -3% to +3% range into 0-100
-                indexScore = Math.min(100, Math.max(0, ((avgChange + 3) / 6) * 100));
-                if (sfIndex) {
-                    const sign = avgChange >= 0 ? '+' : '';
-                    sfIndex.textContent = `${sign}${avgChange.toFixed(2)}%`;
-                    sfIndex.className = `sf-value ${avgChange >= 0 ? 'sf-positive' : 'sf-negative'}`;
-                }
+            const spPct = extractPct(indexData.sp500);
+            const nasPct = extractPct(indexData.nasdaq);
+            const dowPct = extractPct(indexData.dowjones);
+
+            if (spPct !== null) changes.push(spPct);
+            if (nasPct !== null) changes.push(nasPct);
+            if (dowPct !== null) changes.push(dowPct);
+        }
+
+        if (changes.length > 0) {
+            const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
+            // Map -3% to +3% range into 0-100
+            indexScore = Math.min(100, Math.max(0, ((avgChange + 3) / 6) * 100));
+            if (sfIndex) {
+                const sign = avgChange > 0 ? '+' : '';
+                sfIndex.textContent = `${sign}${avgChange.toFixed(2)}%`;
+                sfIndex.className = `sf-value ${avgChange > 0 ? 'sf-positive' : (avgChange < 0 ? 'sf-negative' : 'sf-neutral')}`;
             }
+        } else if (sfIndex) {
+            sfIndex.textContent = '0.00%';
+            sfIndex.className = 'sf-value sf-neutral';
         }
 
         // 2. GAINERS vs LOSERS RATIO (weight: 30%)
@@ -1403,9 +1457,15 @@ async function computeMarketSentiment(indexPayload, moversPayload, sectorPayload
                 moversScore = (gCount / total) * 100;
                 if (sfMovers) {
                     sfMovers.textContent = `${gCount}G / ${lCount}L`;
-                    sfMovers.className = `sf-value ${gCount >= lCount ? 'sf-positive' : 'sf-negative'}`;
+                    sfMovers.className = `sf-value ${gCount > lCount ? 'sf-positive' : (gCount < lCount ? 'sf-negative' : 'sf-neutral')}`;
                 }
+            } else if (sfMovers) {
+                sfMovers.textContent = 'Neutral';
+                sfMovers.className = 'sf-value sf-neutral';
             }
+        } else if (sfMovers) {
+            sfMovers.textContent = 'Neutral';
+            sfMovers.className = 'sf-value sf-neutral';
         }
 
         // 3. SECTOR BREADTH (weight: 30%)
@@ -1418,9 +1478,15 @@ async function computeMarketSentiment(indexPayload, moversPayload, sectorPayload
                 sectorScore = (posCount / totalSectors) * 100;
                 if (sfSectors) {
                     sfSectors.textContent = `${posCount}/${totalSectors} positive`;
-                    sfSectors.className = `sf-value ${posCount >= totalSectors / 2 ? 'sf-positive' : 'sf-negative'}`;
+                    sfSectors.className = `sf-value ${posCount > totalSectors / 2 ? 'sf-positive' : (posCount < totalSectors / 2 ? 'sf-negative' : 'sf-neutral')}`;
                 }
+            } else if (sfSectors) {
+                sfSectors.textContent = 'Neutral';
+                sfSectors.className = 'sf-value sf-neutral';
             }
+        } else if (sfSectors) {
+            sfSectors.textContent = 'Neutral';
+            sfSectors.className = 'sf-value sf-neutral';
         }
 
         // Weighted composite score (0-100)

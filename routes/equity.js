@@ -2,14 +2,19 @@ const express = require('express');
 const router = express.Router();
 
 const { requireTicker } = require('../utils/api');
-const { fetchFmpMetrics, fetchFinnhubHistory } = require('../utils/equityProviders');
+const { fetchFmpMetrics, fetchFinnhubHistory, fetchYahooProfile, fetchYahooQuote, fetchYahooTimeSeries, fetchTwelveDataQuote } = require('../utils/equityProviders');
 const { getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
 
-async function fetchWithTimeout(url, timeoutMs = 10000) {
+async function fetchWithTimeout(url, options = {}) {
+    const timeoutMs = typeof options === 'number' ? options : (options.timeout || 10000);
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
     try {
-        const response = await fetchWithTimeout(url, { signal: controller.signal });
+        const fetchOptions = typeof options === 'object' ? { ...options } : {};
+        if (!fetchOptions.signal) {
+            fetchOptions.signal = controller.signal;
+        }
+        const response = await fetch(url, fetchOptions);
         clearTimeout(id);
         return response;
     } catch (err) {
@@ -36,9 +41,6 @@ function enforceCacheLimit(cache) {
     }
 }
 
-// Company Profile Endpoint
-// ... (omitted profile endpoint as it's not changing, target starting from time_series) ...
-
 // Historical Time-Series (Charts)
 router.get('/twelvedata/time_series', async (req, res) => {
     const symbol = requireTicker(req, res);
@@ -64,36 +66,45 @@ router.get('/twelvedata/time_series', async (req, res) => {
     }
 
     try {
-        const response = await fetchWithTimeout(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${config.interval}&outputsize=${config.outputsize}&apikey=${process.env.TWELVEDATA_API_KEY}`);
-        const data = await response.json();
-
-        if (data?.status === 'error' || !Array.isArray(data?.values)) {
-            console.warn('TwelveData time series fallback triggered:', data);
-            const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
-            if (fallback) {
-                TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
-                enforceCacheLimit(TIME_SERIES_CACHE);
-                return res.json(fallback);
-            }
-            return res.status(500).json({ error: 'No time series values returned', raw: data });
-        }
-
-        if (timeframe === '1Y' && Array.isArray(data.values) && data.values.length < 180) {
-            console.warn(`TwelveData 1Y values too short (${data.values.length}), using fallback`);
-            const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
-            if (fallback) {
-                TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
-                enforceCacheLimit(TIME_SERIES_CACHE);
-                return res.json(fallback);
+        let chartData = null;
+        if (process.env.TWELVEDATA_API_KEY) {
+            try {
+                const response = await fetchWithTimeout(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${config.interval}&outputsize=${config.outputsize}&apikey=${process.env.TWELVEDATA_API_KEY}`, 5000);
+                const data = await response.json();
+                if (data && data.status !== 'error' && Array.isArray(data.values) && data.values.length > 0) {
+                    chartData = data;
+                }
+            } catch (err) {
+                console.warn('TwelveData time series fetch failed:', err.message);
             }
         }
 
-        TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: data };
-        enforceCacheLimit(TIME_SERIES_CACHE);
-        res.json(data);
+        if (!chartData) {
+            // Priority 1 Fallback: Yahoo Finance Historical Bars (Fast & Accurate)
+            const yahooBars = await fetchYahooTimeSeries(symbol, timeframe);
+            if (yahooBars && Array.isArray(yahooBars.values) && yahooBars.values.length > 0) {
+                chartData = yahooBars;
+            }
+        }
+
+        if (!chartData) {
+            // Priority 2 Fallback: Polygon or Finnhub
+            const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
+            if (fallback) {
+                chartData = fallback;
+            }
+        }
+
+        if (chartData && Array.isArray(chartData.values)) {
+            TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: chartData };
+            enforceCacheLimit(TIME_SERIES_CACHE);
+            return res.json(chartData);
+        }
+
+        return res.status(500).json({ error: 'No time series values returned' });
     } catch (error) {
         console.error("TwelveData Time Series Error:", error);
-        const fallback = await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
+        const fallback = await fetchYahooTimeSeries(symbol, timeframe) || await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
         if (fallback) {
             TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
             enforceCacheLimit(TIME_SERIES_CACHE);
@@ -102,6 +113,7 @@ router.get('/twelvedata/time_series', async (req, res) => {
         res.status(500).json({ error: "Failed to fetch historical data" });
     }
 });
+
 const PROFILE_CACHE = {};
 const METRICS_CACHE = {};
 const QUOTE_CACHE = {};
@@ -117,16 +129,62 @@ router.get('/finnhub/profile', async (req, res) => {
     }
 
     try {
-        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
-        const data = await response.json();
-        if (data && !data.error && data.name) {
-            PROFILE_CACHE[cacheKey] = { lastFetched: now, data };
-            enforceCacheLimit(PROFILE_CACHE);
+        let profileData = null;
+
+        // Primary: Finnhub stock profile
+        if (process.env.FINNHUB_API_KEY) {
+            try {
+                const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`, 5000);
+                const data = await response.json();
+                if (data && !data.error && data.name) {
+                    profileData = data;
+                }
+            } catch (err) {
+                console.warn("Finnhub profile attempt failed:", err.message);
+            }
         }
-        res.json(data);
+
+        // Secondary Fallback: Yahoo Finance metadata (covers stocks, ETFs, indices, ADRs)
+        if (!profileData || !profileData.name) {
+            try {
+                const yahooProfile = await fetchYahooProfile(symbol);
+                if (yahooProfile && yahooProfile.name) {
+                    profileData = yahooProfile;
+                }
+            } catch (err) {
+                console.warn("Yahoo profile fallback failed:", err.message);
+            }
+        }
+
+        // Tertiary Fallback: Generic ticker structure so frontend never crashes
+        if (!profileData || !profileData.name) {
+            profileData = {
+                ticker: symbol.toUpperCase(),
+                name: `${symbol.toUpperCase()} Asset`,
+                country: 'US',
+                currency: 'USD',
+                exchange: 'US Markets',
+                finnhubIndustry: 'Equities',
+                logo: `https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/${symbol.toUpperCase()}.png`,
+                weburl: `https://finance.yahoo.com/quote/${symbol.toUpperCase()}`
+            };
+        }
+
+        PROFILE_CACHE[cacheKey] = { lastFetched: now, data: profileData };
+        enforceCacheLimit(PROFILE_CACHE);
+        return res.json(profileData);
     } catch (error) {
-        console.error("Finnhub Profile Error:", error);
-        res.status(500).json({ error: "Failed to fetch company profile" });
+        console.error("Company Profile Error:", error);
+        return res.json({
+            ticker: symbol.toUpperCase(),
+            name: `${symbol.toUpperCase()} Asset`,
+            country: 'US',
+            currency: 'USD',
+            exchange: 'US Markets',
+            finnhubIndustry: 'Equities',
+            logo: '',
+            weburl: ''
+        });
     }
 });
 
@@ -142,23 +200,32 @@ router.get('/finnhub/metrics', async (req, res) => {
     }
 
     try {
-        const response = await fetchWithTimeout(
-            `https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${process.env.FINNHUB_API_KEY}`
-        );
-        const data = await response.json();
-
-        if (data?.metric) {
-            const de = data.metric['totalDebt/totalEquityAnnual'] ??
-                       data.metric['totalDebt/totalEquityQuarterly'] ??
-                       data.metric['longTermDebt/equityAnnual'] ??
-                       data.metric['longTermDebt/equityQuarterly'] ??
-                       data.metric.debtToEquityAnnual ??
-                       data.metric.totalDebtToEquity;
-            if (de != null) {
-                data.metric.debtToEquityAnnual = Number(de);
-                data.metric.totalDebtToEquity = Number(de);
-                data.metric.totalDebtTotalEquityAnnual = Number(de);
+        let data = null;
+        if (process.env.FINNHUB_API_KEY) {
+            try {
+                const response = await fetchWithTimeout(
+                    `https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${process.env.FINNHUB_API_KEY}`,
+                    5000
+                );
+                data = await response.json();
+            } catch (err) {
+                console.warn("Finnhub metrics attempt failed:", err.message);
             }
+        }
+
+        if (!data) data = { metric: {} };
+        if (!data.metric) data.metric = {};
+
+        const de = data.metric['totalDebt/totalEquityAnnual'] ??
+                   data.metric['totalDebt/totalEquityQuarterly'] ??
+                   data.metric['longTermDebt/equityAnnual'] ??
+                   data.metric['longTermDebt/equityQuarterly'] ??
+                   data.metric.debtToEquityAnnual ??
+                   data.metric.totalDebtToEquity;
+        if (de != null) {
+            data.metric.debtToEquityAnnual = Number(de);
+            data.metric.totalDebtToEquity = Number(de);
+            data.metric.totalDebtTotalEquityAnnual = Number(de);
         }
 
         const needsFallback = !data?.metric ||
@@ -192,7 +259,7 @@ router.get('/finnhub/metrics', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error("Finnhub Metrics Error:", error);
-        res.status(500).json({ error: "Failed to fetch financial metrics" });
+        res.json({ metric: {} });
     }
 });
 
@@ -203,18 +270,66 @@ router.get('/finnhub/quote', async (req, res) => {
 
     const cacheKey = symbol.toUpperCase();
     const now = Date.now();
-    if (QUOTE_CACHE[cacheKey] && (now - QUOTE_CACHE[cacheKey].lastFetched < 60 * 1000)) {
+    if (QUOTE_CACHE[cacheKey] && (now - QUOTE_CACHE[cacheKey].lastFetched < 30 * 1000)) {
         return res.json(QUOTE_CACHE[cacheKey].data);
     }
 
     try {
-        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
-        const data = await response.json();
-        if (data && typeof data.c === 'number' && data.c > 0) {
-            QUOTE_CACHE[cacheKey] = { lastFetched: now, data };
-            enforceCacheLimit(QUOTE_CACHE);
+        let quoteData = null;
+
+        // Primary: Finnhub quote
+        if (process.env.FINNHUB_API_KEY) {
+            try {
+                const response = await fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`, 5000);
+                const data = await response.json();
+                if (data && typeof data.c === 'number' && data.c > 0) {
+                    quoteData = data;
+                }
+            } catch (err) {
+                console.warn("Finnhub quote attempt failed:", err.message);
+            }
         }
-        res.json(data);
+
+        // Secondary Fallback: Yahoo Finance real-time quote
+        if (!quoteData) {
+            try {
+                const yQuote = await fetchYahooQuote(symbol);
+                if (yQuote && yQuote.c > 0) {
+                    quoteData = yQuote;
+                }
+            } catch (err) {
+                console.warn("Yahoo quote fallback failed:", err.message);
+            }
+        }
+
+        // Tertiary Fallback: TwelveData quote
+        if (!quoteData) {
+            try {
+                const tdQuote = await fetchTwelveDataQuote(symbol);
+                if (tdQuote && tdQuote.price > 0) {
+                    quoteData = {
+                        c: tdQuote.price,
+                        d: tdQuote.change,
+                        dp: tdQuote.changePercent,
+                        h: tdQuote.price,
+                        l: tdQuote.price,
+                        o: tdQuote.price,
+                        pc: tdQuote.price - tdQuote.change,
+                        t: Math.floor(Date.now() / 1000)
+                    };
+                }
+            } catch (err) {
+                console.warn("TwelveData quote fallback failed:", err.message);
+            }
+        }
+
+        if (quoteData) {
+            QUOTE_CACHE[cacheKey] = { lastFetched: now, data: quoteData };
+            enforceCacheLimit(QUOTE_CACHE);
+            return res.json(quoteData);
+        }
+
+        res.status(500).json({ error: "Failed to fetch real-time quote" });
     } catch (error) {
         console.error("Finnhub Quote Error:", error);
         res.status(500).json({ error: "Failed to fetch real-time quote" });
