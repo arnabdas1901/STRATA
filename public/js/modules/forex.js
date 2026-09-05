@@ -274,12 +274,13 @@ async function executeForexSearch(pairQuery, days = 365) {
         // Setup Currency Converter
         setupConverter(data.fromSymbol, data.toSymbol, data.price);
 
-        if (data.chartData && data.chartData.length > 0) {
-            renderForexChart(data.chartData, `${data.fromSymbol}/${data.toSymbol}`, isPositive);
-        }
-
         if (loader) loader.classList.add('hidden-element');
         if (results) results.classList.remove('hidden-element');
+
+        // Render chart AFTER container is visible so clientWidth/clientHeight are non-zero
+        if (data.chartData && data.chartData.length > 0) {
+            requestAnimationFrame(() => renderForexChart(data.chartData, `${data.fromSymbol}/${data.toSymbol}`, isPositive));
+        }
 
     } catch (err) {
         console.error("Forex Search Error:", err);
@@ -427,57 +428,70 @@ function renderForexChart(chartData, pairName, isPositive) {
     const dataPoints = chartData.map(d => d.close);
     const accentColor = isPositive ? '#00ffff' : '#ff0055';
 
+    // Guarantee chart gets correct dimensions (safety net for any edge-case timing)
+    const containerW = container.clientWidth || container.offsetWidth || 800;
+    const containerH = container.clientHeight || container.offsetHeight || 420;
+
     // Create chart
     const chart = LightweightCharts.createChart(container, {
+        width: containerW,
+        height: containerH,
         layout: {
-            background: { type: 'solid', color: '#131722' },
-            textColor: '#d1d4dc',
+            background: { type: 'solid', color: '#0d1117' },
+            textColor: '#9ca3af',
             fontFamily: "'JetBrains Mono', 'Inter', monospace",
             fontSize: 11,
         },
         grid: {
-            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
-            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            vertLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
+            horzLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
             vertLine: {
-                color: 'rgba(0, 240, 255, 0.4)',
+                color: 'rgba(99, 179, 237, 0.6)',
                 width: 1,
-                style: LightweightCharts.LineStyle.Dashed,
-                labelBackgroundColor: '#2563eb',
+                style: LightweightCharts.LineStyle.Solid,
+                labelBackgroundColor: '#1e40af',
             },
             horzLine: {
-                color: 'rgba(0, 240, 255, 0.4)',
+                color: 'rgba(99, 179, 237, 0.6)',
                 width: 1,
-                style: LightweightCharts.LineStyle.Dashed,
-                labelBackgroundColor: '#2563eb',
+                style: LightweightCharts.LineStyle.Solid,
+                labelBackgroundColor: '#1e40af',
             },
         },
         rightPriceScale: {
-            borderColor: 'rgba(197, 203, 206, 0.15)',
+            borderColor: 'rgba(255,255,255,0.06)',
             scaleMargins: { top: 0.1, bottom: 0.1 },
+            textColor: '#6b7280',
         },
         timeScale: {
-            borderColor: 'rgba(197, 203, 206, 0.15)',
-            timeVisible: false,
+            borderColor: 'rgba(255,255,255,0.06)',
+            timeVisible: true,
+            secondsVisible: false,
             fixLeftEdge: true,
             fixRightEdge: true,
+            tickMarkFormatter: (time) => {
+                const d = typeof time === 'string' ? new Date(time) : new Date(time * 1000);
+                return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            },
         },
-        handleScroll: { vertTouchDrag: false },
+        handleScroll: { vertTouchDrag: false, mouseWheel: true, pressedMouseMove: true },
+        handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
     });
 
     // Area series for exchange rate
     const mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
-        topColor: isPositive ? 'rgba(0, 255, 255, 0.25)' : 'rgba(255, 0, 85, 0.25)',
-        bottomColor: isPositive ? 'rgba(0, 255, 255, 0.02)' : 'rgba(255, 0, 85, 0.02)',
-        lineColor: accentColor,
+        topColor: isPositive ? 'rgba(0, 255, 255, 0.28)' : 'rgba(255, 0, 85, 0.28)',
+        bottomColor: isPositive ? 'rgba(0, 255, 255, 0.01)' : 'rgba(255, 0, 85, 0.01)',
+        lineColor: isPositive ? '#00ffff' : '#ff0055',
         lineWidth: 2,
         crosshairMarkerVisible: true,
-        crosshairMarkerRadius: 5,
+        crosshairMarkerRadius: 4,
         crosshairMarkerBorderColor: '#ffffff',
-        crosshairMarkerBorderWidth: 2,
-        crosshairMarkerBackgroundColor: accentColor,
+        crosshairMarkerBorderWidth: 1.5,
+        crosshairMarkerBackgroundColor: isPositive ? '#00ffff' : '#ff0055',
         priceFormat: { type: 'price', precision: 4, minMove: 0.0001 },
     });
 
@@ -511,6 +525,26 @@ function renderForexChart(chartData, pairName, isPositive) {
         axisLabelVisible: true,
         title: '',
     });
+
+    // ── % Return Label ────────────────────────────────────────────────────────
+    const firstPrice = dataPoints[0];
+    const retPct = ((lastPrice - firstPrice) / firstPrice * 100);
+    const retStr = `${retPct >= 0 ? '▲ +' : '▼ '}${retPct.toFixed(4)}%`;
+    let retLabel = container.querySelector('.chart-return-label');
+    if (!retLabel) {
+        retLabel = document.createElement('div');
+        container.appendChild(retLabel);
+    }
+    retLabel.className = `chart-return-label ${isPositive ? 'positive' : 'negative'}`;
+    retLabel.textContent = retStr;
+
+    // ── STRATA Watermark ──────────────────────────────────────────────────────
+    try {
+        LightweightCharts.createTextWatermark(chart.panes()[0], {
+            horzAlign: 'center', vertAlign: 'center',
+            lines: [{ text: 'STRATA', color: 'rgba(255,255,255,0.022)', fontSize: 56, fontStyle: 'bold', fontFamily: "'Inter', sans-serif" }],
+        });
+    } catch (e) { /* optional */ }
 
     // Floating tooltip
     const toolTipEl = document.createElement('div');
@@ -564,10 +598,23 @@ function renderForexChart(chartData, pairName, isPositive) {
             const { width, height } = entry.contentRect;
             if (width > 0 && height > 0) {
                 chart.applyOptions({ width, height });
+                chart.timeScale().fitContent();
             }
         }
     });
     resizeObserver.observe(container);
+
+    // Double-safety: force explicit size after next two frames
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            if (w > 0 && h > 0) {
+                chart.applyOptions({ width: w, height: h });
+                chart.timeScale().fitContent();
+            }
+        });
+    });
 
     forexChartInstance = chart;
     forexChartInstance._resizeObserver = resizeObserver;

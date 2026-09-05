@@ -973,6 +973,36 @@ select {
 }
 
 .chart-wrapper-box { position: relative; height: 420px; width: 100%; max-width: 100%; overflow: hidden; }
+/* Ensure inner chart container div always fills wrapper — fixes Lightweight Charts 0px height bug */
+.chart-wrapper-box > div { width: 100%; height: 100%; }
+
+/* % Return Label — top-left overlay on chart (Groww-style) */
+.chart-return-label {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    z-index: 10;
+    pointer-events: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 3px 9px;
+    border-radius: 5px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: color 0.3s ease, background 0.3s ease;
+}
+.chart-return-label.positive {
+    color: #00d09c;
+    background: rgba(0, 208, 156, 0.1);
+    border: 1px solid rgba(0, 208, 156, 0.22);
+}
+.chart-return-label.negative {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.22);
+}
 
 /* TradingView Lightweight Charts — Floating Tooltip (Zerodha-style) */
 .lw-chart-tooltip {

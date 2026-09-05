@@ -188,10 +188,15 @@ async function displayCryptoDetails(cryptoId, cryptoSymbol = null) {
         if (!detailsResponse || !detailsResponse.ok) throw new Error(details?.error || 'Failed to fetch details');
 
         populateCryptoDetails(details);
-        renderCryptoChart(history);
 
         if (loader) loader.classList.add('hidden-element');
         if (resultsContainer) resultsContainer.classList.remove('hidden-element');
+
+        // Render chart AFTER container is visible so clientWidth/clientHeight are non-zero
+        if (history) {
+            requestAnimationFrame(() => renderCryptoChart(history));
+        }
+
         showToast(`Loaded ${details.name} details.`);
     } catch (error) {
         console.error('Error displaying crypto:', error);
@@ -725,57 +730,70 @@ function renderCryptoChart(history) {
     const isPositive = dataPoints[dataPoints.length - 1] >= dataPoints[0];
     const accentColor = isPositive ? '#10b981' : '#ef4444';
 
+    // Guarantee chart gets correct dimensions (safety net for any edge-case timing)
+    const containerW = container.clientWidth || container.offsetWidth || 800;
+    const containerH = container.clientHeight || container.offsetHeight || 420;
+
     // Create chart
     const chart = LightweightCharts.createChart(container, {
+        width: containerW,
+        height: containerH,
         layout: {
-            background: { type: 'solid', color: '#131722' },
-            textColor: '#d1d4dc',
+            background: { type: 'solid', color: '#0d1117' },
+            textColor: '#9ca3af',
             fontFamily: "'JetBrains Mono', 'Inter', monospace",
             fontSize: 11,
         },
         grid: {
-            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
-            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            vertLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
+            horzLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
             vertLine: {
-                color: 'rgba(6, 182, 212, 0.4)',
+                color: 'rgba(99, 179, 237, 0.6)',
                 width: 1,
-                style: LightweightCharts.LineStyle.Dashed,
-                labelBackgroundColor: '#2563eb',
+                style: LightweightCharts.LineStyle.Solid,
+                labelBackgroundColor: '#1e40af',
             },
             horzLine: {
-                color: 'rgba(6, 182, 212, 0.4)',
+                color: 'rgba(99, 179, 237, 0.6)',
                 width: 1,
-                style: LightweightCharts.LineStyle.Dashed,
-                labelBackgroundColor: '#2563eb',
+                style: LightweightCharts.LineStyle.Solid,
+                labelBackgroundColor: '#1e40af',
             },
         },
         rightPriceScale: {
-            borderColor: 'rgba(197, 203, 206, 0.15)',
+            borderColor: 'rgba(255,255,255,0.06)',
             scaleMargins: { top: 0.1, bottom: 0.25 },
+            textColor: '#6b7280',
         },
         timeScale: {
-            borderColor: 'rgba(197, 203, 206, 0.15)',
-            timeVisible: false,
+            borderColor: 'rgba(255,255,255,0.06)',
+            timeVisible: true,
+            secondsVisible: false,
             fixLeftEdge: true,
             fixRightEdge: true,
+            tickMarkFormatter: (time) => {
+                const d = typeof time === 'string' ? new Date(time) : new Date(time * 1000);
+                return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            },
         },
-        handleScroll: { vertTouchDrag: false },
+        handleScroll: { vertTouchDrag: false, mouseWheel: true, pressedMouseMove: true },
+        handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
     });
 
     // Price/MCap area series
     const mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
-        topColor: isPositive ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)',
-        bottomColor: isPositive ? 'rgba(16, 185, 129, 0.02)' : 'rgba(239, 68, 68, 0.02)',
-        lineColor: accentColor,
+        topColor: isPositive ? 'rgba(0, 208, 156, 0.28)' : 'rgba(255, 107, 107, 0.28)',
+        bottomColor: isPositive ? 'rgba(0, 208, 156, 0.01)' : 'rgba(255, 107, 107, 0.01)',
+        lineColor: isPositive ? '#00d09c' : '#ff6b6b',
         lineWidth: 2,
         crosshairMarkerVisible: true,
-        crosshairMarkerRadius: 5,
+        crosshairMarkerRadius: 4,
         crosshairMarkerBorderColor: '#ffffff',
-        crosshairMarkerBorderWidth: 2,
-        crosshairMarkerBackgroundColor: accentColor,
+        crosshairMarkerBorderWidth: 1.5,
+        crosshairMarkerBackgroundColor: isPositive ? '#00d09c' : '#ff6b6b',
         priceFormat: isMcapMode
             ? { type: 'custom', formatter: (val) => val >= 1e12 ? '$' + (val/1e12).toFixed(2) + 'T' : val >= 1e9 ? '$' + (val/1e9).toFixed(2) + 'B' : val >= 1e6 ? '$' + (val/1e6).toFixed(1) + 'M' : '$' + val.toLocaleString() }
             : { type: 'custom', formatter: (val) => '$' + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
@@ -846,6 +864,27 @@ function renderCryptoChart(history) {
     });
     volumeSeries.setData(uniqueVolumeData);
 
+    // ── % Return Label ────────────────────────────────────────────────────────
+    const firstVal = dataPoints[0];
+    const lastVal = dataPoints[dataPoints.length - 1];
+    const retPct = ((lastVal - firstVal) / firstVal * 100);
+    const retStr = `${retPct >= 0 ? '▲ +' : '▼ '}${retPct.toFixed(2)}%`;
+    let retLabel = container.querySelector('.chart-return-label');
+    if (!retLabel) {
+        retLabel = document.createElement('div');
+        container.appendChild(retLabel);
+    }
+    retLabel.className = `chart-return-label ${isPositive ? 'positive' : 'negative'}`;
+    retLabel.textContent = retStr;
+
+    // ── STRATA Watermark ──────────────────────────────────────────────────────
+    try {
+        LightweightCharts.createTextWatermark(chart.panes()[0], {
+            horzAlign: 'center', vertAlign: 'center',
+            lines: [{ text: 'STRATA', color: 'rgba(255,255,255,0.022)', fontSize: 56, fontStyle: 'bold', fontFamily: "'Inter', sans-serif" }],
+        });
+    } catch (e) { /* optional */ }
+
     // Floating tooltip (Zerodha-style)
     const toolTipEl = document.createElement('div');
     toolTipEl.className = 'lw-chart-tooltip';
@@ -902,16 +941,29 @@ function renderCryptoChart(history) {
     // Fit content
     chart.timeScale().fitContent();
 
-    // Responsive resize
+    // Responsive resize — immediate size sync
     const resizeObserver = new ResizeObserver(entries => {
         for (const entry of entries) {
             const { width, height } = entry.contentRect;
             if (width > 0 && height > 0) {
                 chart.applyOptions({ width, height });
+                chart.timeScale().fitContent();
             }
         }
     });
     resizeObserver.observe(container);
+
+    // Double-safety: force explicit size after next two frames
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            if (w > 0 && h > 0) {
+                chart.applyOptions({ width: w, height: h });
+                chart.timeScale().fitContent();
+            }
+        });
+    });
 
     cryptoChartInstance = chart;
     cryptoChartInstance._resizeObserver = resizeObserver;

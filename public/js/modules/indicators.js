@@ -205,7 +205,7 @@ export class IndicatorManager {
         // Add Series
         if (indicator === 'sma') {
             const smaData = calculateSMA(closeData, 20);
-            this.series.sma = this.chart.addLineSeries({
+            this.series.sma = this.chart.addSeries(LightweightCharts.LineSeries, {
                 color: this.colors.sma,
                 lineWidth: 1,
                 crosshairMarkerVisible: false,
@@ -216,7 +216,7 @@ export class IndicatorManager {
         }
         else if (indicator === 'ema') {
             const emaData = calculateEMA(closeData, 20);
-            this.series.ema = this.chart.addLineSeries({
+            this.series.ema = this.chart.addSeries(LightweightCharts.LineSeries, {
                 color: this.colors.ema,
                 lineWidth: 1,
                 crosshairMarkerVisible: false,
@@ -228,9 +228,9 @@ export class IndicatorManager {
         else if (indicator === 'bb') {
             const bbData = calculateBollingerBands(closeData, 20, 2);
             
-            this.series.bbUpper = this.chart.addLineSeries({ color: this.colors.bbUpper, lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false });
-            this.series.bbMiddle = this.chart.addLineSeries({ color: this.colors.bbMiddle, lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false });
-            this.series.bbLower = this.chart.addLineSeries({ color: this.colors.bbLower, lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false });
+            this.series.bbUpper = this.chart.addSeries(LightweightCharts.LineSeries, { color: this.colors.bbUpper, lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false });
+            this.series.bbMiddle = this.chart.addSeries(LightweightCharts.LineSeries, { color: this.colors.bbMiddle, lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false });
+            this.series.bbLower = this.chart.addSeries(LightweightCharts.LineSeries, { color: this.colors.bbLower, lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false });
             
             this.series.bbUpper.setData(bbData.map(d => ({ time: d.time, value: d.upper })));
             this.series.bbMiddle.setData(bbData.map(d => ({ time: d.time, value: d.middle })));
@@ -238,7 +238,7 @@ export class IndicatorManager {
         }
         else if (indicator === 'rsi') {
             const rsiData = calculateRSI(closeData, 14);
-            this.series.rsi = this.chart.addLineSeries({
+            this.series.rsi = this.chart.addSeries(LightweightCharts.LineSeries, {
                 color: this.colors.rsi,
                 lineWidth: 1.5,
                 priceScaleId: 'rsi',
@@ -257,9 +257,9 @@ export class IndicatorManager {
         else if (indicator === 'macd') {
             const macdData = calculateMACD(closeData, 12, 26, 9);
             
-            this.series.macdHist = this.chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }});
-            this.series.macdLine = this.chart.addLineSeries({ color: this.colors.macdLine, lineWidth: 1.5, priceScaleId: 'macd', lastValueVisible: false, priceLineVisible: false });
-            this.series.macdSignal = this.chart.addLineSeries({ color: this.colors.macdSignal, lineWidth: 1.5, priceScaleId: 'macd', lastValueVisible: false, priceLineVisible: false });
+            this.series.macdHist = this.chart.addSeries(LightweightCharts.HistogramSeries, { priceScaleId: 'macd', priceFormat: { type: 'volume' }});
+            this.series.macdLine = this.chart.addSeries(LightweightCharts.LineSeries, { color: this.colors.macdLine, lineWidth: 1.5, priceScaleId: 'macd', lastValueVisible: false, priceLineVisible: false });
+            this.series.macdSignal = this.chart.addSeries(LightweightCharts.LineSeries, { color: this.colors.macdSignal, lineWidth: 1.5, priceScaleId: 'macd', lastValueVisible: false, priceLineVisible: false });
             
             this.series.macdHist.setData(macdData.map(d => ({ time: d.time, value: d.hist, color: d.hist >= 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)' })));
             this.series.macdLine.setData(macdData.map(d => ({ time: d.time, value: d.macd })));

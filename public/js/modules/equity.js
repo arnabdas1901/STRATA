@@ -180,17 +180,28 @@ async function executeEquityAnalysis(ticker) {
         }
         
         if (chartData && !chartData.error && chartData.values) {
-            rawHistoricalData = [...chartData.values].reverse();
-            renderEquityChart(rawHistoricalData);
+            // Deduplicate + sort ascending (Lightweight Charts v5 strict requirement)
+            const seenDates = new Set();
+            rawHistoricalData = [...chartData.values].reverse().filter(v => {
+                if (!v.datetime || seenDates.has(v.datetime)) return false;
+                seenDates.add(v.datetime);
+                return true;
+            });
         } else {
             console.warn('Chart data unavailable:', chartData);
         }
 
-        // Unblock UI immediately — reveal hero card & chart instantly!
+        // Unblock UI FIRST — chart must render into a visible container!
         if (loader) loader.classList.add('hidden-element');
         if (resultsContainer) {
             resultsContainer.classList.remove('hidden-element');
             animateCardReveals();
+        }
+
+        // Render chart AFTER container is visible so clientWidth/clientHeight are non-zero
+        if (rawHistoricalData.length > 0) {
+            // Small defer to let the browser do one layout pass before chart init
+            requestAnimationFrame(() => renderEquityChart(rawHistoricalData));
         }
 
         // Stage 2 (Background non-blocking hydration): Analyst Reco, Peers, Financial Statements
@@ -704,76 +715,111 @@ function renderEquityChart(data) {
     const isPositive = prices[prices.length - 1] >= prices[0];
     const accentColor = isPositive ? '#10b981' : '#ef4444';
 
-    // Create chart
+    // Guarantee chart gets correct dimensions (safety net for any edge-case timing)
+    const containerW = container.clientWidth || container.offsetWidth || 800;
+    const containerH = container.clientHeight || container.offsetHeight || 420;
+
+    // Create chart — premium TradingView-style config
     const chart = LightweightCharts.createChart(container, {
+        width: containerW,
+        height: containerH,
         layout: {
-            background: { type: 'solid', color: '#131722' },
-            textColor: '#d1d4dc',
+            background: { type: 'solid', color: '#0d1117' },
+            textColor: '#9ca3af',
             fontFamily: "'JetBrains Mono', 'Inter', monospace",
             fontSize: 11,
         },
         grid: {
-            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
-            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            vertLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
+            horzLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
             vertLine: {
-                color: 'rgba(6, 182, 212, 0.4)',
+                color: 'rgba(99, 179, 237, 0.6)',
                 width: 1,
-                style: LightweightCharts.LineStyle.Dashed,
-                labelBackgroundColor: '#2563eb',
+                style: LightweightCharts.LineStyle.Solid,
+                labelBackgroundColor: '#1e40af',
             },
             horzLine: {
-                color: 'rgba(6, 182, 212, 0.4)',
+                color: 'rgba(99, 179, 237, 0.6)',
                 width: 1,
-                style: LightweightCharts.LineStyle.Dashed,
-                labelBackgroundColor: '#2563eb',
+                style: LightweightCharts.LineStyle.Solid,
+                labelBackgroundColor: '#1e40af',
             },
         },
         rightPriceScale: {
-            borderColor: 'rgba(197, 203, 206, 0.15)',
-            scaleMargins: { top: 0.1, bottom: 0.25 },
+            borderColor: 'rgba(255,255,255,0.06)',
+            scaleMargins: { top: 0.08, bottom: 0.28 },
+            textColor: '#6b7280',
         },
         timeScale: {
-            borderColor: 'rgba(197, 203, 206, 0.15)',
-            timeVisible: false,
+            borderColor: 'rgba(255,255,255,0.06)',
+            timeVisible: true,
+            secondsVisible: false,
             fixLeftEdge: true,
             fixRightEdge: true,
+            tickMarkFormatter: (time) => {
+                const d = typeof time === 'string' ? new Date(time) : new Date(time * 1000);
+                return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            },
         },
-        handleScroll: { vertTouchDrag: false },
+        handleScroll: { vertTouchDrag: false, mouseWheel: true, pressedMouseMove: true },
+        handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
     });
 
     // Main price series
     let mainSeries;
     if (isCandlestick) {
         mainSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
-            upColor: '#10b981',
-            downColor: '#ef4444',
-            borderUpColor: '#10b981',
-            borderDownColor: '#ef4444',
-            wickUpColor: 'rgba(16, 185, 129, 0.7)',
-            wickDownColor: 'rgba(239, 68, 68, 0.7)',
+            upColor: '#00d09c',
+            downColor: '#ff6b6b',
+            borderUpColor: '#00d09c',
+            borderDownColor: '#ff6b6b',
+            wickUpColor: '#00d09c',
+            wickDownColor: '#ff6b6b',
         });
-        const candleData = data.map(v => ({
-            time: v.datetime,
-            open: parseFloat(v.open || v.close),
-            high: parseFloat(v.high || v.close),
-            low: parseFloat(v.low || v.close),
-            close: parseFloat(v.close),
-        }));
+        // Deduplicate candle data too
+        const candleSeen = new Set();
+        const candleData = data
+            .filter(v => { if (candleSeen.has(v.datetime)) return false; candleSeen.add(v.datetime); return true; })
+            .map(v => ({
+                time: v.datetime,
+                open: parseFloat(v.open || v.close),
+                high: parseFloat(v.high || v.close),
+                low: parseFloat(v.low || v.close),
+                close: parseFloat(v.close),
+            }));
         mainSeries.setData(candleData);
+    } else if (chartMode === 'bar') {
+        mainSeries = chart.addSeries(LightweightCharts.BarSeries, {
+            upColor: '#00d09c',
+            downColor: '#ff6b6b',
+            openVisible: true,
+            thinBars: false,
+        });
+        const barSeen = new Set();
+        const barData = data
+            .filter(v => { if (barSeen.has(v.datetime)) return false; barSeen.add(v.datetime); return true; })
+            .map(v => ({
+                time: v.datetime,
+                open: parseFloat(v.open || v.close),
+                high: parseFloat(v.high || v.close),
+                low: parseFloat(v.low || v.close),
+                close: parseFloat(v.close),
+            }));
+        mainSeries.setData(barData);
     } else {
         mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
-            topColor: isPositive ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)',
-            bottomColor: isPositive ? 'rgba(16, 185, 129, 0.02)' : 'rgba(239, 68, 68, 0.02)',
-            lineColor: accentColor,
+            topColor: isPositive ? 'rgba(0, 208, 156, 0.28)' : 'rgba(255, 107, 107, 0.28)',
+            bottomColor: isPositive ? 'rgba(0, 208, 156, 0.01)' : 'rgba(255, 107, 107, 0.01)',
+            lineColor: isPositive ? '#00d09c' : '#ff6b6b',
             lineWidth: 2,
             crosshairMarkerVisible: true,
-            crosshairMarkerRadius: 5,
+            crosshairMarkerRadius: 4,
             crosshairMarkerBorderColor: '#ffffff',
-            crosshairMarkerBorderWidth: 2,
-            crosshairMarkerBackgroundColor: accentColor,
+            crosshairMarkerBorderWidth: 1.5,
+            crosshairMarkerBackgroundColor: isPositive ? '#00d09c' : '#ff6b6b',
         });
         const lineData = data.map(v => ({
             time: v.datetime,
@@ -786,7 +832,7 @@ function renderEquityChart(data) {
     const lastPrice = prices[prices.length - 1];
     mainSeries.createPriceLine({
         price: lastPrice,
-        color: accentColor,
+        color: isPositive ? '#00d09c' : '#ff6b6b',
         lineWidth: 1,
         lineStyle: LightweightCharts.LineStyle.Dashed,
         axisLabelVisible: true,
@@ -800,7 +846,7 @@ function renderEquityChart(data) {
         return {
             time: v.datetime,
             value: parseFloat(v.volume || 0),
-            color: currClose >= prevClose ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+            color: currClose >= prevClose ? 'rgba(0, 208, 156, 0.22)' : 'rgba(255, 107, 107, 0.22)',
         };
     });
 
@@ -812,6 +858,34 @@ function renderEquityChart(data) {
         scaleMargins: { top: 0.8, bottom: 0 },
     });
     volumeSeries.setData(volumeData);
+
+    // ── % Return Label (top-left overlay, zero API calls) ────────────────────
+    const firstPrice = prices[0];
+    const returnPct = ((lastPrice - firstPrice) / firstPrice * 100);
+    const returnSign = returnPct >= 0 ? '+' : '';
+    const returnStr = `${returnPct >= 0 ? '▲' : '▼'} ${returnSign}${returnPct.toFixed(2)}%`;
+    let returnLabel = container.querySelector('.chart-return-label');
+    if (!returnLabel) {
+        returnLabel = document.createElement('div');
+        container.appendChild(returnLabel);
+    }
+    returnLabel.className = `chart-return-label ${isPositive ? 'positive' : 'negative'}`;
+    returnLabel.textContent = returnStr;
+
+    // ── STRATA Watermark (built-in LW Charts v5 API, zero cost) ─────────────
+    try {
+        LightweightCharts.createTextWatermark(chart.panes()[0], {
+            horzAlign: 'center',
+            vertAlign: 'center',
+            lines: [{
+                text: 'STRATA',
+                color: 'rgba(255,255,255,0.022)',
+                fontSize: 56,
+                fontStyle: 'bold',
+                fontFamily: "'Inter', 'JetBrains Mono', sans-serif",
+            }],
+        });
+    } catch (e) { /* watermark is optional */ }
 
     // Floating OHLC tooltip (Zerodha-style)
     const toolTipEl = document.createElement('div');
@@ -879,16 +953,29 @@ function renderEquityChart(data) {
     // Fit content
     chart.timeScale().fitContent();
 
-    // Responsive resize
+    // Responsive resize — also do an immediate size sync in case clientWidth changed
     const resizeObserver = new ResizeObserver(entries => {
         for (const entry of entries) {
             const { width, height } = entry.contentRect;
             if (width > 0 && height > 0) {
                 chart.applyOptions({ width, height });
+                chart.timeScale().fitContent();
             }
         }
     });
     resizeObserver.observe(container);
+
+    // Double-safety: force explicit size after next two frames in case layout shifts
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            if (w > 0 && h > 0) {
+                chart.applyOptions({ width: w, height: h });
+                chart.timeScale().fitContent();
+            }
+        });
+    });
 
     equityChartInstance = chart;
     // Store the observer so we can clean it up later
