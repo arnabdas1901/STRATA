@@ -142,6 +142,46 @@
                         </div>
                     </div>
 
+                    <!-- Section 9: Historical Price Trajectory -->
+                    <div class="chart-container-card" id="crypto-chart-card" style="border: none; background: transparent; padding: 0; box-shadow: none;">
+                        <div class="chart-header" style="border: none; padding-bottom: 0;">
+                            <div class="chart-controls-row" style="width: 100%; justify-content: space-between;">
+                                <div class="chart-mode-toggle" id="crypto-chart-mode-toggle">
+                                    <button class="chart-mode-btn active" data-mode="price" title="Price Chart">
+                                        <i class="fa-solid fa-dollar-sign" aria-hidden="true"></i>
+                                    </button>
+                                    <button class="chart-mode-btn" data-mode="mcap" title="Market Cap Chart">
+                                        <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="indicator-dropdown">
+                                    <button class="indicator-btn" id="crypto-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
+                                    <div class="indicator-menu" id="crypto-indicator-menu">
+                                        <label><input type="checkbox" value="sma"> SMA (20)</label>
+                                        <label><input type="checkbox" value="ema"> EMA (20)</label>
+                                        <label><input type="checkbox" value="bb"> Bollinger Bands</label>
+                                        <label><input type="checkbox" value="rsi"> RSI (14)</label>
+                                        <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
+                                    </div>
+                                </div>
+                                <button class="chart-fullscreen-btn" title="Fullscreen" data-chart-card="crypto-chart-card" aria-label="Toggle fullscreen">
+                                    <i class="fa-solid fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box">
+                            <div id="cryptoHistoricalChart"></div>
+                        </div>
+                        <div class="groww-tf-strip">
+                                    <button class="tf-btn" data-tf="7">7D</button>
+                                    <button class="tf-btn" data-tf="30">30D</button>
+                                    <button class="tf-btn" data-tf="90">90D</button>
+                                    <button class="tf-btn active" data-tf="365">1Y</button>
+                                </div>
+                    </div>
+
+                    
                     <!-- Section 2: Multi-Timeframe Price Strip -->
                     <div id="crypto-timeframe-strip" class="crypto-timeframe-strip">
                         <!-- JS will populate with pills for 1h, 24h, 7d, 14d, 30d, 60d, 200d, 1y -->
@@ -259,6 +299,92 @@
                         </div>
                     </div>
 
+                    <!-- Section 6b: Fear & Greed Index + 24h Range Bar (side by side) -->
+                    <div class="crypto-fng-range-row">
+
+                        <!-- Fear & Greed Gauge (same design as Dashboard 1) -->
+                        <div class="sentiment-gauge-card" id="crypto-fng-card">
+                            <div class="sentiment-gauge-header">
+                                <div class="header-title-wrap">
+                                    <i class="fa-solid fa-brain" style="color: var(--neon-cyan-vibrant);"></i>
+                                    <h3>Fear &amp; Greed Index</h3>
+                                </div>
+                                <div class="sentiment-status-tag">
+                                    <span class="pulse-dot"></span> LIVE
+                                </div>
+                            </div>
+                            <div class="sentiment-gauge-body">
+                                <div class="sentiment-arc-wrap">
+                                    <svg viewBox="0 0 200 115" class="sentiment-arc-svg">
+                                        <defs>
+                                            <linearGradient id="crypto-gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%" stop-color="#ef4444"/>
+                                                <stop offset="25%" stop-color="#f97316"/>
+                                                <stop offset="50%" stop-color="#eab308"/>
+                                                <stop offset="75%" stop-color="#22c55e"/>
+                                                <stop offset="100%" stop-color="#10b981"/>
+                                            </linearGradient>
+                                        </defs>
+                                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12" stroke-linecap="round"/>
+                                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#crypto-gauge-gradient)" stroke-width="12" stroke-linecap="round" opacity="0.35"/>
+                                        <!-- Needle -->
+                                        <line id="crypto-fng-needle" x1="100" y1="100" x2="100" y2="28" stroke="rgba(248,250,252,0.9)" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90, 100, 100)" style="transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);"/>
+                                        <circle cx="100" cy="100" r="5" fill="rgba(248,250,252,0.9)"/>
+                                        <circle cx="100" cy="100" r="2.5" fill="var(--neon-cyan-vibrant)"/>
+                                    </svg>
+                                    <div class="sentiment-score-display">
+                                        <span class="sentiment-score-value" id="crypto-fng-value">--</span>
+                                        <span class="sentiment-score-label" id="crypto-fng-label">Loading…</span>
+                                    </div>
+                                </div>
+                                <div class="sentiment-factors">
+                                    <div class="sentiment-factor-row">
+                                        <span class="sf-name"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i> Today</span>
+                                        <span class="sf-value" id="crypto-fng-today">--</span>
+                                    </div>
+                                    <div class="sentiment-factor-row">
+                                        <span class="sf-name"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Yesterday</span>
+                                        <span class="sf-value" id="crypto-fng-yesterday">--</span>
+                                    </div>
+                                    <div class="sentiment-factor-row">
+                                        <span class="sf-name"><i class="fa-solid fa-calendar-week" aria-hidden="true"></i> Last Week</span>
+                                        <span class="sf-value" id="crypto-fng-lastweek">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 24h High / Low Range Bar -->
+                        <div class="crypto-range-bar-card" id="crypto-range-bar-card">
+                            <div class="card-section-header">
+                                <i class="fa-solid fa-arrows-up-down" aria-hidden="true"></i>
+                                <h3>24h Price Range</h3>
+                            </div>
+                            <div class="range-bar-body">
+                                <div class="range-price-row">
+                                    <span class="range-low-label">Low</span>
+                                    <span class="range-high-label">High</span>
+                                </div>
+                                <div class="range-price-row range-price-values">
+                                    <span id="crypto-range-low-price" class="range-low-val font-mono">--</span>
+                                    <span id="crypto-range-high-price" class="range-high-val font-mono">--</span>
+                                </div>
+                                <div class="range-track">
+                                    <div class="range-fill" id="crypto-range-fill"></div>
+                                    <div class="range-thumb" id="crypto-range-thumb"></div>
+                                </div>
+                                <div class="range-current-row">
+                                    <span class="range-current-label">Current Price</span>
+                                    <span id="crypto-range-current-price" class="range-current-val font-mono">--</span>
+                                </div>
+                                <div class="range-pct-row">
+                                    <span class="range-pct-label">Position in range</span>
+                                    <span id="crypto-range-position-pct" class="range-pct-val font-mono">--%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Section 7: Intel Cards -->
                     <div class="crypto-intel-grid">
                         <div class="crypto-intel-card">
@@ -290,42 +416,6 @@
                             <span id="crypto-briefing-badge" class="briefing-badge">Balanced</span>
                         </div>
                         <p id="crypto-briefing-text">Market context will appear here once the asset load completes.</p>
-                    </div>
-
-                    <!-- Section 9: Historical Price Trajectory -->
-                    <div class="chart-container-card">
-                        <div class="chart-header">
-                            <h3>Historical Price Trajectory</h3>
-                            <div class="chart-controls-row">
-                                <div class="chart-mode-toggle" id="crypto-chart-mode-toggle">
-                                    <button class="chart-mode-btn active" data-mode="price" title="Price Chart">
-                                        <i class="fa-solid fa-dollar-sign" aria-hidden="true"></i>
-                                    </button>
-                                    <button class="chart-mode-btn" data-mode="mcap" title="Market Cap Chart">
-                                        <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                                <div class="chart-timeframe-selectors">
-                                    <button class="tf-btn" data-tf="7">7D</button>
-                                    <button class="tf-btn" data-tf="30">30D</button>
-                                    <button class="tf-btn" data-tf="90">90D</button>
-                                    <button class="tf-btn active" data-tf="365">1Y</button>
-                                </div>
-                                <div class="indicator-dropdown">
-                                    <button class="indicator-btn" id="crypto-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
-                                    <div class="indicator-menu" id="crypto-indicator-menu">
-                                        <label><input type="checkbox" value="sma"> SMA (20)</label>
-                                        <label><input type="checkbox" value="ema"> EMA (20)</label>
-                                        <label><input type="checkbox" value="bb"> Bollinger Bands</label>
-                                        <label><input type="checkbox" value="rsi"> RSI (14)</label>
-                                        <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="chart-wrapper-box">
-                            <div id="cryptoHistoricalChart"></div>
-                        </div>
                     </div>
 
                     <!-- Section 10: Tabbed Section (4 tabs) -->

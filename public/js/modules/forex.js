@@ -1,4 +1,4 @@
-import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, normalizeForexPair } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, normalizeForexPair, setupChartFullscreen } from '../utils.js';
 import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let forexChartInstance = null;
@@ -19,6 +19,7 @@ export function setupForexTracker() {
         if (isDetailsPage) {
             setupDetailsPageHandlers();
             setupIndicatorsUI('forex', () => window.currentForexChartData || [], () => window.forexIndicatorManager);
+            setupChartFullscreen();
             
             const params = new URLSearchParams(window.location.search);
             const symbol = params.get('symbol');
@@ -437,14 +438,14 @@ function renderForexChart(chartData, pairName, isPositive) {
         width: containerW,
         height: containerH,
         layout: {
-            background: { type: 'solid', color: '#0d1117' },
+            background: { type: 'solid', color: 'transparent' },
             textColor: '#9ca3af',
             fontFamily: "'JetBrains Mono', 'Inter', monospace",
             fontSize: 11,
         },
         grid: {
-            vertLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
-            horzLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
+            vertLines: { visible: false },
+            horzLines: { visible: false },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
@@ -462,12 +463,12 @@ function renderForexChart(chartData, pairName, isPositive) {
             },
         },
         rightPriceScale: {
-            borderColor: 'rgba(255,255,255,0.06)',
+            borderVisible: false,
             scaleMargins: { top: 0.1, bottom: 0.1 },
             textColor: '#6b7280',
         },
         timeScale: {
-            borderColor: 'rgba(255,255,255,0.06)',
+            borderVisible: false,
             timeVisible: true,
             secondsVisible: false,
             fixLeftEdge: true,

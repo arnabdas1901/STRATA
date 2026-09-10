@@ -159,7 +159,13 @@ function renderYieldCurveChart(yields, fedFunds) {
     const y30 = yields['30Y']?.yield;
     const isInverted = (y3m != null && y30 != null && y3m > y30);
     const curveColor = isInverted ? '#ef4444' : '#06b6d4';
-    const curveFill = isInverted ? 'rgba(239, 68, 68, 0.08)' : 'rgba(6, 182, 212, 0.08)';
+    
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, isInverted ? 'rgba(239, 68, 68, 0.4)' : 'rgba(6, 182, 212, 0.4)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    const curveFill = gradient;
 
     const datasets = [
         {
@@ -167,7 +173,7 @@ function renderYieldCurveChart(yields, fedFunds) {
             data: currentValues,
             borderColor: curveColor,
             backgroundColor: curveFill,
-            tension: 0.35,
+            tension: 0.4,
             fill: true,
             pointRadius: 6,
             pointHoverRadius: 9,
@@ -184,7 +190,7 @@ function renderYieldCurveChart(yields, fedFunds) {
             data: historicalValues,
             borderColor: '#64748b',
             backgroundColor: 'transparent',
-            tension: 0.35,
+            tension: 0.4,
             fill: false,
             borderDash: [6, 4],
             pointRadius: 4,
@@ -682,19 +688,24 @@ function renderBreakevenChart(history) {
 
 // ── Duration & Convexity Calculator ─────────────────────────────────────────────
 function setupDurationCalculator() {
-    const btn = document.getElementById('calc-duration-btn');
-    if (!btn) return;
-
-    btn.addEventListener('click', () => {
+    const inputs = ['bond-coupon-rate', 'bond-ytm', 'bond-maturity-years'];
+    const update = () => {
         const faceValue = parseFloat(document.getElementById('bond-face-value')?.value) || 1000;
         const couponRate = parseFloat(document.getElementById('bond-coupon-rate')?.value) / 100 || 0;
         const ytm = parseFloat(document.getElementById('bond-ytm')?.value) / 100 || 0;
         const maturityYears = parseInt(document.getElementById('bond-maturity-years')?.value) || 10;
         const frequency = parseInt(document.getElementById('bond-frequency')?.value) || 2;
-
         const result = calculateDurationConvexity(faceValue, couponRate, ytm, maturityYears, frequency);
         displayDurationResults(result, faceValue, couponRate, ytm, maturityYears, frequency);
+    };
+    
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', update);
     });
+    
+    // Initial calculate
+    setTimeout(update, 500);
 }
 
 function calculateDurationConvexity(faceValue, couponRate, ytm, maturityYears, frequency) {
@@ -810,7 +821,7 @@ function renderHeatmapTable(container, heatmap) {
         }
     };
 
-    let html = `<table class="yield-heatmap-table">
+    let html = `<table class="yield-heatmap-table tabular-nums">
         <thead><tr><th>Maturity</th><th>Current</th>`;
     for (const p of periods) html += `<th>${p}</th>`;
     html += '</tr></thead><tbody>';
@@ -818,12 +829,12 @@ function renderHeatmapTable(container, heatmap) {
     for (const mat of maturities) {
         const row = heatmap[mat];
         if (!row) continue;
-        html += `<tr><td>${mat}</td><td style="color: #f8fafc;">${row.current != null ? row.current.toFixed(2) + '%' : 'N/A'}</td>`;
+        html += `<tr><td style="font-size: 0.85rem; font-weight: 600;">${mat}</td><td style="color: #f8fafc; font-size: 0.85rem;" class="font-mono tabular-nums">${row.current != null ? row.current.toFixed(2) + '%' : 'N/A'}</td>`;
         for (const p of periods) {
             const bps = row.changes?.[p];
             const { bg, text } = cellColor(bps);
             const display = bps != null ? `${bps > 0 ? '+' : ''}${bps}` : '—';
-            html += `<td><span class="heatmap-cell" style="background: ${bg}; color: ${text};">${display}</span></td>`;
+            html += `<td><span class="heatmap-cell font-mono tabular-nums" style="font-size: 0.85rem;" style="background: ${bg}; color: ${text};">${display}</span></td>`;
         }
         html += '</tr>';
     }

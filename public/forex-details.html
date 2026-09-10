@@ -153,6 +153,33 @@
                             <div id="forex-last-updated" class="crypto-last-updated" style="display:none; margin-top: 4px; text-align: right;"></div>
                         </div>
                     </div>
+                    <div class="chart-container-card" id="forex-chart-card" style="border: none; background: transparent; padding: 0; box-shadow: none;">
+                        <div class="chart-header" style="border: none; padding-bottom: 0;">
+                            <div style="width: 100%; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                                
+                                <div class="indicator-dropdown">
+                                    <button class="indicator-btn" id="forex-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
+                                    <div class="indicator-menu" id="forex-indicator-menu">
+                                        <label><input type="checkbox" value="sma"> SMA (20)</label>
+                                        <label><input type="checkbox" value="ema"> EMA (20)</label>
+                                        <label><input type="checkbox" value="bb"> Bollinger Bands</label>
+                                        <label><input type="checkbox" value="rsi"> RSI (14)</label>
+                                        <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
+                                    </div>
+                                </div>
+                                <button class="chart-fullscreen-btn" title="Fullscreen" data-chart-card="forex-chart-card" aria-label="Toggle fullscreen">
+                                    <i class="fa-solid fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper-box"><div id="forexHistoricalChart" style="width:100%;height:100%"></div></div>
+                        <div class="groww-tf-strip">
+                                    <button class="tf-btn" data-tf="7">7D</button>
+                                    <button class="tf-btn" data-tf="30">30D</button>
+                                    <button class="tf-btn" data-tf="90">90D</button>
+                                    <button class="tf-btn active" data-tf="365">1Y</button>
+                                </div>
+                    </div>
                     <div class="metric-summary-grid" style="margin-top: 24px;">
                         <div class="metric-card"><span class="metric-title">Daily Range</span><span id="forex-metric-daily-range" class="metric-value font-mono">--</span></div>
                         <div class="metric-card"><span class="metric-title">52-Week Range</span><span id="forex-metric-52w-range" class="metric-value font-mono">--</span></div>
@@ -196,30 +223,7 @@
                         </p>
                     </div>
 
-                    <div class="chart-container-card">
-                        <div class="chart-header">
-                            <h3>Historical Price Trajectory</h3>
-                            <div style="display: flex; gap: 8px;">
-                                <div class="chart-timeframe-selectors">
-                                    <button class="tf-btn" data-tf="7">7D</button>
-                                    <button class="tf-btn" data-tf="30">30D</button>
-                                    <button class="tf-btn" data-tf="90">90D</button>
-                                    <button class="tf-btn active" data-tf="365">1Y</button>
-                                </div>
-                                <div class="indicator-dropdown">
-                                    <button class="indicator-btn" id="forex-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
-                                    <div class="indicator-menu" id="forex-indicator-menu">
-                                        <label><input type="checkbox" value="sma"> SMA (20)</label>
-                                        <label><input type="checkbox" value="ema"> EMA (20)</label>
-                                        <label><input type="checkbox" value="bb"> Bollinger Bands</label>
-                                        <label><input type="checkbox" value="rsi"> RSI (14)</label>
-                                        <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="chart-wrapper-box"><div id="forexHistoricalChart" style="width:100%;height:100%"></div></div>
-                    </div>
+                    
                 </div>
             </section>
         </main>

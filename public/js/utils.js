@@ -132,3 +132,39 @@ export function showToast(message) {
     toast.classList.remove('hidden-toast');
     setTimeout(() => { toast.classList.add('hidden-toast'); }, 3000);
 }
+
+// ── Chart Fullscreen Utility ───────────────────────────────────────────────────
+// Call once per page. Wires every .chart-fullscreen-btn on the page.
+// Uses the native Fullscreen API — fullscreens the whole chart card so the
+// chart header + controls remain visible. The existing ResizeObserver on each
+// LW Charts instance handles the resize automatically.
+export function setupChartFullscreen() {
+    document.querySelectorAll('.chart-fullscreen-btn').forEach(btn => {
+        const cardId = btn.dataset.chartCard;
+        const card   = cardId ? document.getElementById(cardId) : btn.closest('.chart-container-card');
+        if (!card) return;
+
+        const icon = btn.querySelector('i');
+
+        const updateIcon = () => {
+            const isFs = document.fullscreenElement === card;
+            if (icon) {
+                icon.className = isFs ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+            }
+            btn.title = isFs ? 'Exit fullscreen' : 'Fullscreen';
+        };
+
+        btn.addEventListener('click', () => {
+            if (document.fullscreenElement === card) {
+                document.exitFullscreen().catch(() => {});
+            } else {
+                card.requestFullscreen({ navigationUI: 'hide' }).catch(err => {
+                    console.warn('Fullscreen not available:', err);
+                });
+            }
+        });
+
+        // Update icon when fullscreen state changes (handles Esc key exit too)
+        card.addEventListener('fullscreenchange', updateIcon);
+    });
+}

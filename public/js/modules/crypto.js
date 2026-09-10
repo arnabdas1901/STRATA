@@ -1,4 +1,4 @@
-import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, formatLargeCurrency, setupTabs } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, formatLargeCurrency, setupTabs, setupChartFullscreen } from '../utils.js';
 import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let cryptoChartInstance = null;
@@ -21,6 +21,7 @@ export function setupCryptoTracker() {
         setupTabs('#dashboard-crypto');
         setupAboutToggle();
         setupConverter();
+        setupChartFullscreen();
 
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
@@ -188,6 +189,9 @@ async function displayCryptoDetails(cryptoId, cryptoSymbol = null) {
         if (!detailsResponse || !detailsResponse.ok) throw new Error(details?.error || 'Failed to fetch details');
 
         populateCryptoDetails(details);
+
+        // Fire Fear & Greed fetch non-blocking (free API, no key needed)
+        fetchCryptoFearGreed();
 
         if (loader) loader.classList.add('hidden-element');
         if (resultsContainer) resultsContainer.classList.remove('hidden-element');
@@ -653,23 +657,40 @@ function populateCryptoDetails(crypto) {
         }
     }
 
-    // ── About Section ───────────────────────────────────────────────────────────
+    // ── 24h High / Low Range Bar ─────────────────────────────────────────────────
+    if (high24h > 0 && low24h > 0 && currentPrice > 0) {
+        const rangePct = Math.min(100, Math.max(0, ((currentPrice - low24h) / (high24h - low24h)) * 100));
+
+        const fillEl   = document.getElementById('crypto-range-fill');
+        const thumbEl  = document.getElementById('crypto-range-thumb');
+        const lowPrEl  = document.getElementById('crypto-range-low-price');
+        const highPrEl = document.getElementById('crypto-range-high-price');
+        const curPrEl  = document.getElementById('crypto-range-current-price');
+        const pctEl    = document.getElementById('crypto-range-position-pct');
+
+        if (fillEl)   fillEl.style.width  = `${rangePct}%`;
+        if (thumbEl)  thumbEl.style.left  = `${rangePct}%`;
+        if (lowPrEl)  lowPrEl.textContent  = formatCryptoPrice(low24h);
+        if (highPrEl) highPrEl.textContent = formatCryptoPrice(high24h);
+        if (curPrEl)  curPrEl.textContent  = formatCryptoPrice(currentPrice);
+        if (pctEl)    pctEl.textContent    = `${rangePct.toFixed(1)}%`;
+    }
+
+    // ── About Section ─────────────────────────────────────────────────────────────
     const aboutText = document.getElementById('crypto-about-text');
     if (aboutText) aboutText.innerHTML = description || 'No description available.';
 
-    // ── Converter ───────────────────────────────────────────────────────────────
+    // ── Converter ─────────────────────────────────────────────────────────────────
     const converterSymbol = document.getElementById('crypto-converter-symbol');
     if (converterSymbol) converterSymbol.textContent = (crypto.symbol || '').toUpperCase();
 
-    const converterUsd = document.getElementById('crypto-converter-usd');
+    const converterUsd  = document.getElementById('crypto-converter-usd');
     const converterCoin = document.getElementById('crypto-converter-coin');
     if (converterCoin) {
         converterCoin.value = currentPrice > 0 ? (1000 / currentPrice).toFixed(8) : '0';
         converterCoin.readOnly = false;
     }
-    if (converterUsd) {
-        converterUsd.readOnly = false;
-    }
+    if (converterUsd) converterUsd.readOnly = false;
 }
 
 // ─── About Toggle ───────────────────────────────────────────────────────────────
@@ -684,6 +705,63 @@ function setupAboutToggle() {
         content.classList.toggle('expanded', isCollapsed);
         btn.classList.toggle('expanded', isCollapsed);
     });
+}
+
+// ─── Crypto Fear & Greed Index (alternative.me — completely free, no key) ───────
+
+async function fetchCryptoFearGreed() {
+    const needle    = document.getElementById('crypto-fng-needle');
+    const valueEl   = document.getElementById('crypto-fng-value');
+    const labelEl   = document.getElementById('crypto-fng-label');
+    const todayEl   = document.getElementById('crypto-fng-today');
+    const yestEl    = document.getElementById('crypto-fng-yesterday');
+    const weekEl    = document.getElementById('crypto-fng-lastweek');
+
+    if (!needle || !valueEl || !labelEl) return;
+
+    const fngClass = (val) => {
+        if (val <= 20) return { label: 'Extreme Fear', cls: 'extreme-fear' };
+        if (val <= 40) return { label: 'Fear',         cls: 'fear' };
+        if (val <= 60) return { label: 'Neutral',      cls: 'neutral' };
+        if (val <= 80) return { label: 'Greed',        cls: 'greed' };
+        return             { label: 'Extreme Greed',   cls: 'extreme-greed' };
+    };
+
+    const fngRow = (val, classification) =>
+        `${val} — ${classification.label}`;
+
+    try {
+        // Fetch today + yesterday + last week (limit=8 gives us enough history)
+        const res = await fetch('https://api.alternative.me/fng/?limit=8&format=json');
+        if (!res.ok) throw new Error('FNG API error');
+        const json = await res.json();
+        const entries = json.data || [];
+
+        if (!entries.length) throw new Error('No data');
+
+        const today     = parseInt(entries[0]?.value, 10);
+        const yesterday = parseInt(entries[1]?.value, 10);
+        const lastWeek  = parseInt(entries[6]?.value, 10);
+
+        const todayCls = fngClass(today);
+
+        // Animate needle
+        const angle = -90 + (today / 100) * 180;
+        needle.setAttribute('transform', `rotate(${angle}, 100, 100)`);
+
+        valueEl.textContent = today;
+        labelEl.textContent = todayCls.label;
+        labelEl.className   = `sentiment-score-label ${todayCls.cls}`;
+
+        if (todayEl)  { todayEl.textContent = fngRow(today, todayCls); todayEl.className = `sf-value sf-${today >= 50 ? 'positive' : 'negative'}`; }
+        if (yestEl  && !isNaN(yesterday)) { const c = fngClass(yesterday); yestEl.textContent = fngRow(yesterday, c); yestEl.className = `sf-value sf-${yesterday >= 50 ? 'positive' : 'negative'}`; }
+        if (weekEl  && !isNaN(lastWeek))  { const c = fngClass(lastWeek);  weekEl.textContent = fngRow(lastWeek,  c); weekEl.className = `sf-value sf-${lastWeek  >= 50 ? 'positive' : 'negative'}`; }
+
+    } catch (err) {
+        console.warn('Crypto Fear & Greed fetch failed:', err);
+        if (valueEl) valueEl.textContent = '--';
+        if (labelEl) { labelEl.textContent = 'Unavailable'; labelEl.className = 'sentiment-score-label neutral'; }
+    }
 }
 
 // ─── Converter ──────────────────────────────────────────────────────────────────
@@ -739,14 +817,14 @@ function renderCryptoChart(history) {
         width: containerW,
         height: containerH,
         layout: {
-            background: { type: 'solid', color: '#0d1117' },
+            background: { type: 'solid', color: 'transparent' },
             textColor: '#9ca3af',
             fontFamily: "'JetBrains Mono', 'Inter', monospace",
             fontSize: 11,
         },
         grid: {
-            vertLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
-            horzLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
+            vertLines: { visible: false },
+            horzLines: { visible: false },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
@@ -764,12 +842,12 @@ function renderCryptoChart(history) {
             },
         },
         rightPriceScale: {
-            borderColor: 'rgba(255,255,255,0.06)',
+            borderVisible: false,
             scaleMargins: { top: 0.1, bottom: 0.25 },
             textColor: '#6b7280',
         },
         timeScale: {
-            borderColor: 'rgba(255,255,255,0.06)',
+            borderVisible: false,
             timeVisible: true,
             secondsVisible: false,
             fixLeftEdge: true,
@@ -785,7 +863,7 @@ function renderCryptoChart(history) {
 
     // Price/MCap area series
     const mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
-        topColor: isPositive ? 'rgba(0, 208, 156, 0.28)' : 'rgba(255, 107, 107, 0.28)',
+        topColor: isPositive ? 'rgba(0, 208, 156, 0.6)' : 'rgba(255, 107, 107, 0.6)',
         bottomColor: isPositive ? 'rgba(0, 208, 156, 0.01)' : 'rgba(255, 107, 107, 0.01)',
         lineColor: isPositive ? '#00d09c' : '#ff6b6b',
         lineWidth: 2,

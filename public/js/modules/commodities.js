@@ -1,4 +1,4 @@
-import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, setupChartFullscreen } from '../utils.js';
 import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let commoditiesData = [];
@@ -48,6 +48,7 @@ export function initCommoditiesDashboard() {
     if (isDetailsPage) {
         setupDetailsUIListeners();
         setupIndicatorsUI('commodity', () => window.currentCommodityChartData || [], () => window.commodityIndicatorManager);
+        setupChartFullscreen();
         
         const params = new URLSearchParams(window.location.search);
         const symbol = params.get('symbol');
@@ -459,14 +460,14 @@ function renderCommodityChart(chartData, name, isPositive) {
         width: containerW,
         height: containerH,
         layout: {
-            background: { type: 'solid', color: '#0d1117' },
+            background: { type: 'solid', color: 'transparent' },
             textColor: '#9ca3af',
             fontFamily: "'JetBrains Mono', 'Inter', monospace",
             fontSize: 11,
         },
         grid: {
-            vertLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
-            horzLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
+            vertLines: { visible: false },
+            horzLines: { visible: false },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
@@ -484,12 +485,12 @@ function renderCommodityChart(chartData, name, isPositive) {
             },
         },
         rightPriceScale: {
-            borderColor: 'rgba(255,255,255,0.06)',
+            borderVisible: false,
             scaleMargins: { top: 0.1, bottom: 0.1 },
             textColor: '#6b7280',
         },
         timeScale: {
-            borderColor: 'rgba(255,255,255,0.06)',
+            borderVisible: false,
             timeVisible: true,
             secondsVisible: false,
             fixLeftEdge: true,
@@ -505,7 +506,7 @@ function renderCommodityChart(chartData, name, isPositive) {
 
     // Area series for commodity price
     const mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
-        topColor: isPositive ? 'rgba(0, 208, 156, 0.28)' : 'rgba(255, 107, 107, 0.28)',
+        topColor: isPositive ? 'rgba(0, 208, 156, 0.6)' : 'rgba(255, 107, 107, 0.6)',
         bottomColor: isPositive ? 'rgba(0, 208, 156, 0.01)' : 'rgba(255, 107, 107, 0.01)',
         lineColor: isPositive ? '#00d09c' : '#ff6b6b',
         lineWidth: 2,

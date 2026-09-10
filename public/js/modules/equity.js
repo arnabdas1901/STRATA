@@ -1,4 +1,4 @@
-import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, escapeHtml, formatLargeCurrency, setupTabs } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, escapeHtml, formatLargeCurrency, setupTabs, setupChartFullscreen } from '../utils.js';
 import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let equityChartInstance = null;
@@ -19,6 +19,7 @@ export function loadDashboard() {
             setupTimeframeSelectors();
             setupChartModeToggle();
             setupIndicatorsUI('equity', () => rawHistoricalData, () => equityIndicatorManager);
+            setupChartFullscreen();
             
             const params = new URLSearchParams(window.location.search);
             const symbol = params.get('symbol');
@@ -719,42 +720,42 @@ function renderEquityChart(data) {
     const containerW = container.clientWidth || container.offsetWidth || 800;
     const containerH = container.clientHeight || container.offsetHeight || 420;
 
-    // Create chart — premium TradingView-style config
+    // Create chart — premium Groww/TradingView aesthetic config
     const chart = LightweightCharts.createChart(container, {
         width: containerW,
         height: containerH,
         layout: {
-            background: { type: 'solid', color: '#0d1117' },
-            textColor: '#9ca3af',
-            fontFamily: "'JetBrains Mono', 'Inter', monospace",
+            background: { type: 'solid', color: 'transparent' },
+            textColor: '#64748b',
+            fontFamily: "'JetBrains Mono', 'Inter', -apple-system, sans-serif",
             fontSize: 11,
         },
         grid: {
-            vertLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
-            horzLines: { color: 'rgba(255,255,255,0.04)', style: LightweightCharts.LineStyle.Solid },
+            vertLines: { visible: isCandlestick, color: 'rgba(255,255,255,0.02)', style: LightweightCharts.LineStyle.Solid },
+            horzLines: { visible: isCandlestick, color: 'rgba(255,255,255,0.02)', style: LightweightCharts.LineStyle.Solid },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
             vertLine: {
-                color: 'rgba(99, 179, 237, 0.6)',
+                color: 'rgba(56, 189, 248, 0.5)',
                 width: 1,
-                style: LightweightCharts.LineStyle.Solid,
-                labelBackgroundColor: '#1e40af',
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#0f172a',
             },
             horzLine: {
-                color: 'rgba(99, 179, 237, 0.6)',
+                color: 'rgba(56, 189, 248, 0.5)',
                 width: 1,
-                style: LightweightCharts.LineStyle.Solid,
-                labelBackgroundColor: '#1e40af',
+                style: LightweightCharts.LineStyle.Dashed,
+                labelBackgroundColor: '#0f172a',
             },
         },
         rightPriceScale: {
-            borderColor: 'rgba(255,255,255,0.06)',
-            scaleMargins: { top: 0.08, bottom: 0.28 },
-            textColor: '#6b7280',
+            borderColor: 'transparent',
+            scaleMargins: { top: 0.06, bottom: 0.12 },
+            textColor: '#64748b',
         },
         timeScale: {
-            borderColor: 'rgba(255,255,255,0.06)',
+            borderColor: 'transparent',
             timeVisible: true,
             secondsVisible: false,
             fixLeftEdge: true,
@@ -811,15 +812,15 @@ function renderEquityChart(data) {
         mainSeries.setData(barData);
     } else {
         mainSeries = chart.addSeries(LightweightCharts.AreaSeries, {
-            topColor: isPositive ? 'rgba(0, 208, 156, 0.28)' : 'rgba(255, 107, 107, 0.28)',
-            bottomColor: isPositive ? 'rgba(0, 208, 156, 0.01)' : 'rgba(255, 107, 107, 0.01)',
-            lineColor: isPositive ? '#00d09c' : '#ff6b6b',
-            lineWidth: 2,
+            topColor: isPositive ? 'rgba(0, 208, 156, 0.32)' : 'rgba(255, 75, 75, 0.32)',
+            bottomColor: isPositive ? 'rgba(0, 208, 156, 0.0)' : 'rgba(255, 75, 75, 0.0)',
+            lineColor: isPositive ? '#00d09c' : '#ff4b4b',
+            lineWidth: 2.5,
             crosshairMarkerVisible: true,
-            crosshairMarkerRadius: 4,
+            crosshairMarkerRadius: 5,
             crosshairMarkerBorderColor: '#ffffff',
-            crosshairMarkerBorderWidth: 1.5,
-            crosshairMarkerBackgroundColor: isPositive ? '#00d09c' : '#ff6b6b',
+            crosshairMarkerBorderWidth: 2,
+            crosshairMarkerBackgroundColor: isPositive ? '#00d09c' : '#ff4b4b',
         });
         const lineData = data.map(v => ({
             time: v.datetime,

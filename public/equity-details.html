@@ -118,66 +118,69 @@
                 </div>
 
                 <div id="equity-results-container" class="hidden-element">
-                    <!-- Enhanced Hero Card with Logo -->
-                    <div class="ticker-hero-card equity-reveal-card">
-                        <div class="hero-meta">
+                    <!-- Modern Clean Financial Hero Header (Exceeding Groww) -->
+                    <div class="ticker-hero-card equity-reveal-card" id="ticker-hero-card">
+                        <div class="hero-top-row">
                             <div class="hero-identity-row">
                                 <div class="ticker-logo-box" id="company-logo-box">
                                     <img id="company-logo-img" src="" alt="" style="display:none;">
                                     <i class="fa-solid fa-building" id="company-logo-fallback"></i>
                                 </div>
-                                <div>
-                                    <h2 id="company-name-display">Apple Inc.</h2>
-                                    <div class="ticker-badges">
-                                        <span id="company-ticker-badge" class="badge">AAPL</span>
-                                        <span id="company-exchange-badge" class="badge secondary">NASDAQ</span>
-                                        <span id="company-industry-badge" class="badge industry-badge"><i class="fa-solid fa-industry" aria-hidden="true"></i> <span id="industry-badge-text">Technology</span></span>
-                                        <button id="equity-ai-btn" class="badge primary-btn" style="background-color: #7c3aed; border-color: #7c3aed; color: #ffffff; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;">
-                                            <i class="fa-solid fa-brain" aria-hidden="true"></i> 🤖 Analyze with AI
-                                        </button>
+                                <div class="hero-title-group">
+                                    <div class="ticker-meta-breadcrumbs">
+                                        <span id="company-ticker-badge" class="ticker-pill">AAPL</span>
+                                        <span class="ticker-bullet">•</span>
+                                        <span id="company-exchange-badge" class="exchange-pill">NASDAQ</span>
+                                        <span id="company-industry-badge" class="industry-chip"><i class="fa-solid fa-industry" aria-hidden="true"></i> <span id="industry-badge-text">Technology</span></span>
                                     </div>
+                                    <h2 id="company-name-display" class="company-clean-title">Apple Inc.</h2>
                                 </div>
                             </div>
+                            <div class="hero-quick-actions">
+                                <button id="equity-ai-btn" class="ai-deepdive-btn" title="Run AI Deep Dive Analysis">
+                                    <span class="ai-glow-sparkle"></span>
+                                    <i class="fa-solid fa-brain" aria-hidden="true"></i>
+                                    <span>Analyze with AI</span>
+                                </button>
+                            </div>
                         </div>
-                        <div class="hero-pricing">
-                            <div id="live-price-display" class="price-value">$0.00</div>
-                            <div id="live-change-display" class="price-change-percent">
+
+                        <div class="hero-pricing-row">
+                            <div id="live-price-display" class="price-value-hero">$0.00</div>
+                            <div id="live-change-display" class="price-change-hero">
                                 <i id="change-arrow-icon" class="fa-solid fa-caret-up"></i>
                                 <span id="change-text">0.00 (0.00%)</span>
+                                <span class="change-timeframe-tag">Today</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Company Info Bar -->
+                    <!-- Company Info Bar (Sleek Borderless Metadata Strip) -->
                     <div class="company-info-bar equity-reveal-card" id="company-info-bar" style="display:none;">
                         <div class="info-bar-item" id="info-country"><i class="fa-solid fa-globe" aria-hidden="true"></i> <span>--</span></div>
+                        <div class="info-bar-separator">•</div>
                         <div class="info-bar-item" id="info-ipo"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i> IPO: <span>--</span></div>
+                        <div class="info-bar-separator">•</div>
                         <div class="info-bar-item" id="info-shares"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Shares: <span>--</span></div>
+                        <div class="info-bar-separator">•</div>
                         <div class="info-bar-item" id="info-website"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> <a href="#" target="_blank" rel="noopener noreferrer">Website</a></div>
                     </div>
 
-                    <!-- Price Chart -->
-                    <div class="chart-container-card equity-reveal-card">
-                        <div class="chart-header">
-                            <h3>Historical Price Trajectory</h3>
-                            <div class="chart-controls-row">
-                                <div class="chart-mode-toggle" id="chart-mode-toggle">
-                                    <button class="chart-mode-btn active" data-mode="line" title="Line Chart">
-                                        <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-                                    </button>
-                                    <button class="chart-mode-btn" data-mode="bar" title="Bar Chart">
-                                        <i class="fa-solid fa-chart-bar" aria-hidden="true"></i>
-                                    </button>
-                                    <button class="chart-mode-btn" data-mode="candlestick" title="Candlestick Chart">
-                                        <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                                <div class="chart-timeframe-selectors">
-                                    <button class="tf-btn" data-tf="1M">1M</button>
-                                    <button class="tf-btn active" data-tf="1Y">1Y</button>
-                                    <button class="tf-btn" data-tf="5Y">5Y</button>
-                                    <button class="tf-btn" data-tf="MAX">MAX</button>
-                                </div>
+                    <!-- Price Chart — Edge-to-Edge Dominant Hero Chart -->
+                    <div class="chart-container-card equity-reveal-card" id="equity-chart-card">
+                        <div class="chart-toolbar-floating">
+                            <div class="chart-mode-toggle" id="chart-mode-toggle">
+                                <button class="chart-mode-btn active" data-mode="line" title="Line Chart">
+                                    <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                                </button>
+                                <button class="chart-mode-btn" data-mode="bar" title="Bar Chart">
+                                    <i class="fa-solid fa-chart-bar" aria-hidden="true"></i>
+                                </button>
+                                <button class="chart-mode-btn" data-mode="candlestick" title="Candlestick Chart">
+                                    <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="chart-utility-group">
                                 <div class="indicator-dropdown">
                                     <button class="indicator-btn" id="equity-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
                                     <div class="indicator-menu" id="equity-indicator-menu">
@@ -188,10 +191,22 @@
                                         <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
                                     </div>
                                 </div>
+                                <button class="chart-fullscreen-btn" title="Fullscreen" data-chart-card="equity-chart-card" aria-label="Toggle fullscreen">
+                                    <i class="fa-solid fa-expand"></i>
+                                </button>
                             </div>
                         </div>
+
                         <div class="chart-wrapper-box">
                             <div id="equityHistoricalChart"></div>
+                        </div>
+
+                        <!-- Timeframe Segmented Selector Strip Directly Underneath Chart (Like Groww) -->
+                        <div class="chart-timeframe-selectors groww-tf-strip">
+                            <button class="tf-btn" data-tf="1M">1M</button>
+                            <button class="tf-btn active" data-tf="1Y">1Y</button>
+                            <button class="tf-btn" data-tf="5Y">5Y</button>
+                            <button class="tf-btn" data-tf="MAX">MAX</button>
                         </div>
                     </div>
 
