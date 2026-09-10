@@ -1,4 +1,4 @@
-import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, formatLargeCurrency, setupTabs, setupChartFullscreen } from '../utils.js';
+import { BACKEND_URL, fetchWithTimeout, safeJsonParse, showToast, formatLargeCurrency, setupTabs, setupChartFullscreen, escapeHtml } from '../utils.js';
 import { IndicatorManager, setupIndicatorsUI } from './indicators.js';
 
 let cryptoChartInstance = null;

@@ -149,7 +149,7 @@
         </div>
 
         <div class="yields-split-view">
-            <!-- LEFT COLUMN -->
+            <!-- LEFT COLUMN (CHARTS) -->
             <div class="yields-col-main">
                 <!-- Yield Curve -->
                 <div class="chart-container-card borderless-card" style="height: 500px;">
@@ -164,17 +164,47 @@
                     <div class="chart-header">
                         <h3><i class="fa-solid fa-chart-line"></i> 10Y-2Y Spread History</h3>
                     </div>
-                    <div class="chart-wrapper-box"><canvas id="spreadHistoryChart"></canvas></div>
+                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="spreadHistoryChart"></canvas></div>
                 </div>
 
-                <!-- AI Analysis -->
-                <div class="company-profile-card borderless-card" style="margin-top: 16px;">
-                    <h3><i class="fa-solid fa-robot"></i> Fixed Income Strategy Analysis</h3>
-                    <p id="yields-analysis-display" style="color: var(--text-secondary-muted); line-height: 1.6; margin-top: 12px;"><span class="pulse-text">Generating yield curve insights…</span></p>
+                <!-- Credit Spreads -->
+                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
+                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
+                        <h3><i class="fa-solid fa-scale-balanced"></i> Credit Spreads</h3>
+                        <div style="display:flex; gap:12px;">
+                            <span style="font-size:0.8rem;"><span style="color:#10b981;">IG:</span> <span id="credit-ig-spread" class="font-mono tabular-nums">—</span></span>
+                            <span style="font-size:0.8rem;"><span style="color:#f59e0b;">HY:</span> <span id="credit-hy-spread" class="font-mono tabular-nums">—</span></span>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="creditSpreadChart"></canvas></div>
+                </div>
+                
+                <!-- Mortgage Spreads -->
+                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
+                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
+                        <h3><i class="fa-solid fa-house-chimney"></i> Mortgage Spread</h3>
+                        <div style="display:flex; gap:12px;">
+                            <span style="font-size:0.8rem;"><span style="color:#a78bfa;">30Y:</span> <span id="mortgage-rate" class="font-mono tabular-nums">—</span></span>
+                            <span style="font-size:0.8rem;"><span style="color:#f59e0b;">Spread:</span> <span id="mortgage-spread-value" class="font-mono tabular-nums">—</span></span>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="mortgageSpreadChart"></canvas></div>
+                </div>
+
+                <!-- Breakevens -->
+                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
+                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
+                        <h3><i class="fa-solid fa-fire-flame-curved"></i> 10Y Breakevens</h3>
+                        <div style="display:flex; gap:12px;">
+                            <span style="font-size:0.8rem;"><span style="color:#06b6d4;">Real:</span> <span id="real-yield-rate" class="font-mono tabular-nums">—</span></span>
+                            <span style="font-size:0.8rem;"><span style="color:#f97316;">BE:</span> <span id="breakeven-rate" class="font-mono tabular-nums">—</span></span>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="breakevenChart"></canvas></div>
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN -->
+            <!-- RIGHT COLUMN (METRICS & ANALYSIS) -->
             <div class="yields-col-side">
                 
                 <!-- Rates Grid -->
@@ -185,6 +215,12 @@
                     <div class="metric-card"><span class="metric-title">10Y</span><span id="yield-10y" class="metric-value font-mono tabular-nums">—</span></div>
                     <div class="metric-card"><span class="metric-title">30Y</span><span id="yield-30y" class="metric-value font-mono tabular-nums">—</span></div>
                     <div class="metric-card"><span class="metric-title">Updated</span><span id="yield-date" class="metric-value" style="font-size:0.8rem;">—</span></div>
+                </div>
+
+                <!-- AI Analysis -->
+                <div class="company-profile-card borderless-card" style="margin-top: 16px;">
+                    <h3><i class="fa-solid fa-robot"></i> Fixed Income Strategy Analysis</h3>
+                    <p id="yields-analysis-display" style="color: var(--text-secondary-muted); line-height: 1.6; margin-top: 12px;"><span class="pulse-text">Generating yield curve insights…</span></p>
                 </div>
 
                 <!-- Heatmap -->
@@ -219,40 +255,14 @@
                     </div>
                 </div>
 
-                <!-- Credit Spreads -->
+                <!-- Economic Calendar -->
                 <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
-                        <h3><i class="fa-solid fa-scale-balanced"></i> Credit Spreads</h3>
-                        <div style="display:flex; gap:12px;">
-                            <span style="font-size:0.8rem;"><span style="color:#10b981;">IG:</span> <span id="credit-ig-spread" class="font-mono tabular-nums">—</span></span>
-                            <span style="font-size:0.8rem;"><span style="color:#f59e0b;">HY:</span> <span id="credit-hy-spread" class="font-mono tabular-nums">—</span></span>
-                        </div>
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-calendar-days"></i> Upcoming Economic Events (US)</h3>
                     </div>
-                    <div class="chart-wrapper-box" style="height: 160px;"><canvas id="creditSpreadChart"></canvas></div>
-                </div>
-                
-                <!-- Mortgage Spreads -->
-                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
-                        <h3><i class="fa-solid fa-house-chimney"></i> Mortgage Spread</h3>
-                        <div style="display:flex; gap:12px;">
-                            <span style="font-size:0.8rem;"><span style="color:#a78bfa;">30Y:</span> <span id="mortgage-rate" class="font-mono tabular-nums">—</span></span>
-                            <span style="font-size:0.8rem;"><span style="color:#f59e0b;">Spread:</span> <span id="mortgage-spread-value" class="font-mono tabular-nums">—</span></span>
-                        </div>
+                    <div id="econ-calendar-body" style="padding: 0; overflow-x: auto;">
+                        <p class="pulse-text" style="color: var(--text-secondary-muted); text-align: center; padding: 20px 0;">Loading economic calendar…</p>
                     </div>
-                    <div class="chart-wrapper-box" style="height: 160px;"><canvas id="mortgageSpreadChart"></canvas></div>
-                </div>
-
-                <!-- Breakevens -->
-                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
-                        <h3><i class="fa-solid fa-fire-flame-curved"></i> 10Y Breakevens</h3>
-                        <div style="display:flex; gap:12px;">
-                            <span style="font-size:0.8rem;"><span style="color:#06b6d4;">Real:</span> <span id="real-yield-rate" class="font-mono tabular-nums">—</span></span>
-                            <span style="font-size:0.8rem;"><span style="color:#f97316;">BE:</span> <span id="breakeven-rate" class="font-mono tabular-nums">—</span></span>
-                        </div>
-                    </div>
-                    <div class="chart-wrapper-box" style="height: 160px;"><canvas id="breakevenChart"></canvas></div>
                 </div>
 
             </div>
