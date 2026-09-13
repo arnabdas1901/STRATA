@@ -98,7 +98,7 @@ select {
 
 ::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, rgba(37, 99, 235, 0.7), rgba(6, 182, 212, 0.65));
-    border-radius: 999px;
+    border-radius: 0px;
     border: 2px solid rgba(3, 7, 18, 0.95);
 }
 
@@ -223,7 +223,7 @@ select {
     gap: 14px;
     font-size: 0.95rem;
     font-weight: 500;
-    border-radius: 12px;
+    border-radius: 0px;
     cursor: pointer;
     text-align: left;
     transition: border-color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), background-color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), opacity var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
@@ -357,7 +357,7 @@ select {
     padding: 6px 12px;
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(51, 65, 85, 0.5);
-    border-radius: 20px;
+    border-radius: 0px;
     flex-shrink: 0;
 }
 
@@ -410,7 +410,7 @@ select {
     color: var(--text-primary-white);
     border: none;
     padding: 12px 24px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-weight: 600;
     font-size: 0.95rem;
     cursor: pointer;
@@ -433,7 +433,7 @@ select {
     color: var(--text-primary-white);
     border: 1px solid rgba(255,255,255,0.14);
     padding: 10px 16px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.85rem;
     cursor: pointer;
     transition: border-color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), background-color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), opacity var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
@@ -477,7 +477,7 @@ select {
 }
 
 .search-bar-container {
-    border-radius: 18px;
+    border-radius: 0px;
     padding: 8px 10px 8px 18px;
     transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
 }
@@ -506,7 +506,7 @@ select {
 .portfolio-scatter-card,
 .portfolio-kpi-container,
 .portfolio-stress-link-card {
-    border-radius: 18px;
+    border-radius: 0px;
 }
 
 .news-widget,
@@ -548,7 +548,7 @@ select {
     display: flex;
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 6px 8px 6px 18px;
     align-items: center;
     gap: 12px;
@@ -565,7 +565,7 @@ select {
 .index-value-card {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 10px;
+    border-radius: 0px;
     padding: 14px 16px;
     min-width: 190px;
     display: flex;
@@ -578,7 +578,7 @@ select {
     margin-top: 24px;
     background-color: rgba(15, 23, 42, 0.95);
     border: 1px solid rgba(37, 99, 235, 0.12);
-    border-radius: 16px;
+    border-radius: 0px;
     padding: 24px;
 }
 
@@ -609,7 +609,7 @@ select {
 .news-card {
     background: linear-gradient(145deg, rgba(16, 24, 46, 0.96), rgba(9, 14, 28, 0.96));
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
+    border-radius: 0px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -825,7 +825,7 @@ select {
     background: rgba(56, 189, 248, 0.08);
     border: 1px solid rgba(56, 189, 248, 0.2);
     padding: 1px 7px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.68rem;
     color: #38bdf8;
     display: inline-flex;
@@ -859,7 +859,7 @@ select {
     border: 1px solid rgba(139, 92, 246, 0.45);
     color: #c4b5fd;
     padding: 7px 15px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -938,7 +938,7 @@ select {
     background: linear-gradient(145deg, rgba(13, 19, 38, 0.96), rgba(9, 14, 28, 0.96));
     border: 1px solid var(--border-cyan-glow);
     padding: 16px 20px;
-    border-radius: 16px;
+    border-radius: 0px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -968,7 +968,7 @@ select {
 .crypto-intel-card {
     background: linear-gradient(145deg, rgba(8, 15, 31, 0.96), rgba(12, 18, 34, 0.96));
     border: 1px solid rgba(96, 165, 250, 0.16);
-    border-radius: 16px;
+    border-radius: 0px;
     padding: 16px 18px;
     display: flex;
     flex-direction: column;
@@ -1012,7 +1012,7 @@ select {
 .crypto-range-bar-card {
     background: linear-gradient(135deg, rgba(13,17,30,0.96), rgba(9,12,24,0.94));
     border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 1.25rem 1.5rem;
     display: flex;
     flex-direction: column;
@@ -1059,7 +1059,7 @@ select {
     position: relative;
     height: 6px;
     background: rgba(255,255,255,0.06);
-    border-radius: 999px;
+    border-radius: 0px;
     margin: 0.4rem 0;
     overflow: visible;
 }
@@ -1070,7 +1070,7 @@ select {
     top: 0;
     height: 100%;
     background: linear-gradient(90deg, #ff6b6b, #eab308, #00d09c);
-    border-radius: 999px;
+    border-radius: 0px;
     transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -1113,7 +1113,7 @@ select {
 .crypto-briefing-card {
     background: linear-gradient(135deg, rgba(13, 19, 38, 0.96), rgba(9, 14, 28, 0.94));
     border: 1px solid rgba(6, 182, 212, 0.2);
-    border-radius: 18px;
+    border-radius: 0px;
     padding: 20px 22px;
     margin-bottom: 24px;
 }
@@ -1136,7 +1136,7 @@ select {
     display: inline-flex;
     align-items: center;
     padding: 6px 10px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.74rem;
     font-weight: 600;
     background: rgba(37, 99, 235, 0.16);
@@ -1155,7 +1155,7 @@ select {
 .chart-container-card {
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 20px;
+    border-radius: 0px;
     padding: 16px 14px 16px 14px;
     margin-bottom: 24px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
@@ -1177,7 +1177,7 @@ select {
     gap: 4px;
     background: rgba(255, 255, 255, 0.04);
     padding: 3px;
-    border-radius: 8px;
+    border-radius: 0px;
     border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -1187,7 +1187,7 @@ select {
     color: #94a3b8;
     width: 32px;
     height: 30px;
-    border-radius: 6px;
+    border-radius: 0px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1216,7 +1216,7 @@ select {
 
 .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .chart-header h3 { font-size: 1.1rem; font-weight: 600; }
-.chart-timeframe-selectors { display: flex; gap: 6px; background-color: var(--bg-input-slate); padding: 4px; border-radius: 6px; }
+.chart-timeframe-selectors { display: flex; gap: 6px; background-color: var(--bg-input-slate); padding: 4px; border-radius: 0px; }
 
 /* Indicator Dropdown UI */
 .indicator-dropdown {
@@ -1231,7 +1231,7 @@ select {
     padding: 7px 14px;
     font-size: 0.8rem;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 0px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1253,7 +1253,7 @@ select {
     height: 32px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 7px;
+    border-radius: 0px;
     color: #9ca3af;
     cursor: pointer;
     font-size: 0.78rem;
@@ -1303,7 +1303,7 @@ select {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(37, 99, 235, 0.35);
-    border-radius: 8px;
+    border-radius: 0px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
     padding: 8px;
     z-index: 1000;
@@ -1324,7 +1324,7 @@ select {
     font-size: 0.8rem;
     padding: 6px 8px;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 0px;
     transition: background 0.2s ease;
 }
 
@@ -1344,7 +1344,7 @@ select {
     padding: 7px 14px;
     font-size: 0.8rem;
     font-weight: 600;
-    border-radius: 999px;
+    border-radius: 0px;
     cursor: pointer;
     transition: border-color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), background-color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1), opacity var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1369,7 +1369,7 @@ select {
     padding: 4px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: 0px;
     width: fit-content;
     margin-left: auto;
     margin-right: auto;
@@ -1380,7 +1380,7 @@ select {
     border: none;
     color: #94a3b8;
     padding: 6px 16px;
-    border-radius: 8px;
+    border-radius: 0px;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -1401,7 +1401,7 @@ select {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
-.chart-wrapper-box { position: relative; height: 440px; width: 100%; max-width: 100%; overflow: hidden; border-radius: 10px; }
+.chart-wrapper-box { position: relative; height: 440px; width: 100%; max-width: 100%; overflow: hidden; border-radius: 0px; }
 /* Ensure inner chart container div always fills wrapper — fixes Lightweight Charts 0px height bug */
 .chart-wrapper-box > div { width: 100%; height: 100%; }
 
@@ -1417,7 +1417,7 @@ select {
     font-weight: 700;
     letter-spacing: 0.02em;
     padding: 3px 9px;
-    border-radius: 5px;
+    border-radius: 0px;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: color 0.3s ease, background 0.3s ease;
@@ -1446,7 +1446,7 @@ select {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(37, 99, 235, 0.35);
-    border-radius: 10px;
+    border-radius: 0px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(6, 182, 212, 0.08);
     font-family: 'JetBrains Mono', 'Inter', monospace;
     font-size: 0.75rem;
@@ -1503,7 +1503,7 @@ select {
 .ratios-container-card {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
     margin-bottom: 24px;
 }
@@ -1520,7 +1520,7 @@ select {
     background: rgba(17, 24, 39, 0.82);
     border: 1px solid rgba(255,255,255,0.05);
     padding: 14px;
-    border-radius: 14px;
+    border-radius: 0px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1539,7 +1539,7 @@ select {
 .tabs-container-card {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
 }
 
@@ -1648,7 +1648,7 @@ select {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
     border-top: 3px solid var(--neon-blue-accent);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
 }
 
@@ -1656,7 +1656,7 @@ select {
     display: flex;
     background-color: var(--bg-input-slate);
     padding: 4px;
-    border-radius: 6px;
+    border-radius: 0px;
     margin-bottom: 24px;
     gap: 4px;
 }
@@ -1669,7 +1669,7 @@ select {
     font-size: 0.85rem;
     font-weight: 600;
     flex-grow: 1;
-    border-radius: 4px;
+    border-radius: 0px;
     cursor: pointer;
     transition: border-color var(--transition-speed) ease, transform var(--transition-speed) ease, background-color var(--transition-speed) ease, color var(--transition-speed) ease, opacity var(--transition-speed) ease;
 }
@@ -1685,7 +1685,7 @@ select {
     background: linear-gradient(135deg, rgba(13, 19, 38, 0.7), rgba(21, 30, 54, 0.5));
     border: 1px solid var(--border-cyan-glow);
     border-left: 3px solid var(--neon-cyan-vibrant);
-    border-radius: 10px;
+    border-radius: 0px;
     padding: 18px 20px;
     animation: fadeInDef 0.4s ease-out;
 }
@@ -1709,7 +1709,7 @@ select {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: 0px;
     flex-shrink: 0;
 }
 
@@ -1753,7 +1753,7 @@ select {
     color: #f59e0b;
     background: rgba(245, 158, 11, 0.08);
     border: 1px solid rgba(245, 158, 11, 0.18);
-    border-radius: 6px;
+    border-radius: 0px;
     padding: 10px 14px;
     font-weight: 500;
 }
@@ -1767,7 +1767,7 @@ select {
 .inflation-input-group {
     background: linear-gradient(135deg, rgba(6, 182, 212, 0.06), rgba(37, 99, 235, 0.04));
     border: 1px solid rgba(6, 182, 212, 0.2);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 14px 16px;
 }
 
@@ -1792,7 +1792,7 @@ select {
     -webkit-appearance: none;
     appearance: none;
     height: 6px;
-    border-radius: 3px;
+    border-radius: 0px;
     background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
     outline: none;
     cursor: pointer;
@@ -1835,7 +1835,7 @@ select {
     text-align: center;
     background: var(--bg-input-slate);
     padding: 6px 10px;
-    border-radius: 6px;
+    border-radius: 0px;
     border: 1px solid var(--border-cyan-glow);
 }
 
@@ -1882,7 +1882,7 @@ select {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding: 2px 6px;
-    border-radius: 3px;
+    border-radius: 0px;
     vertical-align: middle;
     margin-left: 4px;
 }
@@ -1944,7 +1944,7 @@ select {
     align-items: center;
     background: rgba(17, 24, 39, 0.9);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 0 10px;
     height: 38px;
     transition: all 0.2s ease;
@@ -1989,7 +1989,7 @@ select {
     width: 100%;
     height: 6px;
     background: rgba(37, 99, 235, 0.2);
-    border-radius: 3px;
+    border-radius: 0px;
     outline: none;
     padding: 0;
     margin: 6px 0 12px 0;
@@ -2046,7 +2046,7 @@ select {
     color: var(--neon-cyan-vibrant);
     border: 1px solid rgba(37, 99, 235, 0.3);
     padding: 6px 12px;
-    border-radius: 6px;
+    border-radius: 0px;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -2065,7 +2065,7 @@ select {
     max-height: 400px;
     overflow-y: auto;
     border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 8px;
+    border-radius: 0px;
     background: rgba(10, 14, 26, 0.4);
 }
 
@@ -2075,7 +2075,7 @@ select {
 
 .calc-table-container::-webkit-scrollbar-thumb {
     background: rgba(255,255,255,0.1);
-    border-radius: 3px;
+    border-radius: 0px;
 }
 
 .calc-data-table {
@@ -2122,7 +2122,7 @@ select {
     border: 1px solid var(--border-cyan-glow);
     color: var(--text-primary-white);
     padding: 12px 14px;
-    border-radius: 12px;
+    border-radius: 0px;
     outline: none;
     font-size: 0.95rem;
     transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease, transform var(--transition-speed) ease;
@@ -2168,7 +2168,7 @@ select {
 .portfolio-goal-card {
     background: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
     min-width: 0;
 }
@@ -2212,7 +2212,7 @@ select {
 .portfolio-drift-summary span {
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(21, 30, 54, 0.45);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 9px 10px;
 }
 
@@ -2226,7 +2226,7 @@ select {
 .goal-projection-grid > div {
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(21, 30, 54, 0.45);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 14px;
 }
 
@@ -2264,7 +2264,7 @@ select {
     align-items: center;
     justify-content: center;
     background: rgba(6, 182, 212, 0.1);
-    border-radius: 8px;
+    border-radius: 0px;
     flex-shrink: 0;
 }
 
@@ -2318,7 +2318,7 @@ select {
     padding: 10px 12px;
     background: rgba(6, 182, 212, 0.04);
     border: 1px solid rgba(6, 182, 212, 0.08);
-    border-radius: 8px;
+    border-radius: 0px;
     font-size: 0.75rem;
     color: var(--text-secondary-muted);
     line-height: 1.4;
@@ -2371,7 +2371,7 @@ select {
     align-items: center;
     background: rgba(21, 30, 54, 0.6);
     padding: 12px 14px;
-    border-radius: 8px;
+    border-radius: 0px;
     border: 1px solid rgba(255, 255, 255, 0.04);
     transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
@@ -2390,7 +2390,7 @@ select {
 .legend-color-dot-pro {
     width: 10px;
     height: 10px;
-    border-radius: 3px;
+    border-radius: 0px;
     flex-shrink: 0;
 }
 
@@ -2429,13 +2429,13 @@ select {
     width: 48px;
     height: 5px;
     background: rgba(255, 255, 255, 0.06);
-    border-radius: 3px;
+    border-radius: 0px;
     overflow: hidden;
 }
 
 .legend-bar-fill {
     height: 100%;
-    border-radius: 3px;
+    border-radius: 0px;
     transition: width 0.6s ease;
 }
 
@@ -2443,7 +2443,7 @@ select {
 .portfolio-kpi-container {
     background: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 0;
     margin-top: 24px;
     overflow: hidden;
@@ -2492,7 +2492,7 @@ select {
 
 .kpi-accent {
     width: 3px;
-    border-radius: 2px;
+    border-radius: 0px;
     margin-right: 12px;
     flex-shrink: 0;
 }
@@ -2522,7 +2522,7 @@ select {
 .portfolio-holdings-card {
     background: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 18px;
+    border-radius: 0px;
     padding: 24px;
     margin-top: 24px;
     overflow: hidden;
@@ -2562,7 +2562,7 @@ select {
     background: rgba(10, 14, 23, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-primary-white);
-    border-radius: 6px;
+    border-radius: 0px;
     padding: 9px 10px;
     outline: none;
     font-family: var(--font-main);
@@ -2671,7 +2671,7 @@ select {
 .etf-color-indicator {
     width: 4px;
     height: 32px;
-    border-radius: 2px;
+    border-radius: 0px;
     flex-shrink: 0;
 }
 
@@ -2696,7 +2696,7 @@ select {
     padding: 3px 8px;
     background: rgba(6, 182, 212, 0.1);
     border: 1px solid rgba(6, 182, 212, 0.2);
-    border-radius: 4px;
+    border-radius: 0px;
     font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 600;
@@ -2714,7 +2714,7 @@ select {
     border: 1px solid rgba(239, 68, 68, 0.24);
     background: rgba(239, 68, 68, 0.08);
     color: #fca5a5;
-    border-radius: 6px;
+    border-radius: 0px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -2745,13 +2745,13 @@ select {
     width: 60px;
     height: 4px;
     background: rgba(255, 255, 255, 0.06);
-    border-radius: 2px;
+    border-radius: 0px;
     overflow: hidden;
 }
 
 .weight-bar-fill {
     height: 100%;
-    border-radius: 2px;
+    border-radius: 0px;
     transition: width 0.6s ease;
 }
 
@@ -2778,7 +2778,7 @@ select {
 .portfolio-scatter-card {
     background: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
     margin-top: 24px;
 }
@@ -2825,7 +2825,7 @@ select {
     margin: 18px 40px 0 40px;
     padding: 12px 18px;
     border: 1px solid rgba(37, 99, 235, 0.28);
-    border-radius: 999px;
+    border-radius: 0px;
     background: linear-gradient(90deg, rgba(10, 16, 32, 0.97), rgba(13, 19, 38, 0.95));
     box-shadow: 0 12px 32px rgba(2, 6, 23, 0.35);
     position: sticky;
@@ -2846,7 +2846,7 @@ select {
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    border-radius: 999px;
+    border-radius: 0px;
     background: rgba(37, 99, 235, 0.16);
     color: #dbeafe;
     font-size: 0.72rem;
@@ -2875,7 +2875,7 @@ select {
     padding: 6px 10px;
     background: rgba(6, 182, 212, 0.08);
     border: 1px solid rgba(6, 182, 212, 0.16);
-    border-radius: 999px;
+    border-radius: 0px;
 }
 
 @keyframes pulse {
@@ -2890,11 +2890,11 @@ select {
     align-items: center;
     background-color: var(--bg-input-slate);
     padding: 12px 16px;
-    border-radius: 6px;
+    border-radius: 0px;
 }
 
 .legend-meta { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 500; }
-.legend-color-dot { width: 12px; height: 12px; border-radius: 3px; }
+.legend-color-dot { width: 12px; height: 12px; border-radius: 0px; }
 .legend-value { font-family: var(--font-mono); font-weight: 600; }
 
 
@@ -3029,7 +3029,7 @@ select {
 
 .terminal-code-block {
     margin: 12px 0;
-    border-radius: 8px;
+    border-radius: 0px;
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.08);
     overflow-x: auto;
@@ -3054,7 +3054,7 @@ select {
     padding: 16px 20px;
     background: linear-gradient(145deg, rgba(13, 19, 38, 0.96), rgba(10, 16, 32, 0.93));
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
 }
 
 .history-strip-header {
@@ -3081,7 +3081,7 @@ select {
     padding: 6px 12px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 999px;
+    border-radius: 0px;
     cursor: pointer;
     font-family: var(--font-mono);
     font-size: 0.78rem;
@@ -3115,7 +3115,7 @@ select {
     padding: 8px 18px;
     background: rgba(124, 58, 237, 0.2);
     border: 1px solid rgba(124, 58, 237, 0.4);
-    border-radius: 8px;
+    border-radius: 0px;
     color: #c4b5fd;
     font-family: var(--font-mono);
     font-size: 0.82rem;
@@ -3152,7 +3152,7 @@ select {
     background: linear-gradient(135deg, rgba(17, 24, 39, 0.97), rgba(9, 14, 28, 0.98));
     border-left: 4px solid var(--neon-cyan-vibrant);
     padding: 14px 24px;
-    border-radius: 14px;
+    border-radius: 0px;
     box-shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
     z-index: 1000;
     font-size: 0.9rem;
@@ -3179,7 +3179,7 @@ select {
 .portfolio-suballocation-card, .portfolio-projection-card {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
     min-width: 0;
 }
@@ -3204,7 +3204,7 @@ select {
     justify-content: space-between;
     background-color: rgba(13, 19, 38, 0.4);
     border: 1px solid rgba(6, 182, 212, 0.1);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 16px 20px;
     margin-top: 20px;
 }
@@ -3240,7 +3240,7 @@ select {
 .portfolio-stress-link-card {
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
     border: 1px solid rgba(6, 182, 212, 0.2);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px 28px;
     margin-top: 16px;
 }
@@ -3320,7 +3320,7 @@ select {
     background-color: var(--bg-input-slate);
     border: 1px solid var(--border-cyan-glow);
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: 0px;
     font-family: var(--font-mono);
     font-size: 0.8rem;
     color: var(--neon-cyan-vibrant);
@@ -3340,7 +3340,7 @@ select {
 .stress-inputs-card {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
 }
 
@@ -3362,7 +3362,7 @@ select {
 .stress-section-card {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
     margin-bottom: 24px;
 }
@@ -3395,7 +3395,7 @@ select {
     align-items: center;
     gap: 8px;
     padding: 8px 14px;
-    border-radius: 8px;
+    border-radius: 0px;
     border: 1px solid;
     background-color: var(--bg-input-slate);
     font-size: 0.85rem;
@@ -3443,7 +3443,7 @@ select {
     line-height: 1.65;
     background-color: #010409;
     border: 1px solid #161b22;
-    border-radius: 8px;
+    border-radius: 0px;
 }
 
 .stress-ai-text {
@@ -3471,7 +3471,7 @@ select {
     appearance: none;
     width: 100%;
     height: 6px;
-    border-radius: 3px;
+    border-radius: 0px;
     background: linear-gradient(to right, #ef4444 0%, #ef4444 50%, var(--bg-input-slate) 50%, #10b981 100%);
     outline: none;
     cursor: pointer;
@@ -3529,7 +3529,7 @@ select {
     .executive-toolbar {
         margin: 12px 16px 0 16px;
         padding: 10px 14px;
-        border-radius: 18px;
+        border-radius: 0px;
         align-items: flex-start;
         flex-direction: column;
     }
@@ -3664,7 +3664,7 @@ select {
     background: linear-gradient(180deg, rgba(6, 182, 212, 0.08), rgba(15, 23, 42, 0.95));
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
-    border-radius: 18px;
+    border-radius: 0px;
     padding: 22px 16px;
     cursor: pointer;
     transition: transform var(--transition-speed) ease, border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
@@ -3815,7 +3815,7 @@ select {
         width: auto;
         padding: 8px 16px;
         min-height: 38px;
-        border-radius: 6px;
+        border-radius: 0px;
         font-size: 0.85rem;
         white-space: nowrap;
     }
@@ -3847,7 +3847,7 @@ select {
         flex: 0 0 132px;
         min-width: 132px;
         padding: 7px 9px;
-        border-radius: 8px;
+        border-radius: 0px;
         gap: 2px;
     }
 
@@ -3876,7 +3876,7 @@ select {
     .portfolio-output-card,
     .ai-control-panel-card,
     .ai-terminal-card {
-        border-radius: 10px;
+        border-radius: 0px;
         padding: 12px 14px;
     }
 
@@ -3895,7 +3895,7 @@ select {
 
     .commodity-card,
     .commodity-detail-card {
-        border-radius: 10px;
+        border-radius: 0px;
         padding: 14px;
     }
 
@@ -3957,7 +3957,7 @@ select {
 
     .chart-wrapper-box {
         height: 420px;
-        border-radius: 6px;
+        border-radius: 0px;
     }
 
     .groww-tf-strip {
@@ -4071,7 +4071,7 @@ select {
     }
 
     .crypto-bracket-card {
-        border-radius: 10px;
+        border-radius: 0px;
         padding: 18px 12px;
     }
 
@@ -4085,7 +4085,7 @@ select {
         right: 14px;
         bottom: calc(14px + env(safe-area-inset-bottom));
         padding: 13px 16px;
-        border-radius: 8px;
+        border-radius: 0px;
     }
 }
 
@@ -4194,7 +4194,7 @@ select {
     margin-top: 24px;
     background-color: rgba(15, 23, 42, 0.95);
     border: 1px solid rgba(37, 99, 235, 0.12);
-    border-radius: 16px;
+    border-radius: 0px;
     padding: 18px;
 }
 .commodities-header {
@@ -4225,7 +4225,7 @@ select {
 .commodity-card {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 16px;
     cursor: pointer;
     transition: transform var(--transition-speed), border-color var(--transition-speed), background-color var(--transition-speed);
@@ -4267,7 +4267,7 @@ select {
 .commodity-detail-card {
     background-color: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 16px;
+    border-radius: 0px;
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -4309,7 +4309,7 @@ select {
 .commodity-sparkline {
     min-height: 72px;
     width: 100%;
-    border-radius: 12px;
+    border-radius: 0px;
     background: rgba(255,255,255,0.03);
     position: relative;
 }
@@ -4343,7 +4343,7 @@ select {
     padding: 8px 14px;
     background: rgba(16, 185, 129, 0.08);
     border: 1px solid rgba(16, 185, 129, 0.25);
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--neon-green-positive);
@@ -4381,7 +4381,7 @@ select {
     border: 1px solid var(--border-cyan-glow);
     color: var(--text-secondary-muted);
     padding: 8px 16px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
@@ -4402,7 +4402,7 @@ select {
 .commodities-overview-panel {
     background: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     overflow: hidden;
     margin-bottom: 24px;
 }
@@ -4507,7 +4507,7 @@ select {
 .commodities-instrument-icon {
     width: 36px;
     height: 36px;
-    border-radius: 8px;
+    border-radius: 0px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4558,7 +4558,7 @@ select {
 .commodities-sector-tag {
     display: inline-block;
     padding: 3px 10px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.72rem;
     font-weight: 600;
     background: rgba(255, 255, 255, 0.05);
@@ -4592,7 +4592,7 @@ select {
     display: inline-block;
     margin-left: 6px;
     padding: 1px 6px;
-    border-radius: 4px;
+    border-radius: 0px;
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -4610,7 +4610,7 @@ select {
 .commodities-skeleton-row {
     height: 14px;
     margin: 10px 16px;
-    border-radius: 4px;
+    border-radius: 0px;
     background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
     background-size: 200% 100%;
     animation: commodities-shimmer 1.4s infinite;
@@ -4631,7 +4631,7 @@ select {
 .commodities-quick-card {
     background: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 10px;
+    border-radius: 0px;
     padding: 16px;
     cursor: pointer;
     text-align: left;
@@ -4680,7 +4680,7 @@ select {
 .commodities-detail-hero {
     background: linear-gradient(135deg, var(--bg-card-midnight) 0%, #111a36 100%);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 24px;
     display: flex;
     justify-content: space-between;
@@ -4700,7 +4700,7 @@ select {
 .commodities-detail-icon {
     width: 56px;
     height: 56px;
-    border-radius: 12px;
+    border-radius: 0px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4721,7 +4721,7 @@ select {
 .commodities-sector-badge {
     display: inline-block;
     padding: 3px 10px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -4778,7 +4778,7 @@ select {
 .commodities-drivers-card {
     background: var(--bg-card-midnight);
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 22px;
 }
 
@@ -4852,7 +4852,7 @@ select {
     position: relative;
     height: 6px;
     background: linear-gradient(90deg, var(--neon-red-negative), rgba(255,255,255,0.15), var(--neon-green-positive));
-    border-radius: 999px;
+    border-radius: 0px;
     margin-bottom: 8px;
 }
 
@@ -4946,7 +4946,7 @@ select {
     align-items: center;
     background: var(--bg-card-midnight);
     border: 1px solid rgba(0, 240, 255, 0.15);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 16px 24px;
     margin-bottom: 24px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -4975,7 +4975,7 @@ select {
 .forex-landing-container {
     background: var(--bg-card-midnight);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
+    border-radius: 0px;
     padding: 24px;
     margin-top: 24px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
@@ -4990,7 +4990,7 @@ select {
     border-collapse: separate;
     border-spacing: 0;
     background: rgba(15, 23, 42, 0.95);
-    border-radius: 18px;
+    border-radius: 0px;
     overflow: hidden;
 }
 
@@ -5041,7 +5041,7 @@ select {
 .action-button {
     min-width: 88px;
     padding: 10px 14px;
-    border-radius: 999px;
+    border-radius: 0px;
     border: 1px solid rgba(6, 182, 212, 0.35);
     background: rgba(6, 182, 212, 0.1);
     color: var(--text-primary-white);
@@ -5121,7 +5121,7 @@ select {
     .forex-table-row {
         background: linear-gradient(180deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.95));
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 18px;
+        border-radius: 0px;
         padding: 16px 12px;
         display: flex;
         flex-direction: column;
@@ -5202,7 +5202,7 @@ select {
     overflow-x: auto;
     margin: 16px 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border-radius: 0px;
     background: rgba(10, 14, 23, 0.5);
 }
 
@@ -5261,7 +5261,7 @@ select {
 .watchlist-item {
     background: linear-gradient(135deg, rgba(13, 19, 38, 0.98), rgba(10, 16, 32, 0.96));
     border: 1px solid rgba(37, 99, 235, 0.24);
-    border-radius: 16px;
+    border-radius: 0px;
     padding: 14px 16px;
     display: flex;
     flex-direction: column;
@@ -5323,7 +5323,7 @@ select {
     border: 1px solid rgba(37, 99, 235, 0.3);
     color: var(--text-primary-white);
     padding: 8px 16px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
@@ -5350,7 +5350,7 @@ select {
     left: 0;
     background-color: #000000;
     border: 1px solid var(--neon-blue-accent);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 6px 0;
     margin: 0;
     list-style: none;
@@ -5415,7 +5415,7 @@ select {
     height: 48px;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
+    border-radius: 0px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5426,7 +5426,7 @@ select {
     width: 36px;
     height: 36px;
     object-fit: contain;
-    border-radius: 6px;
+    border-radius: 0px;
 }
 
 .ticker-logo-box i {
@@ -5444,7 +5444,7 @@ select {
 .equity-range-bar-card {
     background: linear-gradient(145deg, rgba(13, 19, 38, 0.97), rgba(10, 16, 32, 0.96));
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 20px;
+    border-radius: 0px;
     padding: 20px;
     margin-bottom: 24px;
     box-shadow: 0 18px 45px rgba(2, 6, 23, 0.34);
@@ -5454,7 +5454,7 @@ select {
 .equity-analyst-card {
     background: linear-gradient(145deg, rgba(13, 19, 38, 0.97), rgba(10, 16, 32, 0.96));
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 20px;
+    border-radius: 0px;
     padding: 20px;
     margin-bottom: 24px;
     box-shadow: 0 18px 45px rgba(2, 6, 23, 0.34);
@@ -5480,7 +5480,7 @@ select {
     color: var(--bg-main-dark);
     font-weight: 700;
     padding: 6px 12px;
-    border-radius: 6px;
+    border-radius: 0px;
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -5495,7 +5495,7 @@ select {
 .reco-stacked-bar {
     display: flex;
     height: 12px;
-    border-radius: 6px;
+    border-radius: 0px;
     overflow: hidden;
     background: var(--bg-input-slate);
 }
@@ -5580,7 +5580,7 @@ select {
 .ai-profile-output {
     background-color: var(--bg-input-slate);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 16px;
     min-height: 100px;
 }
@@ -5605,7 +5605,7 @@ select {
 .equity-kpi-container {
     background: linear-gradient(145deg, rgba(13, 19, 38, 0.97), rgba(10, 16, 32, 0.96));
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 20px;
+    border-radius: 0px;
     padding: 0;
     overflow: hidden;
     margin-bottom: 24px;
@@ -5657,7 +5657,7 @@ select {
     background: rgba(6, 182, 212, 0.08);
     border: 1px solid rgba(6, 182, 212, 0.15);
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: 0px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -5676,7 +5676,7 @@ select {
     justify-content: center;
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: 0px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);
     color: #94a3b8;
@@ -5699,7 +5699,7 @@ select {
     padding: 12px 16px;
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px;
+    border-radius: 0px;
     margin-bottom: 20px;
 }
 
@@ -5710,7 +5710,7 @@ select {
     flex: 1;
     min-width: 70px;
     padding: 10px 8px;
-    border-radius: 8px;
+    border-radius: 0px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.06);
     transition: border-color 0.25s ease, transform 0.25s ease, background-color 0.25s ease, color 0.25s ease, opacity 0.25s ease;
@@ -5750,7 +5750,7 @@ select {
 .crypto-distance-card {
     background: rgba(255,255,255,0.025);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 20px;
 }
 
@@ -5815,13 +5815,13 @@ select {
 .distance-bar-track {
     height: 6px;
     background: rgba(255,255,255,0.06);
-    border-radius: 3px;
+    border-radius: 0px;
     overflow: hidden;
 }
 
 .distance-bar-fill {
     height: 100%;
-    border-radius: 3px;
+    border-radius: 0px;
     transition: width 0.8s ease;
 }
 
@@ -5831,7 +5831,7 @@ select {
 .crypto-supply-card {
     background: rgba(255,255,255,0.025);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -5843,14 +5843,14 @@ select {
 .supply-bar-track {
     height: 10px;
     background: rgba(255,255,255,0.06);
-    border-radius: 5px;
+    border-radius: 0px;
     overflow: hidden;
     margin-bottom: 16px;
 }
 
 .supply-bar-fill {
     height: 100%;
-    border-radius: 5px;
+    border-radius: 0px;
     background: linear-gradient(90deg, #06b6d4, #7c3aed);
     transition: width 0.8s ease;
 }
@@ -5892,7 +5892,7 @@ select {
 .crypto-sentiment-card {
     background: rgba(255,255,255,0.025);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -5904,7 +5904,7 @@ select {
 .sentiment-bar-track {
     height: 8px;
     background: rgba(239, 68, 68, 0.2);
-    border-radius: 4px;
+    border-radius: 0px;
     overflow: hidden;
     margin-bottom: 10px;
 }
@@ -5912,7 +5912,7 @@ select {
 .sentiment-bar-bull {
     height: 100%;
     background: #10b981;
-    border-radius: 4px;
+    border-radius: 0px;
     transition: width 0.8s ease;
 }
 
@@ -5944,7 +5944,7 @@ select {
 .crypto-about-card {
     background: rgba(255,255,255,0.025);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -5962,7 +5962,7 @@ select {
     color: #94a3b8;
     width: 28px;
     height: 28px;
-    border-radius: 6px;
+    border-radius: 0px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -6020,7 +6020,7 @@ select {
 .crypto-converter-card {
     background: rgba(255,255,255,0.025);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -6050,7 +6050,7 @@ select {
 .converter-field input {
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 10px 14px;
     color: #e2e8f0;
     font-size: 15px;
@@ -6140,7 +6140,7 @@ select {
     appearance: none;
     width: 100%;
     height: 6px;
-    border-radius: 3px;
+    border-radius: 0px;
     background: linear-gradient(to right, #ef4444 0%, #1e293b 50%, #10b981 100%);
     outline: none;
     margin: 8px 0;
@@ -6176,7 +6176,7 @@ select {
     color: var(--text-secondary-muted);
     font-size: 0.78rem;
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: 0px;
     cursor: pointer;
     transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
@@ -6191,7 +6191,7 @@ select {
     width: 100%;
     height: 6px;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
+    border-radius: 0px;
     margin: 16px 0;
     overflow: hidden;
 }
@@ -6199,7 +6199,7 @@ select {
     width: 0%;
     height: 100%;
     background: linear-gradient(90deg, var(--neon-blue-accent), var(--neon-cyan-vibrant));
-    border-radius: 3px;
+    border-radius: 0px;
     transition: width 0.3s ease;
 }
 .stress-stepper {
@@ -6235,7 +6235,7 @@ select {
 .stress-efficiency-hero {
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 18px;
+    border-radius: 0px;
     padding: 24px;
     margin-bottom: 24px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
@@ -6299,7 +6299,7 @@ select {
 .efficiency-metric-pill {
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 10px 16px;
     display: flex;
     align-items: center;
@@ -6372,7 +6372,7 @@ select {
     padding: 0;
     background: linear-gradient(145deg, rgba(13, 19, 38, 0.96), rgba(10, 16, 32, 0.93));
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     overflow: hidden;
     animation: fadeSlideIn 0.4s ease-out;
 }
@@ -6449,7 +6449,7 @@ select {
 .ai-company-icon {
     width: 40px;
     height: 40px;
-    border-radius: 10px;
+    border-radius: 0px;
     background: rgba(124, 58, 237, 0.15);
     border: 1px solid rgba(124, 58, 237, 0.3);
     display: grid;
@@ -6477,7 +6477,7 @@ select {
 
 .ai-tag {
     padding: 3px 10px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.7rem;
     font-weight: 500;
     font-family: var(--font-mono);
@@ -6565,7 +6565,7 @@ select {
     padding: 0;
     background: linear-gradient(145deg, rgba(13, 19, 38, 0.96), rgba(10, 16, 32, 0.93));
     border: 1px solid var(--border-cyan-glow);
-    border-radius: 12px;
+    border-radius: 0px;
     overflow: hidden;
     animation: fadeSlideIn 0.4s ease-out;
 }
@@ -6642,7 +6642,7 @@ select {
 .ai-company-icon {
     width: 40px;
     height: 40px;
-    border-radius: 10px;
+    border-radius: 0px;
     background: rgba(124, 58, 237, 0.15);
     border: 1px solid rgba(124, 58, 237, 0.3);
     display: grid;
@@ -6670,7 +6670,7 @@ select {
 
 .ai-tag {
     padding: 3px 10px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-size: 0.7rem;
     font-weight: 500;
     font-family: var(--font-mono);
@@ -6740,7 +6740,7 @@ select {
     padding: 10px 12px;
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 8px;
+    border-radius: 0px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -6787,7 +6787,7 @@ select {
 
 .qt-badge {
     padding: 5px 14px;
-    border-radius: 999px;
+    border-radius: 0px;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     font-weight: 600;
@@ -6820,7 +6820,7 @@ select {
     flex: 1;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 10px 14px;
     font-family: var(--font-mono);
     font-size: 0.85rem;
@@ -6840,7 +6840,7 @@ select {
 .ai-followup-bar button {
     width: 40px;
     height: 40px;
-    border-radius: 10px;
+    border-radius: 0px;
     display: grid;
     place-items: center;
     font-size: 0.9rem;
@@ -6865,7 +6865,7 @@ select {
 
 .ai-tab-bar::-webkit-scrollbar-thumb {
     background: rgba(255,255,255,0.1);
-    border-radius: 4px;
+    border-radius: 0px;
 }
 
 .ai-tab-btn {
@@ -6912,7 +6912,7 @@ select {
 .terminal-copy-btn {
     background: none;
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px;
+    border-radius: 0px;
     padding: 4px 10px;
     font-size: 0.7rem;
     color: #6b7280;
@@ -6941,7 +6941,7 @@ select {
 
 .ai-shimmer-line {
     height: 14px;
-    border-radius: 6px;
+    border-radius: 0px;
     background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
     background-size: 200% 100%;
     animation: shimmerSlide 1.5s ease-in-out infinite;
@@ -6960,7 +6960,7 @@ select {
 .ai-shimmer-heading {
     height: 20px;
     width: 45%;
-    border-radius: 6px;
+    border-radius: 0px;
     background: linear-gradient(90deg, rgba(6,182,212,0.05) 25%, rgba(6,182,212,0.12) 50%, rgba(6,182,212,0.05) 75%);
     background-size: 200% 100%;
     animation: shimmerSlide 1.5s ease-in-out infinite;
@@ -7101,7 +7101,7 @@ select {
     padding: 3px;
     background: rgba(13, 19, 38, 0.85);
     border: 1px solid rgba(37, 99, 235, 0.25);
-    border-radius: 12px;
+    border-radius: 0px;
 }
 
 .equity-tab-btn {
@@ -7109,7 +7109,7 @@ select {
     align-items: center;
     gap: 8px;
     padding: 10px 22px;
-    border-radius: 10px;
+    border-radius: 0px;
     border: none;
     background: transparent;
     color: var(--text-secondary-muted);
@@ -7174,7 +7174,7 @@ select {
 .movers-table-card {
     background: rgba(13, 19, 38, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 0;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -7264,7 +7264,7 @@ select {
 .symbol-tag {
     display: inline-block;
     padding: 2px 7px;
-    border-radius: 5px;
+    border-radius: 0px;
     background: rgba(6, 182, 212, 0.1);
     border: 1px solid rgba(6, 182, 212, 0.25);
     color: var(--neon-cyan-vibrant);
@@ -7305,7 +7305,7 @@ select {
 .sentiment-gauge-card {
     background: rgba(13, 19, 38, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 20px 24px;
     margin-top: 20px;
     margin-bottom: 4px;
@@ -7333,7 +7333,7 @@ select {
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    border-radius: 999px;
+    border-radius: 0px;
     background: rgba(6, 182, 212, 0.06);
     border: 1px solid rgba(6, 182, 212, 0.2);
     color: var(--neon-cyan-vibrant);
@@ -7421,7 +7421,7 @@ select {
     justify-content: space-between;
     align-items: center;
     padding: 10px 14px;
-    border-radius: 10px;
+    border-radius: 0px;
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid rgba(255, 255, 255, 0.04);
     transition: background 0.15s ease;
@@ -7473,7 +7473,7 @@ select {
 .sector-heatmap-card {
     background: rgba(13, 19, 38, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 20px 24px;
     margin-top: 20px;
     margin-bottom: 24px;
@@ -7508,7 +7508,7 @@ select {
     color: var(--text-secondary-muted);
     width: 30px;
     height: 30px;
-    border-radius: 8px;
+    border-radius: 0px;
     display: grid;
     place-items: center;
     cursor: pointer;
@@ -7537,7 +7537,7 @@ select {
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    border-radius: 999px;
+    border-radius: 0px;
     background: rgba(6, 182, 212, 0.06);
     border: 1px solid rgba(6, 182, 212, 0.2);
     color: var(--neon-cyan-vibrant);
@@ -7648,7 +7648,7 @@ select {
 .spt-icon-box {
     width: 30px;
     height: 30px;
-    border-radius: 8px;
+    border-radius: 0px;
     background: rgba(6, 182, 212, 0.08);
     border: 1px solid rgba(6, 182, 212, 0.15);
     display: inline-grid;
@@ -7688,7 +7688,7 @@ select {
 
 .spt-bar-track {
     height: 7px;
-    border-radius: 999px;
+    border-radius: 0px;
     background: rgba(255, 255, 255, 0.04);
     overflow: hidden;
     min-width: 60px;
@@ -7696,7 +7696,7 @@ select {
 
 .spt-bar-fill {
     height: 100%;
-    border-radius: 999px;
+    border-radius: 0px;
     transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -7824,7 +7824,7 @@ select {
     align-items: center;
     gap: 8px;
     padding: 6px 14px;
-    border-radius: 999px;
+    border-radius: 0px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
     font-size: 0.75rem;
@@ -7906,7 +7906,7 @@ select {
 .news-ticker-pill {
     display: inline-block;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: 0px;
     background: rgba(6, 182, 212, 0.08);
     border: 1px solid rgba(6, 182, 212, 0.2);
     color: var(--neon-cyan-vibrant);
@@ -8023,7 +8023,7 @@ select {
 .trend-stacked-bar {
     width: 100%;
     height: 80px;
-    border-radius: 4px;
+    border-radius: 0px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -8082,7 +8082,7 @@ select {
 
 .chart-mode-toggle {
     display: inline-flex;
-    border-radius: 8px;
+    border-radius: 0px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.03);
@@ -8140,7 +8140,7 @@ select {
     font-size: 0.68rem;
     font-weight: 700;
     padding: 2px 7px;
-    border-radius: 6px;
+    border-radius: 0px;
     letter-spacing: 0.3px;
 }
 .crypto-bracket-card {
@@ -8188,7 +8188,7 @@ select {
 .crypto-health-panel {
     background: rgba(13, 19, 38, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 20px;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -8230,13 +8230,13 @@ select {
 .health-score-bar-track {
     height: 5px;
     background: rgba(255, 255, 255, 0.06);
-    border-radius: 3px;
+    border-radius: 0px;
     overflow: hidden;
 }
 
 .health-score-bar-fill {
     height: 100%;
-    border-radius: 3px;
+    border-radius: 0px;
     transition: width 0.6s ease;
 }
 
@@ -8244,7 +8244,7 @@ select {
 .crypto-contract-card {
     background: rgba(13, 19, 38, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 16px 20px;
     display: flex;
     align-items: center;
@@ -8257,7 +8257,7 @@ select {
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: 0px;
     background: rgba(6, 182, 212, 0.08);
     border: 1px solid rgba(6, 182, 212, 0.2);
     color: var(--neon-cyan-vibrant);
@@ -8284,7 +8284,7 @@ select {
     letter-spacing: 0.5px;
     background: rgba(255, 255, 255, 0.03);
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: 0px;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -8293,7 +8293,7 @@ select {
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: rgba(148, 163, 184, 0.7);
     padding: 5px 8px;
-    border-radius: 6px;
+    border-radius: 0px;
     cursor: pointer;
     font-size: 0.72rem;
     transition: border-color 0.15s ease, transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
@@ -8384,7 +8384,7 @@ select {
     color: #34d399;
     background: rgba(16, 185, 129, 0.08);
     border: 1px solid rgba(16, 185, 129, 0.2);
-    border-radius: 6px;
+    border-radius: 0px;
     padding: 2px 8px;
     margin-top: -2px;
 }
@@ -8418,7 +8418,7 @@ select {
 .macro-trend-item {
     background: var(--bg-card-midnight);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 16px 20px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
     transition: border-color 0.2s ease;
@@ -8495,7 +8495,7 @@ select {
 .yields-risk-banner {
     background: rgba(13, 19, 38, 0.85);
     border: 1px solid rgba(6, 182, 212, 0.18);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 22px 28px;
     margin-bottom: 20px;
     transition: border-color 0.4s ease, background 0.4s ease;
@@ -8555,7 +8555,7 @@ select {
 .yields-spread-card {
     background: var(--bg-card-midnight);
     border: 1px solid var(--border-strong);
-    border-radius: 14px;
+    border-radius: 0px;
     padding: 22px 24px;
     text-align: center;
     transition: border-color 0.3s ease, transform 0.2s ease;
@@ -8655,7 +8655,7 @@ select {
     font-weight: 600;
     letter-spacing: 0.8px;
     padding: 2px 8px;
-    border-radius: 6px;
+    border-radius: 0px;
 }
 .econ-badge-high { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 .econ-badge-med { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
@@ -8709,7 +8709,7 @@ select {
 .heatmap-cell {
     display: inline-block;
     padding: 3px 10px;
-    border-radius: 4px;
+    border-radius: 0px;
     min-width: 60px;
     font-weight: 600;
 }
@@ -8750,7 +8750,7 @@ select {
 .duration-input {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 10px 14px;
     color: #f8fafc;
     font-family: 'JetBrains Mono', monospace;
@@ -8781,7 +8781,7 @@ select.duration-input {
     padding: 10px 20px;
     background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.05));
     border: 1px solid rgba(6, 182, 212, 0.3);
-    border-radius: 8px;
+    border-radius: 0px;
     color: var(--neon-cyan-vibrant);
     font-weight: 600;
     font-size: 0.85rem;
@@ -8799,7 +8799,7 @@ select.duration-input {
     padding: 16px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
+    border-radius: 0px;
 }
 
 .duration-results-grid {
@@ -8820,7 +8820,7 @@ select.duration-input {
     gap: 4px;
     padding: 10px;
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
+    border-radius: 0px;
     border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -8863,7 +8863,7 @@ select.duration-input {
     background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
-    border-radius: 8px;
+    border-radius: 0px;
 }
 .chart-skeleton { height: 300px; }
 .metric-skeleton { height: 80px; }
@@ -8895,7 +8895,7 @@ button:focus-visible {
     gap: 24px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 12px 24px;
     overflow-x: auto;
     white-space: nowrap;
@@ -8917,7 +8917,7 @@ button:focus-visible {
 .hud-badge {
     background: rgba(255,255,255,0.05);
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 0px;
     font-size: 0.75rem;
 }
 .yields-split-view {
@@ -8954,7 +8954,7 @@ button:focus-visible {
     padding: 8px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px;
+    border-radius: 0px;
     color: white;
     font-family: var(--font-mono);
     outline: none;

@@ -246,7 +246,7 @@ function populateCryptoDetails(crypto) {
     const atlChangePct = marketData.atl_change_percentage?.usd || 0;
 
     // Supply
-    const circulatingSupply = marketData.circulating_supply || 0;
+    const circulatingSupply = marketData.circulating_supply || 0; window.lastCryptoCirculatingSupply = circulatingSupply;
     const totalSupply = marketData.total_supply || 0;
     const maxSupply = marketData.max_supply || 0;
     const supplyPercent = totalSupply > 0 ? Math.min(100, (circulatingSupply / totalSupply) * 100) : 0;
@@ -786,7 +786,16 @@ function setupConverter() {
 
 function renderCryptoChart(history) {
     const isMcapMode = cryptoChartMode === 'mcap';
-    const rawPrices = isMcapMode ? (history?.market_caps || history?.prices || []) : (history?.prices || []);
+    
+    let rawPrices = history?.prices || [];
+    if (isMcapMode) {
+        if (history?.market_caps && history.market_caps.length > 0) {
+            rawPrices = history.market_caps;
+        } else if (window.lastCryptoCirculatingSupply && history?.prices) {
+            rawPrices = history.prices.map(([time, price]) => [time, price * window.lastCryptoCirculatingSupply]);
+        }
+    }
+    
     const rawVolumes = history?.total_volumes || [];
 
     if (!rawPrices || rawPrices.length === 0) return;
