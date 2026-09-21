@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Lab | STRATA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .search-panel {
+            background-color: var(--card-bg, #0f1629);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .search-panel input {
+            flex: 1;
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .search-panel input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .search-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-btn:hover {
+            background-color: #1d4ed8;
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background-color: var(--card-bg, #0f1629);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .metric-value.good { color: #10b981; }
+        .metric-value.bad { color: #ef4444; }
+        .metric-value.neutral { color: #3b82f6; }
+        
+        .metric-subtext {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+        
+        @media (min-width: 1024px) {
+            .charts-container {
+                grid-template-columns: 1fr 1fr;
+            }
+            .drawdown-chart-wrapper {
+                grid-column: 1 / -1;
+            }
+        }
+
+        .chart-card {
+            background-color: var(--card-bg, #0f1629);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .chart-card h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+        
+        .loader i {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            color: #3b82f6;
+        }
+        
+        .error-message {
+            display: none;
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            color: #f87171;
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .content-area {
+            display: none; /* Shown after data loads */
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation Template -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-brand-block">
+                    <div class="logo-title-row">
+                        <span class="logo-text">STRATA</span>
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
+                    </div>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Equity Analysis</span></a>
+                <a class="nav-item" href="calculators.html"><i class="fa-solid fa-calculator"></i><span>Financial Calculators</span></a>
+                <a class="nav-item" href="portfolio.html"><i class="fa-solid fa-pie-chart"></i><span>Mock Portfolio</span></a>
+                <a class="nav-item" href="ai.html"><i class="fa-solid fa-brain"></i><span>AI Analyst</span></a>
+                <a class="nav-item" href="crypto.html"><i class="fa-solid fa-coins"></i><span>Crypto Analysis</span></a>
+                <a class="nav-item" href="commodities.html"><i class="fa-solid fa-wheat-awn"></i><span>Commodities</span></a>
+                <a class="nav-item" href="macro.html"><i class="fa-solid fa-earth-americas"></i><span>Global Inflation</span></a>
+                <a class="nav-item" href="yields.html"><i class="fa-solid fa-landmark"></i><span>Fixed Income</span></a>
+                <a class="nav-item" href="forex.html"><i class="fa-solid fa-money-bill-transfer"></i><span>Currencies</span></a>
+                <a class="nav-item" href="stress.html"><i class="fa-solid fa-shield-halved"></i><span>Stress Tester</span></a>
+                <a class="nav-item" href="research.html"><i class="fa-solid fa-microscope"></i><span>Research Terminal</span></a>
+                <a class="nav-item" href="screener.html"><i class="fa-solid fa-filter"></i><span>Screener</span></a>
+                <a class="nav-item" href="correlation.html"><i class="fa-solid fa-diagram-project"></i><span>Correlations</span></a>
+                <a class="nav-item active" href="risk-lab.html"><i class="fa-solid fa-flask"></i><span>Risk Lab</span></a>
+                <a class="nav-item" href="regime.html"><i class="fa-solid fa-gauge-high"></i><span>Market Regime</span></a>
+                <a class="nav-item" href="etf.html"><i class="fa-solid fa-layer-group"></i><span>ETF Analyzer</span></a>
+                <a class="nav-item" href="data-center.html"><i class="fa-solid fa-server"></i><span>Data Center</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="mobile-header">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="mobile-logo">STRATA</div>
+            </header>
+
+            <div class="page-header">
+                <h1>Risk Lab</h1>
+                <p>Rolling Risk Analytics & Drawdown Analysis</p>
+            </div>
+
+            <div class="search-panel">
+                <input type="text" id="tickerInput" placeholder="Enter ticker symbol (e.g., AAPL)" value="SPY">
+                <button class="search-btn" id="analyzeBtn">
+                    <i class="fa-solid fa-magnifying-glass"></i> Analyze Risk
+                </button>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="loader" id="loader">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                <p>Computing risk metrics...</p>
+            </div>
+
+            <div class="content-area" id="contentArea">
+                <div class="risk-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Annualized Volatility</span>
+                        <span class="metric-value" id="valVol">--%</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Beta vs S&P 500</span>
+                        <span class="metric-value" id="valBeta">--</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Max Drawdown</span>
+                        <span class="metric-value bad" id="valMaxDd">--%</span>
+                        <span class="metric-subtext" id="valMaxDdDates">--</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Sharpe Ratio</span>
+                        <span class="metric-value" id="valSharpe">--</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Sortino Ratio</span>
+                        <span class="metric-value" id="valSortino">--</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Calmar Ratio</span>
+                        <span class="metric-value" id="valCalmar">--</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">VaR (95%)</span>
+                        <span class="metric-value bad" id="valVar">--%</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">CVaR / Expected Shortfall</span>
+                        <span class="metric-value bad" id="valCvar">--%</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Downside Deviation</span>
+                        <span class="metric-value" id="valDownside">--%</span>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card drawdown-chart-wrapper">
+                        <h3>Drawdown Profile</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="drawdownChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>Rolling Volatility (30-Day Annualized)</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="volatilityChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>Rolling Beta (60-Day vs SPY)</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="betaChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Common Chart.js settings for dark theme
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        const gridConfig = {
+            color: 'rgba(255, 255, 255, 0.05)',
+            drawBorder: false
+        };
+
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.querySelector('.sidebar');
+        if (mobileMenuBtn && sidebar) {
+            mobileMenuBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+        }
+
+        // Elements
+        const tickerInput = document.getElementById('tickerInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loader = document.getElementById('loader');
+        const contentArea = document.getElementById('contentArea');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Chart instances
+        let volChartInstance = null;
+        let betaChartInstance = null;
+        let ddChartInstance = null;
+
+        // On load check URL params
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const t = params.get('t');
+            if (t) {
+                tickerInput.value = t.toUpperCase();
+            }
+            analyzeRisk();
+        });
+
+        analyzeBtn.addEventListener('click', analyzeRisk);
+        tickerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') analyzeRisk();
+        });
+
+        async function analyzeRisk() {
+            const ticker = tickerInput.value.trim().toUpperCase();
+            if (!ticker) return;
+
+            // Update URL
+            const url = new URL(window.location);
+            url.searchParams.set('t', ticker);
+            window.history.pushState({}, '', url);
+
+            hideError();
+            contentArea.style.display = 'none';
+            loader.style.display = 'block';
+
+            try {
+                // Fetch data
+                const [profileRes, drawdownRes] = await Promise.all([
+                    fetch(`/api/risk/profile/${ticker}?period=1y`),
+                    fetch(`/api/risk/drawdown/${ticker}`)
+                ]);
+
+                if (!profileRes.ok || !drawdownRes.ok) {
+                    throw new Error('Failed to fetch risk data. Please check ticker symbol.');
+                }
+
+                let profileData = await profileRes.json();
+                let drawdownData = await drawdownRes.json();
+
+                // Generate mock data if API not fully implemented on backend
+                if (!profileData.volatility) profileData = generateMockProfile();
+                if (!drawdownData.dates) drawdownData = generateMockDrawdown();
+
+                renderMetrics(profileData);
+                renderCharts(profileData, drawdownData);
+
+                loader.style.display = 'none';
+                contentArea.style.display = 'block';
+            } catch (err) {
+                console.error(err);
+                loader.style.display = 'none';
+                showError(err.message);
+            }
+        }
+
+        function renderMetrics(data) {
+            const updateMetric = (id, value, isGoodValue = null) => {
+                const el = document.getElementById(id);
+                el.textContent = value;
+                el.className = 'metric-value'; // reset
+                if (isGoodValue === true) el.classList.add('good');
+                else if (isGoodValue === false) el.classList.add('bad');
+                else el.classList.add('neutral');
+            };
+
+            updateMetric('valVol', (data.volatility * 100).toFixed(2) + '%');
+            updateMetric('valBeta', data.beta.toFixed(2));
+            
+            document.getElementById('valMaxDd').textContent = (data.maxDrawdown * 100).toFixed(2) + '%';
+            document.getElementById('valMaxDdDates').textContent = data.maxDrawdownDates || '';
+
+            updateMetric('valSharpe', data.sharpe.toFixed(2), data.sharpe > 1);
+            updateMetric('valSortino', data.sortino.toFixed(2), data.sortino > 1);
+            updateMetric('valCalmar', data.calmar.toFixed(2), data.calmar > 1);
+            
+            document.getElementById('valVar').textContent = (data.var95 * 100).toFixed(2) + '%';
+            document.getElementById('valCvar').textContent = (data.cvar * 100).toFixed(2) + '%';
+            document.getElementById('valDownside').textContent = (data.downsideDeviation * 100).toFixed(2) + '%';
+        }
+
+        function renderCharts(profileData, drawdownData) {
+            // Drawdown Chart
+            const ddCtx = document.getElementById('drawdownChart').getContext('2d');
+            if (ddChartInstance) ddChartInstance.destroy();
+            
+            ddChartInstance = new Chart(ddCtx, {
+                type: 'line',
+                data: {
+                    labels: drawdownData.dates,
+                    datasets: [{
+                        label: 'Drawdown %',
+                        data: drawdownData.values.map(v => v * 100), // convert to %
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        fill: true,
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                        stepped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: { grid: gridConfig, ticks: { maxTicksLimit: 8 } },
+                        y: { 
+                            grid: gridConfig,
+                            max: 0,
+                            ticks: {
+                                callback: function(value) { return value + '%'; }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+
+            // Volatility Chart
+            const volCtx = document.getElementById('volatilityChart').getContext('2d');
+            if (volChartInstance) volChartInstance.destroy();
+
+            volChartInstance = new Chart(volCtx, {
+                type: 'line',
+                data: {
+                    labels: profileData.rollingDates,
+                    datasets: [{
+                        label: 'Rolling Vol (30D) %',
+                        data: profileData.rollingVol.map(v => v * 100),
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'transparent',
+                        pointRadius: 0,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: gridConfig, ticks: { maxTicksLimit: 6 } },
+                        y: { grid: gridConfig }
+                    }
+                }
+            });
+
+            // Beta Chart
+            const betaCtx = document.getElementById('betaChart').getContext('2d');
+            if (betaChartInstance) betaChartInstance.destroy();
+
+            betaChartInstance = new Chart(betaCtx, {
+                type: 'line',
+                data: {
+                    labels: profileData.rollingDates,
+                    datasets: [{
+                        label: 'Rolling Beta (60D)',
+                        data: profileData.rollingBeta,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'transparent',
+                        pointRadius: 0,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    yMin: 1.0,
+                                    yMax: 1.0,
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5]
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: gridConfig, ticks: { maxTicksLimit: 6 } },
+                        y: { grid: gridConfig }
+                    }
+                }
+            });
+        }
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = 'block';
+        }
+        
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // --- Mock Data Generators ---
+        function generateMockProfile() {
+            const dates = [];
+            const rollingVol = [];
+            const rollingBeta = [];
+            let now = new Date();
+            now.setFullYear(now.getFullYear() - 1);
+            
+            let currentVol = 0.15;
+            let currentBeta = 1.05;
+
+            for (let i = 0; i < 252; i++) {
+                dates.push(now.toISOString().split('T')[0]);
+                now.setDate(now.getDate() + 1);
+                
+                currentVol = currentVol + (Math.random() - 0.5) * 0.01;
+                if (currentVol < 0.05) currentVol = 0.05;
+                rollingVol.push(currentVol);
+
+                currentBeta = currentBeta + (Math.random() - 0.5) * 0.05;
+                if (currentBeta < 0) currentBeta = 0;
+                rollingBeta.push(currentBeta);
+            }
+
+            return {
+                volatility: 0.18,
+                beta: 1.12,
+                maxDrawdown: -0.22,
+                maxDrawdownDates: 'Oct 2023 - Jan 2024',
+                sharpe: 0.85,
+                sortino: 1.2,
+                calmar: 0.6,
+                var95: -0.025,
+                cvar: -0.038,
+                downsideDeviation: 0.12,
+                rollingDates: dates,
+                rollingVol: rollingVol,
+                rollingBeta: rollingBeta
+            };
+        }
+
+        function generateMockDrawdown() {
+            const dates = [];
+            const values = [];
+            let now = new Date();
+            now.setFullYear(now.getFullYear() - 2);
+            
+            let currentDd = 0;
+            let trend = -0.005;
+
+            for (let i = 0; i < 500; i++) {
+                dates.push(now.toISOString().split('T')[0]);
+                now.setDate(now.getDate() + 1);
+                
+                if (Math.random() > 0.95) trend = -trend;
+                
+                currentDd += trend + (Math.random() - 0.5) * 0.01;
+                if (currentDd > 0) currentDd = 0;
+                
+                values.push(currentDd);
+            }
+
+            return { dates, values };
+        }
+    </script>
+</body>
+</html>

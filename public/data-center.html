@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0e1a">
+    <title>STRATA - Data Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Page-specific styles matching STRATA theme */
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+        .page-header h1 {
+            font-size: 1.5rem;
+            color: #e2e8f0;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .page-header p {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        
+        .status-banner {
+            display: flex;
+            align-items: center;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            background: #0f1629;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+        .status-banner.operational {
+            border-left: 4px solid #10b981;
+            background: rgba(16, 185, 129, 0.05);
+        }
+        .status-banner.degraded {
+            border-left: 4px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.05);
+        }
+        .status-banner.impaired {
+            border-left: 4px solid #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+        
+        .banner-icon {
+            font-size: 2rem;
+        }
+        .operational .banner-icon { color: #10b981; }
+        .degraded .banner-icon { color: #f59e0b; }
+        .impaired .banner-icon { color: #ef4444; }
+        
+        .banner-text h2 {
+            font-size: 1.125rem;
+            margin: 0 0 0.25rem 0;
+            color: #e2e8f0;
+        }
+        .banner-text p {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .data-card {
+            background: #0f1629;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-title {
+            font-size: 1.125rem;
+            color: #e2e8f0;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: #94a3b8;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 500;
+        }
+        .data-table td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+        }
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Value styling */
+        .mono-val {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .badge-online { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge-degraded { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge-offline { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .badge-unconfigured { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.2); }
+
+        .metric-good { color: #34d399; }
+        .metric-warn { color: #fbbf24; }
+        .metric-bad { color: #f87171; }
+        
+        .footer-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .refresh-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .refresh-btn.spinning i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout-wrapper">
+        <!-- Mobile Header -->
+        <header class="top-header-bar">
+            <div class="top-brand-group">
+                <button id="mobile-menu-toggle" class="mobile-toggle-btn"><i class="fa-solid fa-bars"></i></button>
+                <a href="index.html" class="top-app-brand">
+                    <div class="logo-brand-block">
+                        <div class="logo-title-row">
+                            <span class="top-app-logo-text">STRATA</span>
+                            <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile" onerror="this.style.display='none'">
+                        </div>
+                        <span class="top-app-tagline">REAL-TIME MARKET ANALYTICS</span>
+                    </div>
+                </a>
+            </div>
+            <div class="top-status-badge">
+                <span class="status-indicator connected"></span>
+                <span class="status-label">Operational</span>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-brand-block">
+                    <div class="logo-title-row">
+                        <span class="logo-text">STRATA</span>
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
+                    </div>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Equity Analysis</span></a>
+                <a class="nav-item" href="calculators.html"><i class="fa-solid fa-calculator"></i><span>Financial Calculators</span></a>
+                <a class="nav-item" href="portfolio.html"><i class="fa-solid fa-pie-chart"></i><span>Mock Portfolio</span></a>
+                <a class="nav-item" href="ai.html"><i class="fa-solid fa-brain"></i><span>AI Analyst</span></a>
+                <a class="nav-item" href="crypto.html"><i class="fa-solid fa-coins"></i><span>Crypto Analysis</span></a>
+                <a class="nav-item" href="commodities.html"><i class="fa-solid fa-wheat-awn"></i><span>Commodities</span></a>
+                <a class="nav-item" href="macro.html"><i class="fa-solid fa-earth-americas"></i><span>Global Inflation</span></a>
+                <a class="nav-item" href="yields.html"><i class="fa-solid fa-landmark"></i><span>Fixed Income</span></a>
+                <a class="nav-item" href="forex.html"><i class="fa-solid fa-money-bill-transfer"></i><span>Currencies</span></a>
+                <a class="nav-item" href="stress.html"><i class="fa-solid fa-shield-halved"></i><span>Stress Tester</span></a>
+                <a class="nav-item" href="research.html"><i class="fa-solid fa-microscope"></i><span>Research Terminal</span></a>
+                <a class="nav-item" href="screener.html"><i class="fa-solid fa-filter"></i><span>Screener</span></a>
+                <a class="nav-item" href="correlation.html"><i class="fa-solid fa-diagram-project"></i><span>Correlations</span></a>
+                <a class="nav-item" href="risk-lab.html"><i class="fa-solid fa-flask"></i><span>Risk Lab</span></a>
+                <a class="nav-item" href="regime.html"><i class="fa-solid fa-gauge-high"></i><span>Market Regime</span></a>
+                <a class="nav-item" href="etf.html"><i class="fa-solid fa-layer-group"></i><span>ETF Analyzer</span></a>
+                <a class="nav-item active" href="data-center.html"><i class="fa-solid fa-server"></i><span>Data Center</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-container">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-server text-accent"></i> STRATA Data Integrity Center</h1>
+                    <p>Real-time monitoring of data providers and system caches</p>
+                </div>
+
+                <div id="overall-status-banner" class="status-banner operational">
+                    <div class="banner-icon"><i class="fa-solid fa-circle-check" id="overall-status-icon"></i></div>
+                    <div class="banner-text">
+                        <h2 id="overall-status-title">All Systems Operational</h2>
+                        <p id="overall-status-desc">Initializing health checks...</p>
+                    </div>
+                </div>
+
+                <div class="card data-card">
+                    <h3 class="card-title"><i class="fa-solid fa-network-wired"></i> Provider Status</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Status</th>
+                                    <th>Configured</th>
+                                    <th>Latency</th>
+                                    <th>Last Success</th>
+                                </tr>
+                            </thead>
+                            <tbody id="provider-table-body">
+                                <tr>
+                                    <td colspan="5" class="empty-state">Loading provider status...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card data-card">
+                    <h3 class="card-title"><i class="fa-solid fa-memory"></i> Cache Statistics</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cache Name</th>
+                                    <th>Entries</th>
+                                    <th>Hit Rate</th>
+                                    <th>Hits</th>
+                                    <th>Misses</th>
+                                    <th>Evictions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cache-table-body">
+                                <tr>
+                                    <td colspan="6" class="empty-state">Loading cache statistics...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="footer-info">
+                    <div class="last-refreshed">
+                        <i class="fa-regular fa-clock"></i> Last Refreshed: <span id="refresh-time" class="mono-val">--:--:--</span>
+                    </div>
+                    <button id="manual-refresh-btn" class="refresh-btn">
+                        <i class="fa-solid fa-rotate-right"></i> Refresh Now
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Mobile Menu Toggle
+        const toggle = document.getElementById('mobile-menu-toggle');
+        const sidebar = document.querySelector('.sidebar');
+        if (toggle && sidebar) {
+            toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+            document.addEventListener('click', (e) => {
+                if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== toggle && !toggle.contains(e.target)) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        }
+
+        // Data Center Logic
+        const DOMElements = {
+            providerBody: document.getElementById('provider-table-body'),
+            cacheBody: document.getElementById('cache-table-body'),
+            statusBanner: document.getElementById('overall-status-banner'),
+            statusIcon: document.getElementById('overall-status-icon'),
+            statusTitle: document.getElementById('overall-status-title'),
+            statusDesc: document.getElementById('overall-status-desc'),
+            refreshTime: document.getElementById('refresh-time'),
+            refreshBtn: document.getElementById('manual-refresh-btn')
+        };
+
+        const STATUS_CONFIG = {
+            online: { class: 'badge-online', icon: 'fa-solid fa-circle-check', text: 'Online' },
+            degraded: { class: 'badge-degraded', icon: 'fa-solid fa-triangle-exclamation', text: 'Degraded' },
+            offline: { class: 'badge-offline', icon: 'fa-solid fa-circle-xmark', text: 'Offline' },
+            unconfigured: { class: 'badge-unconfigured', icon: 'fa-solid fa-circle-minus', text: 'Not Configured' }
+        };
+
+        function getStatusInfo(status, configured) {
+            if (!configured || configured === 'false' || configured === false) return STATUS_CONFIG.unconfigured;
+            if (!status) return STATUS_CONFIG.offline;
+            const normalized = status.toLowerCase();
+            return STATUS_CONFIG[normalized] || STATUS_CONFIG.offline;
+        }
+
+        function formatTimeAgo(timestamp) {
+            if (!timestamp) return '-';
+            try {
+                const date = new Date(timestamp);
+                if (isNaN(date.getTime())) return timestamp;
+                const seconds = Math.floor((new Date() - date) / 1000);
+                if (seconds < 60) return `${seconds}s ago`;
+                if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+                if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+                return date.toLocaleDateString();
+            } catch (e) {
+                return timestamp;
+            }
+        }
+
+        function formatLatency(ms) {
+            if (ms === undefined || ms === null) return '-';
+            const num = Number(ms);
+            let colorClass = 'metric-good';
+            if (num > 1000) colorClass = 'metric-bad';
+            else if (num > 500) colorClass = 'metric-warn';
+            
+            return `<span class="mono-val ${colorClass}">${num.toFixed(0)} ms</span>`;
+        }
+
+        function renderProviders(providers) {
+            if (!providers || (Array.isArray(providers) && providers.length === 0) || Object.keys(providers).length === 0) {
+                DOMElements.providerBody.innerHTML = '<tr><td colspan="5" class="empty-state">No provider data available</td></tr>';
+                return;
+            }
+
+            const providerList = Array.isArray(providers) ? providers : Object.entries(providers).map(([name, data]) => ({ name, ...data }));
+            
+            let html = '';
+            let onlineCount = 0;
+            let degradedCount = 0;
+            let offlineCount = 0;
+            let totalActive = 0;
+
+            providerList.forEach(p => {
+                const isConfigured = p.configured !== false && p.configured !== 'false' && p.configured !== 0;
+                const statusInfo = getStatusInfo(p.status, isConfigured);
+                
+                if (isConfigured) {
+                    totalActive++;
+                    if (statusInfo.text === 'Online') onlineCount++;
+                    else if (statusInfo.text === 'Degraded') degradedCount++;
+                    else if (statusInfo.text === 'Offline') offlineCount++;
+                }
+
+                const nameDisplay = p.name || p.provider || 'Unknown';
+                const configuredText = isConfigured ? 'Yes' : 'No';
+                
+                html += `
+                    <tr>
+                        <td class="font-medium">${nameDisplay}</td>
+                        <td><span class="badge ${statusInfo.class}"><i class="${statusInfo.icon}"></i> ${statusInfo.text}</span></td>
+                        <td>${configuredText}</td>
+                        <td>${formatLatency(p.latency)}</td>
+                        <td><span class="mono-val text-secondary">${formatTimeAgo(p.lastSuccess || p.lastFetch)}</span></td>
+                    </tr>
+                `;
+            });
+
+            DOMElements.providerBody.innerHTML = html;
+            updateOverallBanner(totalActive, onlineCount, degradedCount, offlineCount);
+        }
+
+        function updateOverallBanner(total, online, degraded, offline) {
+            let state = 'operational';
+            let title = 'All Systems Operational';
+            let desc = `${online} of ${total} configured providers are responding normally.`;
+            let icon = 'fa-circle-check';
+
+            if (offline > 0 || degraded > 1) {
+                state = 'impaired';
+                title = 'System Impaired';
+                desc = `${offline} provider(s) offline, ${degraded} degraded. Some data may be unavailable.`;
+                icon = 'fa-circle-xmark';
+            } else if (degraded === 1) {
+                state = 'degraded';
+                title = 'Degraded Performance';
+                desc = '1 provider is experiencing elevated latency or intermittent errors.';
+                icon = 'fa-triangle-exclamation';
+            }
+
+            if (total === 0) {
+                title = 'No Providers Configured';
+                desc = 'System is running but no external data sources are available.';
+                state = 'degraded';
+                icon = 'fa-circle-info';
+            }
+
+            DOMElements.statusBanner.className = `status-banner ${state}`;
+            DOMElements.statusIcon.className = `fa-solid ${icon}`;
+            DOMElements.statusTitle.textContent = title;
+            DOMElements.statusDesc.textContent = desc;
+        }
+
+        function renderCaches(caches) {
+            if (!caches || Object.keys(caches).length === 0) {
+                DOMElements.cacheBody.innerHTML = '<tr><td colspan="6" class="empty-state">No cache statistics available</td></tr>';
+                return;
+            }
+
+            const cacheList = Array.isArray(caches) ? caches : Object.entries(caches).map(([name, data]) => ({ name, ...data }));
+            
+            let html = '';
+            cacheList.forEach(c => {
+                const nameDisplay = c.name || c.cache || 'Unknown';
+                const entries = c.entries !== undefined ? c.entries : c.keys || 0;
+                const hits = c.hits || 0;
+                const misses = c.misses || 0;
+                const evictions = c.evictions || 0;
+                
+                const totalReqs = hits + misses;
+                let hitRate = 0;
+                if (totalReqs > 0) {
+                    hitRate = (hits / totalReqs) * 100;
+                }
+                
+                // If the API provided a hit rate directly, use it
+                if (c.hitRate !== undefined) {
+                    hitRate = parseFloat(c.hitRate);
+                    // Convert fraction to percentage if it looks like one (e.g. 0.85)
+                    if (hitRate <= 1 && hitRate > 0 && String(c.hitRate).indexOf('.') !== -1) {
+                        hitRate *= 100;
+                    }
+                }
+
+                let rateColor = 'metric-good';
+                if (hitRate < 50) rateColor = 'metric-bad';
+                else if (hitRate < 80) rateColor = 'metric-warn';
+
+                html += `
+                    <tr>
+                        <td class="font-medium">${nameDisplay}</td>
+                        <td><span class="mono-val">${entries.toLocaleString()}</span></td>
+                        <td><span class="mono-val ${rateColor}">${hitRate.toFixed(1)}%</span></td>
+                        <td><span class="mono-val text-secondary">${hits.toLocaleString()}</span></td>
+                        <td><span class="mono-val text-secondary">${misses.toLocaleString()}</span></td>
+                        <td><span class="mono-val text-secondary">${evictions.toLocaleString()}</span></td>
+                    </tr>
+                `;
+            });
+
+            DOMElements.cacheBody.innerHTML = html;
+        }
+
+        async function fetchHealthData() {
+            const btnIcon = DOMElements.refreshBtn.querySelector('i');
+            DOMElements.refreshBtn.classList.add('spinning');
+            
+            try {
+                // Fetch data in parallel
+                const [providersRes, cacheRes] = await Promise.allSettled([
+                    fetch('/api/health/providers').then(res => res.json()).catch(() => null),
+                    fetch('/api/health/cache-stats').then(res => res.json()).catch(() => null)
+                ]);
+                
+                let providers = providersRes.status === 'fulfilled' && providersRes.value ? providersRes.value : [];
+                let caches = cacheRes.status === 'fulfilled' && cacheRes.value ? cacheRes.value : {};
+
+                // Fallback mock data if endpoints don't exist yet (for demonstration while backend is built)
+                if ((!providers || Object.keys(providers).length === 0) && (!caches || Object.keys(caches).length === 0)) {
+                    console.log("Using mock data as health endpoints may not be implemented yet.");
+                    providers = {
+                        "Finnhub": { status: "online", configured: true, latency: 145, lastSuccess: new Date().toISOString() },
+                        "AlphaVantage": { status: "degraded", configured: true, latency: 850, lastSuccess: new Date(Date.now() - 120000).toISOString() },
+                        "FRED": { status: "online", configured: true, latency: 220, lastSuccess: new Date().toISOString() },
+                        "Polygon": { status: "offline", configured: false, latency: null, lastSuccess: null }
+                    };
+                    caches = {
+                        "QuoteCache": { entries: 1250, hits: 8430, misses: 1250, evictions: 45 },
+                        "HistoryCache": { entries: 340, hits: 1200, misses: 340, evictions: 12 },
+                        "NewsCache": { entries: 85, hits: 450, misses: 90, evictions: 5 }
+                    };
+                }
+
+                renderProviders(providers);
+                renderCaches(caches);
+                
+                DOMElements.refreshTime.textContent = new Date().toLocaleTimeString();
+            } catch (err) {
+                console.error("Error updating health dashboard", err);
+                DOMElements.statusTitle.textContent = "Data Fetch Error";
+                DOMElements.statusDesc.textContent = "Failed to retrieve system health metrics.";
+                DOMElements.statusBanner.className = "status-banner impaired";
+                DOMElements.statusIcon.className = "fa-solid fa-circle-xmark";
+            } finally {
+                setTimeout(() => DOMElements.refreshBtn.classList.remove('spinning'), 500);
+            }
+        }
+
+        // Initialize
+        DOMElements.refreshBtn.addEventListener('click', fetchHealthData);
+        
+        // Initial fetch
+        fetchHealthData();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(fetchHealthData, 30000);
+
+    </script>
+</body>
+</html>

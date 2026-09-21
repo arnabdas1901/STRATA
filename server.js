@@ -54,7 +54,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Import Routes
+// Import Routes — Original
 const equityRoutes = require('./routes/equity');
 const cryptoRoutes = require('./routes/crypto');
 const macroRoutes = require('./routes/macro');
@@ -64,7 +64,24 @@ const forexRoutes = require('./routes/forex');
 const stressRoutes = require('./routes/stress');
 const yieldsRoutes = require('./routes/yields');
 
-// Mount Routes
+// Import Routes — Phase 1: Data Integrity
+const healthRoutes = require('./routes/health');
+const secRoutes = require('./routes/sec');
+
+// Import Routes — Phase 2: Analytics
+const analyticsRoutes = require('./routes/analytics');
+const correlationsRoutes = require('./routes/correlations');
+const riskRoutes = require('./routes/risk');
+
+// Import Routes — Phase 3: Terminal Features
+const screenerRoutes = require('./routes/screener');
+const regimeRoutes = require('./routes/regime');
+
+// Import Routes — Phase 4: Product
+const reportRoutes = require('./routes/report');
+const etfRoutes = require('./routes/etf');
+
+// Mount Routes — Original
 app.use('/api', equityRoutes); // contains /finnhub/* and /twelvedata/*
 app.use('/api/crypto', cryptoRoutes);
 app.use('/api', macroRoutes); // contains /indices
@@ -73,6 +90,23 @@ app.use('/api/forex', forexRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/stress', stressRoutes);
 app.use('/api/yields', yieldsRoutes);
+
+// Mount Routes — Phase 1: Data Integrity
+app.use('/api/health', healthRoutes);
+app.use('/api/sec', secRoutes);
+
+// Mount Routes — Phase 2: Analytics
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/correlations', correlationsRoutes);
+app.use('/api/risk', riskRoutes);
+
+// Mount Routes — Phase 3: Terminal Features
+app.use('/api/screener', screenerRoutes);
+app.use('/api/regime', regimeRoutes);
+
+// Mount Routes — Phase 4: Product
+app.use('/api/report', reportRoutes);
+app.use('/api/etf', etfRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
@@ -98,8 +132,9 @@ if (process.env.NODE_ENV !== 'test') {
         const { getAiProvider } = require('./utils/aiProviders');
         const aiProvider = getAiProvider();
         console.log(`==================================================`);
-        console.log(`🚀 STRATA Secure Backend Engine Active!`);
+        console.log(`🚀 STRATA Research Terminal Active!`);
         console.log(`🔗 Open the app: http://localhost:${PORT}`);
+        console.log(`📡 API Modules: 17 (equity, crypto, macro, ai, commodities, forex, stress, yields, health, sec, analytics, correlations, risk, screener, regime, report, etf)`);
         if (aiProvider === 'groq') {
             console.log(`🤖 AI Advisor: Groq (${process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'})`);
         } else if (aiProvider === 'gemini') {

@@ -257,10 +257,139 @@ async function generateAiAnalysis(prompt) {
     throw err;
 }
 
+function buildEvidencePack(ticker, data) {
+    // data object can contain: profile, quote, metrics, secFacts, filings, capitalAllocation, earningsQuality, macroContext, peers
+    let pack = `## EVIDENCE PACK — ${ticker}\n\n`;
+    
+    // Company Profile
+    if (data.profile) {
+        pack += `### COMPANY PROFILE\n`;
+        pack += `Name: ${data.profile.name || 'N/A'} — Source: Finnhub\n`;
+        pack += `Industry: ${data.profile.finnhubIndustry || 'N/A'}\n`;
+        pack += `Exchange: ${data.profile.exchange || 'N/A'}\n`;
+        pack += `Market Cap: ${data.profile.marketCapitalization ? '$' + (data.profile.marketCapitalization / 1000).toFixed(1) + 'B' : 'N/A'}\n\n`;
+    }
+    
+    // Market Data
+    if (data.quote) {
+        pack += `### MARKET DATA\n`;
+        pack += `Price: $${data.quote.c || 'N/A'} — Source: Finnhub Quote\n`;
+        pack += `Day Change: ${data.quote.dp != null ? data.quote.dp.toFixed(2) + '%' : 'N/A'}\n`;
+        pack += `52W High: $${data.quote.h || 'N/A'}, 52W Low: $${data.quote.l || 'N/A'}\n\n`;
+    }
+    
+    // Key Metrics
+    if (data.metrics && data.metrics.metric) {
+        const m = data.metrics.metric;
+        pack += `### KEY METRICS — Source: Finnhub Metrics\n`;
+        const metricPairs = [
+            ['P/E (TTM)', m['peTTM'] || m.peBasicExclExtraTTM],
+            ['P/S (TTM)', m.psTTM],
+            ['P/B', m.pbAnnual || m.pbQuarterly],
+            ['EV/EBITDA', m['ev/ebitdaTTM'] || m.currentEv],
+            ['ROE (TTM)', m.roeTTM],
+            ['ROIC', m.roicTTM || m.roicAnnual],
+            ['Gross Margin', m.grossMarginTTM],
+            ['Operating Margin', m.operatingMarginTTM],
+            ['Net Margin', m.netProfitMarginTTM],
+            ['Debt/Equity', m.totalDebtToEquityAnnual || m.totalDebtToEquityQuarterly],
+            ['Current Ratio', m.currentRatioAnnual || m.currentRatioQuarterly],
+            ['Beta', m.beta],
+            ['52W High', m['52WeekHigh']],
+            ['52W Low', m['52WeekLow']],
+            ['Dividend Yield', m.dividendYieldIndicatedAnnual],
+        ];
+        for (const [label, value] of metricPairs) {
+            if (value != null) pack += `${label}: ${typeof value === 'number' ? value.toFixed(2) : value}\n`;
+        }
+        pack += `\n`;
+    }
+    
+    // SEC Financial Data
+    if (data.secFacts) {
+        pack += `### SEC FINANCIAL DATA — Source: SEC EDGAR (XBRL)\n`;
+        // Extract key items if available
+        const concepts = [
+            { key: 'Revenue', concept: 'us-gaap:Revenues' },
+            { key: 'Revenue (Alt)', concept: 'us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax' },
+            { key: 'Net Income', concept: 'us-gaap:NetIncomeLoss' },
+            { key: 'EPS Diluted', concept: 'us-gaap:EarningsPerShareDiluted' },
+            { key: 'Total Assets', concept: 'us-gaap:Assets' },
+            { key: 'Total Debt', concept: 'us-gaap:LongTermDebt' },
+            { key: 'Cash', concept: 'us-gaap:CashAndCashEquivalentsAtCarryingValue' },
+            { key: 'Operating CF', concept: 'us-gaap:NetCashProvidedByOperatingActivities' },
+            { key: 'CapEx', concept: 'us-gaap:PaymentsToAcquirePropertyPlantAndEquipment' },
+        ];
+        
+        const facts = data.secFacts?.facts;
+        if (facts && facts['us-gaap']) {
+            for (const { key, concept } of concepts) {
+                const conceptName = concept.split(':')[1];
+                const conceptData = facts['us-gaap'][conceptName];
+                if (conceptData && conceptData.units) {
+                    const usdData = conceptData.units.USD || conceptData.units['USD/shares'];
+                    if (usdData && usdData.length > 0) {
+                        // Get the last 2-3 annual values
+                        const annuals = usdData.filter(d => d.form === '10-K' && d.fp === 'FY').slice(-3);
+                        if (annuals.length > 0) {
+                            const vals = annuals.map(a => {
+                                const val = typeof a.val === 'number' ? (Math.abs(a.val) > 1e9 ? '$' + (a.val / 1e9).toFixed(1) + 'B' : Math.abs(a.val) > 1e6 ? '$' + (a.val / 1e6).toFixed(0) + 'M' : a.val.toFixed(2)) : a.val;
+                                return `${a.fy || a.end}: ${val}`;
+                            }).join(', ');
+                            pack += `${key}: ${vals}\n`;
+                        }
+                    }
+                }
+            }
+        }
+        pack += `\n`;
+    }
+    
+    // Capital Allocation
+    if (data.capitalAllocation && data.capitalAllocation.allocation) {
+        pack += `### CAPITAL ALLOCATION — Source: SEC EDGAR\n`;
+        const alloc = data.capitalAllocation.allocation;
+        if (alloc.capex) pack += `CapEx: ${JSON.stringify(alloc.capex.slice(-2))}\n`;
+        if (alloc.buybacks) pack += `Buybacks: ${JSON.stringify(alloc.buybacks.slice(-2))}\n`;
+        if (alloc.dividends) pack += `Dividends: ${JSON.stringify(alloc.dividends.slice(-2))}\n`;
+        pack += `\n`;
+    }
+    
+    // Earnings Quality
+    if (data.earningsQuality && data.earningsQuality.quality) {
+        pack += `### EARNINGS QUALITY — Source: SEC EDGAR\n`;
+        const eq = data.earningsQuality.quality;
+        if (eq.cashConversion) pack += `Cash Conversion: ${eq.cashConversion}\n`;
+        if (eq.accruals) pack += `Accruals Ratio: ${eq.accruals}\n`;
+        pack += `\n`;
+    }
+    
+    // Peer context
+    if (data.peers && data.peers.length > 0) {
+        pack += `### PEER COMPARISON\n`;
+        for (const peer of data.peers.slice(0, 5)) {
+            pack += `${peer.symbol || peer.ticker}: PE=${peer.pe || 'N/A'}, Price=$${peer.price || 'N/A'}\n`;
+        }
+        pack += `\n`;
+    }
+    
+    // Recent filings
+    if (data.filings && data.filings.length > 0) {
+        pack += `### RECENT SEC FILINGS\n`;
+        for (const f of data.filings.slice(0, 5)) {
+            pack += `${f.form} filed ${f.filingDate}: ${f.description || ''}\n`;
+        }
+        pack += `\n`;
+    }
+    
+    return pack;
+}
+
 module.exports = {
     AI_FRAME_INSTRUCTIONS,
     buildAiPrompt,
     getAiProvider,
     generateAiAnalysis,
-    pickMetricsForAi
+    pickMetricsForAi,
+    buildEvidencePack
 };

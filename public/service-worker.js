@@ -1,11 +1,21 @@
-const CACHE_NAME = 'strata-v1';
+const CACHE_NAME = 'strata-v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/js/main.js',
   '/js/utils.js',
-  '/images/strata-logo.png'
+  '/js/modules/workspace.js',
+  '/js/modules/explain.js',
+  '/js/modules/search.js',
+  '/images/strata-logo.png',
+  '/research.html',
+  '/screener.html',
+  '/correlation.html',
+  '/risk-lab.html',
+  '/regime.html',
+  '/etf.html',
+  '/data-center.html'
 ];
 
 // Install Event - Pre-cache critical app shell files

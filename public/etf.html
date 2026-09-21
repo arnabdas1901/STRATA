@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0e1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/images/strata-logo.png">
+    <title>STRATA - ETF Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .section-block {
+            background-color: var(--card-bg, #0f1629);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+        }
+
+        .section-header {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: #e2e8f0;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .input-field {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            width: 150px;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .action-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #3b82f6;
+        }
+
+        .action-btn:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .data-grid { grid-template-columns: 1fr; }
+        }
+
+        .data-table-container {
+            overflow-x: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        th {
+            color: #94a3b8;
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        td { color: #e2e8f0; }
+        
+        .mono-val { font-family: 'JetBrains Mono', monospace; }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 1rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .metric-label {
+            color: #94a3b8;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            color: #f8fafc;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .metric-sub {
+            color: #10b981;
+            font-size: 0.875rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .metric-sub.negative { color: #ef4444; }
+
+        .venn-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 1.5rem;
+        }
+        
+        .venn-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            font-weight: bold;
+            mix-blend-mode: screen;
+        }
+        
+        .venn-a { background: rgba(59, 130, 246, 0.6); margin-right: -30px; z-index: 1; }
+        .venn-b { background: rgba(16, 185, 129, 0.6); margin-left: -30px; z-index: 1; }
+        
+        .venn-overlap-text {
+            position: absolute;
+            z-index: 10;
+            font-size: 1.25rem;
+            font-weight: 800;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .loading-overlay {
+            display: none;
+            color: #3b82f6;
+            margin-left: 1rem;
+        }
+        
+        .error-msg {
+            color: #ef4444;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-brand-block">
+                    <div class="logo-title-row">
+                        <span class="logo-text">STRATA</span>
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
+                    </div>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Equity Analysis</span></a>
+                <a class="nav-item" href="calculators.html"><i class="fa-solid fa-calculator"></i><span>Financial Calculators</span></a>
+                <a class="nav-item" href="portfolio.html"><i class="fa-solid fa-pie-chart"></i><span>Mock Portfolio</span></a>
+                <a class="nav-item" href="ai.html"><i class="fa-solid fa-brain"></i><span>AI Analyst</span></a>
+                <a class="nav-item" href="crypto.html"><i class="fa-solid fa-coins"></i><span>Crypto Analysis</span></a>
+                <a class="nav-item" href="commodities.html"><i class="fa-solid fa-wheat-awn"></i><span>Commodities</span></a>
+                <a class="nav-item" href="macro.html"><i class="fa-solid fa-earth-americas"></i><span>Global Inflation</span></a>
+                <a class="nav-item" href="yields.html"><i class="fa-solid fa-landmark"></i><span>Fixed Income</span></a>
+                <a class="nav-item" href="forex.html"><i class="fa-solid fa-money-bill-transfer"></i><span>Currencies</span></a>
+                <a class="nav-item" href="stress.html"><i class="fa-solid fa-shield-halved"></i><span>Stress Tester</span></a>
+                <a class="nav-item" href="research.html"><i class="fa-solid fa-microscope"></i><span>Research Terminal</span></a>
+                <a class="nav-item" href="screener.html"><i class="fa-solid fa-filter"></i><span>Screener</span></a>
+                <a class="nav-item" href="correlation.html"><i class="fa-solid fa-diagram-project"></i><span>Correlations</span></a>
+                <a class="nav-item" href="risk-lab.html"><i class="fa-solid fa-flask"></i><span>Risk Lab</span></a>
+                <a class="nav-item" href="regime.html"><i class="fa-solid fa-gauge-high"></i><span>Market Regime</span></a>
+                <a class="nav-item active" href="etf.html"><i class="fa-solid fa-layer-group"></i><span>ETF Analyzer</span></a>
+                <a class="nav-item" href="data-center.html"><i class="fa-solid fa-server"></i><span>Data Center</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header-bar">
+                <div class="top-brand-group">
+                    <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                    </button>
+                    <a href="index.html" class="top-app-brand">
+                        <div class="logo-brand-block">
+                            <div class="logo-title-row">
+                                <span class="top-app-logo-text">STRATA</span>
+                                <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile" onerror="this.style.display='none'">
+                            </div>
+                            <span class="top-app-tagline">REAL-TIME MARKET ANALYTICS</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="top-status-badge">
+                    <span class="status-indicator connected"></span>
+                    <span class="status-label">Operational</span>
+                </div>
+            </header>
+
+            <section class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <h1>ETF Analyzer</h1>
+                    <p style="color: #94a3b8; margin-top: 0.5rem;">Analyze structure and correlations of Exchange Traded Funds</p>
+                </div>
+
+                <!-- SINGLE ETF SECTION -->
+                <div class="section-block">
+                    <h2 class="section-header"><i class="fa-solid fa-magnifying-glass"></i> Single ETF Profile</h2>
+                    
+                    <div class="input-group">
+                        <input type="text" id="etf-single-ticker" class="input-field" placeholder="e.g. VOO" style="text-transform: uppercase;">
+                        <button id="btn-analyze-single" class="action-btn">Analyze ETF</button>
+                        <i class="fa-solid fa-circle-notch fa-spin loading-overlay" id="loading-single"></i>
+                    </div>
+                    <div id="error-single" class="error-msg"></div>
+
+                    <div id="result-single" style="display: none;">
+                        <div class="metrics-bar">
+                            <div class="metric">
+                                <span class="metric-label">Name</span>
+                                <span class="metric-value" id="etf-name">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Price</span>
+                                <span class="metric-value" id="etf-price">--</span>
+                                <span class="metric-sub" id="etf-change">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Holdings</span>
+                                <span class="metric-value" id="etf-count">--</span>
+                            </div>
+                        </div>
+
+                        <div class="data-grid">
+                            <div>
+                                <h3 style="color:#e2e8f0; font-size:1rem; margin-top:0;">Top 10 Holdings</h3>
+                                <div class="data-table-container">
+                                    <table id="holdings-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Asset</th>
+                                                <th>Name</th>
+                                                <th style="text-align: right;">Weight</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Injected via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 style="color:#e2e8f0; font-size:1rem; margin-top:0;">Sector Weights</h3>
+                                <div class="chart-container">
+                                    <canvas id="sector-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ETF OVERLAP SECTION -->
+                <div class="section-block">
+                    <h2 class="section-header"><i class="fa-solid fa-diagram-project"></i> Overlap Analyzer</h2>
+                    
+                    <div class="input-group">
+                        <input type="text" id="etf-a-ticker" class="input-field" placeholder="ETF A (e.g. VOO)" style="text-transform: uppercase;">
+                        <span style="color:#94a3b8; font-weight:bold;">VS</span>
+                        <input type="text" id="etf-b-ticker" class="input-field" placeholder="ETF B (e.g. QQQ)" style="text-transform: uppercase;">
+                        <button id="btn-analyze-overlap" class="action-btn">Compare</button>
+                        <i class="fa-solid fa-circle-notch fa-spin loading-overlay" id="loading-overlap"></i>
+                    </div>
+                    <div id="error-overlap" class="error-msg"></div>
+
+                    <div id="result-overlap" style="display: none;">
+                        
+                        <div class="venn-container">
+                            <div class="venn-circle venn-a">
+                                <span id="venn-a-label" style="margin-bottom:20px;font-size:0.875rem;">A</span>
+                            </div>
+                            <div class="venn-overlap-text" id="venn-overlap-val">--%</div>
+                            <div class="venn-circle venn-b">
+                                <span id="venn-b-label" style="margin-bottom:20px;font-size:0.875rem;">B</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-bar" style="justify-content: center; text-align: center;">
+                            <div class="metric">
+                                <span class="metric-label">Overlap by Weight</span>
+                                <span class="metric-value" id="overlap-weight-val">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Unique in A</span>
+                                <span class="metric-value" id="unique-a-val">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Unique in B</span>
+                                <span class="metric-value" id="unique-b-val">--</span>
+                            </div>
+                        </div>
+
+                        <h3 style="color:#e2e8f0; font-size:1rem; margin-top:2rem;">Common Holdings</h3>
+                        <div class="data-table-container">
+                            <table id="common-table">
+                                <thead>
+                                    <tr>
+                                        <th>Asset</th>
+                                        <th style="text-align: right;">Weight in A</th>
+                                        <th style="text-align: right;">Weight in B</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Mobile Menu
+        document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+        });
+
+        // Initialize Sector Chart
+        let sectorChart = null;
+
+        const renderSectorChart = (sectorData) => {
+            const ctx = document.getElementById('sector-chart').getContext('2d');
+            
+            if (sectorChart) sectorChart.destroy();
+
+            const labels = Object.keys(sectorData);
+            const data = Object.values(sectorData);
+            
+            // Standard colors
+            const colors = [
+                '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+                '#ec4899', '#06b6d4', '#64748b', '#f97316', '#14b8a6'
+            ];
+
+            sectorChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#cbd5e1',
+                                font: { family: "'Inter', sans-serif", size: 10 },
+                                boxWidth: 12
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        };
+
+        // Single Profile logic
+        document.getElementById('btn-analyze-single').addEventListener('click', async () => {
+            const ticker = document.getElementById('etf-single-ticker').value.trim().toUpperCase();
+            if (!ticker) return;
+
+            const btn = document.getElementById('btn-analyze-single');
+            const loader = document.getElementById('loading-single');
+            const error = document.getElementById('error-single');
+            const result = document.getElementById('result-single');
+
+            btn.disabled = true;
+            loader.style.display = 'inline-block';
+            error.style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/etf/profile/${ticker}`);
+                if (!res.ok) throw new Error('Failed to fetch ETF profile.');
+                const data = await res.json();
+
+                document.getElementById('etf-name').textContent = data.name || ticker;
+                document.getElementById('etf-price').textContent = data.price ? `$${data.price.toFixed(2)}` : 'N/A';
+                
+                const changeEl = document.getElementById('etf-change');
+                if (data.change !== undefined) {
+                    const isNeg = data.change < 0;
+                    changeEl.textContent = `${isNeg ? '' : '+'}${data.change.toFixed(2)}%`;
+                    changeEl.className = `metric-sub ${isNeg ? 'negative' : ''}`;
+                }
+
+                document.getElementById('etf-count').textContent = data.holdingsCount || 'N/A';
+
+                const tbody = document.querySelector('#holdings-table tbody');
+                tbody.innerHTML = '';
+                if (data.topHoldings && data.topHoldings.length > 0) {
+                    data.topHoldings.forEach(h => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="mono-val" style="color: #60a5fa; font-weight:500;">${h.asset}</td>
+                                <td>${h.name || '--'}</td>
+                                <td class="mono-val" style="text-align: right;">${h.weight ? h.weight.toFixed(2) + '%' : '--'}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3">No holdings data available</td></tr>';
+                }
+
+                if (data.sectors) {
+                    renderSectorChart(data.sectors);
+                }
+
+                result.style.display = 'block';
+
+                // Update URL
+                const url = new URL(window.location);
+                url.searchParams.set('t', ticker);
+                window.history.pushState({}, '', url);
+
+            } catch (err) {
+                error.textContent = err.message;
+                error.style.display = 'block';
+                result.style.display = 'none';
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        });
+
+        // Overlap logic
+        document.getElementById('btn-analyze-overlap').addEventListener('click', async () => {
+            const tA = document.getElementById('etf-a-ticker').value.trim().toUpperCase();
+            const tB = document.getElementById('etf-b-ticker').value.trim().toUpperCase();
+            if (!tA || !tB) return;
+
+            const btn = document.getElementById('btn-analyze-overlap');
+            const loader = document.getElementById('loading-overlap');
+            const error = document.getElementById('error-overlap');
+            const result = document.getElementById('result-overlap');
+
+            btn.disabled = true;
+            loader.style.display = 'inline-block';
+            error.style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/etf/overlap?a=${tA}&b=${tB}`);
+                if (!res.ok) throw new Error('Failed to compute overlap.');
+                const data = await res.json();
+
+                document.getElementById('venn-a-label').textContent = tA;
+                document.getElementById('venn-b-label').textContent = tB;
+                
+                const overlapVal = data.overlapPercentage || 0;
+                document.getElementById('venn-overlap-val').textContent = `${overlapVal.toFixed(1)}%`;
+                document.getElementById('overlap-weight-val').textContent = `${overlapVal.toFixed(1)}%`;
+                
+                document.getElementById('unique-a-val').textContent = data.uniqueA || 0;
+                document.getElementById('unique-b-val').textContent = data.uniqueB || 0;
+
+                const tbody = document.querySelector('#common-table tbody');
+                tbody.innerHTML = '';
+                if (data.commonHoldings && data.commonHoldings.length > 0) {
+                    data.commonHoldings.forEach(h => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="mono-val" style="color: #60a5fa; font-weight:500;">${h.asset}</td>
+                                <td class="mono-val" style="text-align: right;">${h.weightA ? h.weightA.toFixed(2) + '%' : '--'}</td>
+                                <td class="mono-val" style="text-align: right;">${h.weightB ? h.weightB.toFixed(2) + '%' : '--'}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3">No common holdings found</td></tr>';
+                }
+
+                result.style.display = 'block';
+
+            } catch (err) {
+                error.textContent = err.message;
+                error.style.display = 'block';
+                result.style.display = 'none';
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        });
+
+        // Initialize from URL
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const t = urlParams.get('t');
+            if (t) {
+                document.getElementById('etf-single-ticker').value = t;
+                document.getElementById('btn-analyze-single').click();
+            }
+        });
+    </script>
+</body>
+</html>

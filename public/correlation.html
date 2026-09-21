@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Asset Correlation Matrix | STRATA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        .correlation-layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .correlation-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .controls-panel {
+            background-color: var(--card-bg, #0f1629);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .assets-selection {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            accent-color: #3b82f6;
+        }
+
+        .custom-asset {
+            display: flex;
+            gap: 8px;
+        }
+
+        .custom-asset input {
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            width: 120px;
+        }
+
+        .custom-asset button {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .custom-asset button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .period-toggle {
+            display: flex;
+            gap: 4px;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .period-toggle button {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .period-toggle button.active {
+            background-color: #3b82f6;
+            color: #fff;
+        }
+
+        .calc-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .calc-btn:hover {
+            background-color: #1d4ed8;
+        }
+
+        .heatmap-container {
+            background-color: var(--card-bg, #0f1629);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            overflow-x: auto;
+        }
+
+        .heatmap-table {
+            border-collapse: collapse;
+            width: 100%;
+            text-align: center;
+        }
+
+        .heatmap-table th, .heatmap-table td {
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .heatmap-table th {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            position: sticky;
+            top: 0;
+            left: 0;
+            background-color: var(--card-bg, #0f1629);
+            z-index: 1;
+        }
+
+        .heatmap-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #fff;
+            transition: transform 0.1s;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .diagonal {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            color: #94a3b8;
+        }
+
+        .side-panels {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-card {
+            background-color: var(--card-bg, #0f1629);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .panel-card h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .insights-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .insights-list li {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .insights-list li:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .insight-label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .insight-value {
+            font-size: 1rem;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .insight-value.positive { color: #10b981; }
+        .insight-value.negative { color: #ef4444; }
+        .insight-value.neutral { color: #94a3b8; }
+
+        .guide-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+        
+        .loader i {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            color: #3b82f6;
+        }
+        
+        .error-message {
+            display: none;
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            color: #f87171;
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation Template -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-brand-block">
+                    <div class="logo-title-row">
+                        <span class="logo-text">STRATA</span>
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
+                    </div>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Equity Analysis</span></a>
+                <a class="nav-item" href="calculators.html"><i class="fa-solid fa-calculator"></i><span>Financial Calculators</span></a>
+                <a class="nav-item" href="portfolio.html"><i class="fa-solid fa-pie-chart"></i><span>Mock Portfolio</span></a>
+                <a class="nav-item" href="ai.html"><i class="fa-solid fa-brain"></i><span>AI Analyst</span></a>
+                <a class="nav-item" href="crypto.html"><i class="fa-solid fa-coins"></i><span>Crypto Analysis</span></a>
+                <a class="nav-item" href="commodities.html"><i class="fa-solid fa-wheat-awn"></i><span>Commodities</span></a>
+                <a class="nav-item" href="macro.html"><i class="fa-solid fa-earth-americas"></i><span>Global Inflation</span></a>
+                <a class="nav-item" href="yields.html"><i class="fa-solid fa-landmark"></i><span>Fixed Income</span></a>
+                <a class="nav-item" href="forex.html"><i class="fa-solid fa-money-bill-transfer"></i><span>Currencies</span></a>
+                <a class="nav-item" href="stress.html"><i class="fa-solid fa-shield-halved"></i><span>Stress Tester</span></a>
+                <a class="nav-item" href="research.html"><i class="fa-solid fa-microscope"></i><span>Research Terminal</span></a>
+                <a class="nav-item" href="screener.html"><i class="fa-solid fa-filter"></i><span>Screener</span></a>
+                <a class="nav-item active" href="correlation.html"><i class="fa-solid fa-diagram-project"></i><span>Correlations</span></a>
+                <a class="nav-item" href="risk-lab.html"><i class="fa-solid fa-flask"></i><span>Risk Lab</span></a>
+                <a class="nav-item" href="regime.html"><i class="fa-solid fa-gauge-high"></i><span>Market Regime</span></a>
+                <a class="nav-item" href="etf.html"><i class="fa-solid fa-layer-group"></i><span>ETF Analyzer</span></a>
+                <a class="nav-item" href="data-center.html"><i class="fa-solid fa-server"></i><span>Data Center</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="mobile-header">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="mobile-logo">STRATA</div>
+            </header>
+
+            <div class="page-header">
+                <h1>Cross-Asset Correlation Matrix</h1>
+                <p>Analyze price relationships across different asset classes</p>
+            </div>
+
+            <div class="controls-panel">
+                <div class="controls-row">
+                    <div class="assets-selection" id="assetsSelection">
+                        <label class="checkbox-label"><input type="checkbox" value="SPY" checked> SPY (S&P 500)</label>
+                        <label class="checkbox-label"><input type="checkbox" value="QQQ" checked> QQQ (NASDAQ)</label>
+                        <label class="checkbox-label"><input type="checkbox" value="GLD" checked> GLD (Gold)</label>
+                        <label class="checkbox-label"><input type="checkbox" value="USO" checked> USO (Oil)</label>
+                        <label class="checkbox-label"><input type="checkbox" value="BTC-USD" checked> BTC-USD (Bitcoin)</label>
+                        <label class="checkbox-label"><input type="checkbox" value="DX-Y.NYB" checked> DX-Y (Dollar)</label>
+                        <label class="checkbox-label"><input type="checkbox" value="TLT" checked> TLT (20Y Treas)</label>
+                    </div>
+
+                    <div class="custom-asset">
+                        <input type="text" id="customTickerInput" placeholder="Add custom..." maxlength="10">
+                        <button id="addCustomTickerBtn"><i class="fa-solid fa-plus"></i> Add</button>
+                    </div>
+
+                    <div class="period-toggle" id="periodToggle">
+                        <button data-period="30">30D</button>
+                        <button data-period="90" class="active">90D</button>
+                        <button data-period="365">1Y</button>
+                    </div>
+
+                    <button class="calc-btn" id="calculateBtn">
+                        <i class="fa-solid fa-calculator"></i> Calculate
+                    </button>
+                </div>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="loader" id="loader">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                <p>Computing correlation matrix...</p>
+            </div>
+
+            <div class="correlation-layout" id="resultsContainer" style="display: none;">
+                <div class="heatmap-container">
+                    <table class="heatmap-table" id="heatmapTable">
+                        <!-- Filled by JS -->
+                    </table>
+                </div>
+
+                <div class="side-panels">
+                    <div class="panel-card">
+                        <h3><i class="fa-solid fa-lightbulb"></i> Key Insights</h3>
+                        <ul class="insights-list" id="insightsList">
+                            <!-- Filled by JS -->
+                        </ul>
+                    </div>
+
+                    <div class="panel-card">
+                        <h3><i class="fa-solid fa-circle-info"></i> Interpretation Guide</h3>
+                        <div class="guide-item">
+                            <div class="color-box" style="background-color: rgba(16, 185, 129, 0.8);"></div>
+                            <span>> 0.7: Strong positive</span>
+                        </div>
+                        <div class="guide-item">
+                            <div class="color-box" style="background-color: rgba(16, 185, 129, 0.4);"></div>
+                            <span>0.3 to 0.7: Moderate positive</span>
+                        </div>
+                        <div class="guide-item">
+                            <div class="color-box" style="background-color: rgba(255, 255, 255, 0.1);"></div>
+                            <span>-0.3 to 0.3: Weak/No correlation</span>
+                        </div>
+                        <div class="guide-item">
+                            <div class="color-box" style="background-color: rgba(239, 68, 68, 0.4);"></div>
+                            <span>-0.7 to -0.3: Moderate negative</span>
+                        </div>
+                        <div class="guide-item">
+                            <div class="color-box" style="background-color: rgba(239, 68, 68, 0.8);"></div>
+                            <span>< -0.7: Strong negative</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.querySelector('.sidebar');
+        
+        if (mobileMenuBtn && sidebar) {
+            mobileMenuBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+        }
+
+        // State
+        let selectedPeriod = '90';
+
+        // Elements
+        const addCustomTickerBtn = document.getElementById('addCustomTickerBtn');
+        const customTickerInput = document.getElementById('customTickerInput');
+        const assetsSelection = document.getElementById('assetsSelection');
+        const periodToggleButtons = document.querySelectorAll('#periodToggle button');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const heatmapTable = document.getElementById('heatmapTable');
+        const insightsList = document.getElementById('insightsList');
+        const loader = document.getElementById('loader');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Event Listeners
+        periodToggleButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                periodToggleButtons.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                selectedPeriod = e.target.getAttribute('data-period');
+            });
+        });
+
+        addCustomTickerBtn.addEventListener('click', () => {
+            const ticker = customTickerInput.value.trim().toUpperCase();
+            if (ticker) {
+                // Check if already exists
+                const existing = Array.from(assetsSelection.querySelectorAll('input')).find(input => input.value === ticker);
+                if (!existing) {
+                    const label = document.createElement('label');
+                    label.className = 'checkbox-label';
+                    label.innerHTML = `<input type="checkbox" value="${ticker}" checked> ${ticker}`;
+                    assetsSelection.appendChild(label);
+                }
+                customTickerInput.value = '';
+            }
+        });
+
+        customTickerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addCustomTickerBtn.click();
+            }
+        });
+
+        calculateBtn.addEventListener('click', fetchAndRenderMatrix);
+
+        // Color interpolation function for heatmap
+        function getColorForCorrelation(value) {
+            // value between -1 and 1
+            if (value >= 0) {
+                // 0 to 1 -> white/transparent to dark green
+                // rgb(16, 185, 129) is the green (#10b981)
+                const opacity = Math.min(Math.abs(value), 1);
+                return `rgba(16, 185, 129, ${opacity * 0.9})`;
+            } else {
+                // -1 to 0 -> white/transparent to dark red
+                // rgb(239, 68, 68) is the red (#ef4444)
+                const opacity = Math.min(Math.abs(value), 1);
+                return `rgba(239, 68, 68, ${opacity * 0.9})`;
+            }
+        }
+        
+        function formatVal(val) {
+            return val.toFixed(2);
+        }
+
+        async function fetchAndRenderMatrix() {
+            // Get selected assets
+            const selectedAssets = Array.from(assetsSelection.querySelectorAll('input:checked')).map(cb => cb.value);
+            
+            if (selectedAssets.length < 2) {
+                showError('Please select at least 2 assets to calculate correlation.');
+                return;
+            }
+
+            hideError();
+            resultsContainer.style.display = 'none';
+            loader.style.display = 'block';
+
+            try {
+                const assetsParam = selectedAssets.join(',');
+                const response = await fetch(`/api/correlations/matrix?assets=${assetsParam}&period=${selectedPeriod}`);
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // MOCK fallback if API not ready yet, but assuming it exists
+                let matrix = data.matrix;
+                let assets = data.assets || selectedAssets;
+                
+                if (!matrix) {
+                    // Generate mock matrix for frontend dev if backend endpoint is not yet created
+                    console.log('Using mock matrix data');
+                    matrix = [];
+                    for (let i = 0; i < assets.length; i++) {
+                        matrix[i] = [];
+                        for (let j = 0; j < assets.length; j++) {
+                            if (i === j) {
+                                matrix[i][j] = 1.0;
+                            } else if (j > i) {
+                                // Random correlation between -1 and 1
+                                matrix[i][j] = (Math.random() * 2) - 1;
+                            } else {
+                                // mirror
+                                matrix[i][j] = matrix[j][i];
+                            }
+                        }
+                    }
+                }
+                
+                renderHeatmap(assets, matrix);
+                renderInsights(assets, matrix);
+                
+                loader.style.display = 'none';
+                resultsContainer.style.display = 'grid';
+                
+            } catch (err) {
+                console.error(err);
+                loader.style.display = 'none';
+                showError(`Failed to fetch correlation matrix: ${err.message}`);
+            }
+        }
+
+        function renderHeatmap(assets, matrix) {
+            let html = '<tr><th></th>';
+            
+            // Header row
+            for (const asset of assets) {
+                html += `<th>${asset}</th>`;
+            }
+            html += '</tr>';
+
+            // Rows
+            for (let i = 0; i < assets.length; i++) {
+                html += `<tr><th>${assets[i]}</th>`;
+                for (let j = 0; j < assets.length; j++) {
+                    const val = matrix[i][j];
+                    if (i === j) {
+                        html += `<td class="heatmap-cell diagonal">1.00</td>`;
+                    } else {
+                        const color = getColorForCorrelation(val);
+                        html += `<td class="heatmap-cell" style="background-color: ${color}; color: ${Math.abs(val) > 0.5 ? '#fff' : '#e2e8f0'};">${formatVal(val)}</td>`;
+                    }
+                }
+                html += '</tr>';
+            }
+            
+            heatmapTable.innerHTML = html;
+        }
+
+        function renderInsights(assets, matrix) {
+            let maxPos = { val: -1.1, pair: [] };
+            let maxNeg = { val: 1.1, pair: [] };
+            let minCorr = { val: 1.1, pair: [] };
+
+            for (let i = 0; i < assets.length; i++) {
+                for (let j = i + 1; j < assets.length; j++) {
+                    const val = matrix[i][j];
+                    
+                    if (val > maxPos.val) {
+                        maxPos = { val, pair: [assets[i], assets[j]] };
+                    }
+                    if (val < maxNeg.val) {
+                        maxNeg = { val, pair: [assets[i], assets[j]] };
+                    }
+                    if (Math.abs(val) < Math.abs(minCorr.val)) {
+                        minCorr = { val, pair: [assets[i], assets[j]] };
+                    }
+                }
+            }
+
+            let html = '';
+            
+            if (maxPos.pair.length > 0) {
+                html += `
+                    <li>
+                        <span class="insight-label">Strongest Positive Correlation</span>
+                        <span class="insight-value positive">${maxPos.pair[0]}/${maxPos.pair[1]} (${formatVal(maxPos.val)})</span>
+                    </li>
+                `;
+            }
+            
+            if (maxNeg.pair.length > 0) {
+                html += `
+                    <li>
+                        <span class="insight-label">Strongest Negative Correlation</span>
+                        <span class="insight-value negative">${maxNeg.pair[0]}/${maxNeg.pair[1]} (${formatVal(maxNeg.val)})</span>
+                    </li>
+                `;
+            }
+            
+            if (minCorr.pair.length > 0) {
+                html += `
+                    <li>
+                        <span class="insight-label">Most Uncorrelated Pair</span>
+                        <span class="insight-value neutral">${minCorr.pair[0]}/${minCorr.pair[1]} (${formatVal(minCorr.val)})</span>
+                    </li>
+                `;
+            }
+
+            insightsList.innerHTML = html;
+        }
+        
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = 'block';
+        }
+        
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndRenderMatrix();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equity Screener | STRATA</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .page-header {
+            margin-bottom: 24px;
+        }
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .page-subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        /* Filter Panel */
+        .filter-panel {
+            background-color: #0f1629;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .filter-label {
+            font-size: 12px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .filter-input {
+            background-color: #030712;
+            border: 1px solid #1e293b;
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .filter-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        .filter-row {
+            display: flex;
+            gap: 8px;
+        }
+        .filter-row input {
+            width: 100%;
+        }
+        
+        .filter-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #1e293b;
+            padding-top: 16px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .btn {
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background-color: #2563eb;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+        }
+        .btn-secondary:hover {
+            background-color: #1e293b;
+            color: #fff;
+        }
+        
+        .saved-screens-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .saved-screens-dropdown {
+            background-color: #030712;
+            border: 1px solid #1e293b;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        /* Results Section */
+        .results-section {
+            background-color: #0f1629;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .results-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .results-count {
+            font-size: 14px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 12px 20px;
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 13px;
+            border-bottom: 1px solid #1e293b;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .data-table th:hover {
+            color: #fff;
+        }
+        .data-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #1e293b;
+            color: #e2e8f0;
+            white-space: nowrap;
+        }
+        .data-table tbody tr {
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .data-table tbody tr:hover {
+            background-color: #1e293b;
+        }
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .mono-text {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .symbol-cell {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .company-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .text-green { color: #10b981; }
+        .text-red { color: #ef4444; }
+
+        /* States */
+        .loading-state, .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: #94a3b8;
+        }
+        .loading-spinner {
+            font-size: 24px;
+            color: #3b82f6;
+            margin-bottom: 16px;
+        }
+        .empty-state i {
+            font-size: 32px;
+            margin-bottom: 16px;
+            color: #334155;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-brand-block">
+                    <div class="logo-title-row">
+                        <span class="logo-text">STRATA</span>
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
+                    </div>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Equity Analysis</span></a>
+                <a class="nav-item" href="calculators.html"><i class="fa-solid fa-calculator"></i><span>Financial Calculators</span></a>
+                <a class="nav-item" href="portfolio.html"><i class="fa-solid fa-pie-chart"></i><span>Mock Portfolio</span></a>
+                <a class="nav-item" href="ai.html"><i class="fa-solid fa-brain"></i><span>AI Analyst</span></a>
+                <a class="nav-item" href="crypto.html"><i class="fa-solid fa-coins"></i><span>Crypto Analysis</span></a>
+                <a class="nav-item" href="commodities.html"><i class="fa-solid fa-wheat-awn"></i><span>Commodities</span></a>
+                <a class="nav-item" href="macro.html"><i class="fa-solid fa-earth-americas"></i><span>Global Inflation</span></a>
+                <a class="nav-item" href="yields.html"><i class="fa-solid fa-landmark"></i><span>Fixed Income</span></a>
+                <a class="nav-item" href="forex.html"><i class="fa-solid fa-money-bill-transfer"></i><span>Currencies</span></a>
+                <a class="nav-item" href="stress.html"><i class="fa-solid fa-shield-halved"></i><span>Stress Tester</span></a>
+                
+                <a class="nav-item" href="research.html"><i class="fa-solid fa-microscope"></i><span>Research Terminal</span></a>
+                <a class="nav-item active" href="screener.html"><i class="fa-solid fa-filter"></i><span>Screener</span></a>
+                <a class="nav-item" href="correlation.html"><i class="fa-solid fa-diagram-project"></i><span>Correlations</span></a>
+                <a class="nav-item" href="risk-lab.html"><i class="fa-solid fa-flask"></i><span>Risk Lab</span></a>
+                <a class="nav-item" href="regime.html"><i class="fa-solid fa-gauge-high"></i><span>Market Regime</span></a>
+                <a class="nav-item" href="etf.html"><i class="fa-solid fa-layer-group"></i><span>ETF Analyzer</span></a>
+                <a class="nav-item" href="data-center.html"><i class="fa-solid fa-server"></i><span>Data Center</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Mobile Header -->
+            <header class="mobile-header">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="mobile-logo">STRATA</div>
+                <div style="width: 24px;"></div>
+            </header>
+
+            <div class="content-wrapper">
+                <div class="page-header">
+                    <h1 class="page-title">Equity Screener</h1>
+                    <p class="page-subtitle">Find companies matching your criteria</p>
+                </div>
+
+                <!-- Filter Builder Panel -->
+                <div class="filter-panel">
+                    <div class="filter-grid" id="filterForm">
+                        <div class="filter-group">
+                            <label class="filter-label">Market Cap</label>
+                            <div class="filter-row">
+                                <select class="filter-input" id="mcapMin">
+                                    <option value="">Min</option>
+                                    <option value="2000000000">>$2B</option>
+                                    <option value="10000000000">>$10B</option>
+                                    <option value="50000000000">>$50B</option>
+                                    <option value="100000000000">>$100B</option>
+                                    <option value="500000000000">>$500B</option>
+                                </select>
+                                <select class="filter-input" id="mcapMax">
+                                    <option value="">Max</option>
+                                    <option value="2000000000"><$2B</option>
+                                    <option value="10000000000"><$10B</option>
+                                    <option value="50000000000"><$50B</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Price Min ($)</label>
+                            <input type="number" class="filter-input" id="priceMin" placeholder="e.g. 10">
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Volume (Min)</label>
+                            <select class="filter-input" id="volumeMin">
+                                <option value="">Any</option>
+                                <option value="100000">> 100K</option>
+                                <option value="500000">> 500K</option>
+                                <option value="1000000">> 1M</option>
+                                <option value="5000000">> 5M</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Sector</label>
+                            <select class="filter-input" id="sectorSelect">
+                                <option value="">All Sectors</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Financials">Financials</option>
+                                <option value="Consumer Discretionary">Consumer Discretionary</option>
+                                <option value="Consumer Staples">Consumer Staples</option>
+                                <option value="Industrials">Industrials</option>
+                                <option value="Energy">Energy</option>
+                                <option value="Materials">Materials</option>
+                                <option value="Utilities">Utilities</option>
+                                <option value="Real Estate">Real Estate</option>
+                                <option value="Communication Services">Communication Services</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Country</label>
+                            <select class="filter-input" id="countrySelect">
+                                <option value="US">United States</option>
+                                <option value="CA">Canada</option>
+                                <option value="GB">United Kingdom</option>
+                                <option value="CN">China</option>
+                                <option value="">All</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Dividend Yield Min (%)</label>
+                            <input type="number" class="filter-input" id="dividendMin" placeholder="e.g. 2.5" step="0.1">
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Beta Range</label>
+                            <div class="filter-row">
+                                <input type="number" class="filter-input" id="betaMin" placeholder="Min" step="0.1">
+                                <input type="number" class="filter-input" id="betaMax" placeholder="Max" step="0.1">
+                            </div>
+                        </div>
+
+                        <div class="filter-group">
+                            <label class="filter-label">Sort By</label>
+                            <div class="filter-row">
+                                <select class="filter-input" id="sortBy">
+                                    <option value="marketCap">Market Cap</option>
+                                    <option value="price">Price</option>
+                                    <option value="volume">Volume</option>
+                                    <option value="change">Change %</option>
+                                </select>
+                                <select class="filter-input" id="sortOrder" style="width: 80px;">
+                                    <option value="desc">Desc</option>
+                                    <option value="asc">Asc</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-actions">
+                        <div class="saved-screens-wrapper">
+                            <span>Saved Screens:</span>
+                            <select class="saved-screens-dropdown" id="savedScreens">
+                                <option value="">Select a screen...</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" id="saveScreenBtn" style="padding: 6px 12px; font-size: 13px;">Save Current</button>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary" id="resetBtn">
+                                <i class="fa-solid fa-rotate-right"></i> Reset
+                            </button>
+                            <button class="btn btn-primary" id="scanBtn">
+                                <i class="fa-solid fa-radar"></i> Scan Market
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="results-section">
+                    <div class="results-header">
+                        <div class="results-count" id="resultsCountBadge">Ready to scan</div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="data-table" id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="symbol">Symbol <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="companyName">Company <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="sector">Sector <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="price">Price <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="changePercent">Change % <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="marketCap">Market Cap <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="volume">Volume <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="beta">Beta <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="dividend">Dividend <i class="fa-solid fa-sort"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody">
+                                <!-- Results populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- States -->
+                    <div class="loading-state hidden" id="loadingState">
+                        <div class="loading-spinner">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        </div>
+                        <div>Scanning market...</div>
+                    </div>
+                    
+                    <div class="empty-state" id="emptyState">
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        <div>No companies match your current filters.</div>
+                        <div style="font-size: 13px; margin-top: 8px;">Try broadening your criteria.</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/modules/api.js" type="module"></script>
+    <script>
+        // Inline JS for Screener functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mobile Menu Toggle
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (mobileMenuBtn && sidebar) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    sidebar.classList.toggle('active');
+                });
+            }
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('active')) {
+                    if (!sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+                        sidebar.classList.remove('active');
+                    }
+                }
+            });
+
+            // UI Elements
+            const scanBtn = document.getElementById('scanBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const saveScreenBtn = document.getElementById('saveScreenBtn');
+            const savedScreensSelect = document.getElementById('savedScreens');
+            const resultsBody = document.getElementById('resultsBody');
+            const resultsCountBadge = document.getElementById('resultsCountBadge');
+            const loadingState = document.getElementById('loadingState');
+            const emptyState = document.getElementById('emptyState');
+            const resultsTable = document.getElementById('resultsTable');
+
+            let currentResults = [];
+            let currentSort = { column: 'marketCap', direction: 'desc' };
+
+            // Formatters
+            const formatMoney = (val) => {
+                if (val === null || val === undefined) return '-';
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+            };
+
+            const formatCompactNumber = (num) => {
+                if (num === null || num === undefined) return '-';
+                if (num >= 1e12) return '$' + (num / 1e12).toFixed(2) + 'T';
+                if (num >= 1e9) return '$' + (num / 1e9).toFixed(2) + 'B';
+                if (num >= 1e6) return '$' + (num / 1e6).toFixed(2) + 'M';
+                if (num >= 1e3) return '$' + (num / 1e3).toFixed(2) + 'K';
+                return '$' + num;
+            };
+
+            const formatVolume = (num) => {
+                if (num === null || num === undefined) return '-';
+                if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+                if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+                if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+                return num;
+            };
+
+            const formatPercent = (val) => {
+                if (val === null || val === undefined) return '-';
+                return val.toFixed(2) + '%';
+            };
+
+            // Get Current Filter Values
+            const getFilterValues = () => {
+                return {
+                    marketCapMin: document.getElementById('mcapMin').value,
+                    marketCapMax: document.getElementById('mcapMax').value,
+                    priceMin: document.getElementById('priceMin').value,
+                    volumeMin: document.getElementById('volumeMin').value,
+                    sector: document.getElementById('sectorSelect').value,
+                    country: document.getElementById('countrySelect').value,
+                    dividendMin: document.getElementById('dividendMin').value,
+                    betaMin: document.getElementById('betaMin').value,
+                    betaMax: document.getElementById('betaMax').value,
+                    sortBy: document.getElementById('sortBy').value,
+                    sortOrder: document.getElementById('sortOrder').value
+                };
+            };
+
+            // Load saved screens from localStorage
+            const loadSavedScreens = () => {
+                const screens = JSON.parse(localStorage.getItem('strata_saved_screens') || '{}');
+                savedScreensSelect.innerHTML = '<option value="">Select a screen...</option>';
+                Object.keys(screens).forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    savedScreensSelect.appendChild(opt);
+                });
+            };
+
+            // Apply saved screen
+            savedScreensSelect.addEventListener('change', (e) => {
+                const name = e.target.value;
+                if (!name) return;
+                
+                const screens = JSON.parse(localStorage.getItem('strata_saved_screens') || '{}');
+                const filters = screens[name];
+                
+                if (filters) {
+                    document.getElementById('mcapMin').value = filters.marketCapMin || '';
+                    document.getElementById('mcapMax').value = filters.marketCapMax || '';
+                    document.getElementById('priceMin').value = filters.priceMin || '';
+                    document.getElementById('volumeMin').value = filters.volumeMin || '';
+                    document.getElementById('sectorSelect').value = filters.sector || '';
+                    document.getElementById('countrySelect').value = filters.country || 'US';
+                    document.getElementById('dividendMin').value = filters.dividendMin || '';
+                    document.getElementById('betaMin').value = filters.betaMin || '';
+                    document.getElementById('betaMax').value = filters.betaMax || '';
+                    document.getElementById('sortBy').value = filters.sortBy || 'marketCap';
+                    document.getElementById('sortOrder').value = filters.sortOrder || 'desc';
+                }
+            });
+
+            // Save screen
+            saveScreenBtn.addEventListener('click', () => {
+                const name = prompt('Enter a name for this screen:');
+                if (name) {
+                    const screens = JSON.parse(localStorage.getItem('strata_saved_screens') || '{}');
+                    screens[name] = getFilterValues();
+                    localStorage.setItem('strata_saved_screens', JSON.stringify(screens));
+                    loadSavedScreens();
+                    savedScreensSelect.value = name;
+                }
+            });
+
+            // Reset filters
+            resetBtn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-input').forEach(el => {
+                    if (el.tagName === 'SELECT') {
+                        el.selectedIndex = 0;
+                    } else {
+                        el.value = '';
+                    }
+                });
+                // Set defaults
+                document.getElementById('countrySelect').value = 'US';
+                document.getElementById('sortBy').value = 'marketCap';
+                document.getElementById('sortOrder').value = 'desc';
+                savedScreensSelect.value = '';
+                
+                // Clear table
+                currentResults = [];
+                renderTable();
+                resultsCountBadge.textContent = 'Ready to scan';
+            });
+
+            // Fetch sectors (optional API enhancement)
+            const fetchSectors = async () => {
+                try {
+                    // This could hit GET /api/screener/sectors if available
+                    // For now we rely on the hardcoded list in HTML
+                } catch (e) {
+                    console.error('Failed to load sectors', e);
+                }
+            };
+
+            // Scan Market
+            const scanMarket = async () => {
+                const filters = getFilterValues();
+                
+                resultsTable.classList.add('hidden');
+                emptyState.classList.add('hidden');
+                loadingState.classList.remove('hidden');
+                resultsCountBadge.textContent = 'Scanning...';
+                
+                try {
+                    const res = await fetch('/api/screener/scan', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(filters)
+                    });
+                    
+                    if (!res.ok) throw new Error('API Error');
+                    const data = await res.json();
+                    
+                    // The API might wrap in { data: [] } or just return array
+                    currentResults = Array.isArray(data) ? data : (data.data || []);
+                    
+                    // Default sort
+                    currentSort.column = filters.sortBy;
+                    currentSort.direction = filters.sortOrder;
+                    
+                    renderTable();
+                    
+                } catch (error) {
+                    console.error('Scan error:', error);
+                    alert('Error scanning market. Please check API connection.');
+                    loadingState.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    resultsCountBadge.textContent = '0 results found';
+                }
+            };
+
+            // Sorting logic
+            const sortData = (data, column, direction) => {
+                return [...data].sort((a, b) => {
+                    let valA = a[column];
+                    let valB = b[column];
+                    
+                    if (valA === undefined || valA === null) valA = '';
+                    if (valB === undefined || valB === null) valB = '';
+                    
+                    if (typeof valA === 'string') valA = valA.toLowerCase();
+                    if (typeof valB === 'string') valB = valB.toLowerCase();
+                    
+                    if (valA < valB) return direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            };
+
+            // Render Table
+            const renderTable = () => {
+                loadingState.classList.add('hidden');
+                
+                if (currentResults.length === 0) {
+                    resultsTable.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    resultsCountBadge.textContent = '0 companies found';
+                    return;
+                }
+                
+                // Apply sorting
+                const sorted = sortData(currentResults, currentSort.column, currentSort.direction);
+                
+                resultsBody.innerHTML = sorted.map(row => {
+                    const changeClass = row.changePercent >= 0 ? 'text-green' : 'text-red';
+                    const changeSign = row.changePercent >= 0 ? '+' : '';
+                    
+                    return `
+                        <tr onclick="window.location.href='research.html?t=${row.symbol}'">
+                            <td class="mono-text symbol-cell">${row.symbol}</td>
+                            <td class="company-cell" title="${row.companyName}">${row.companyName || '-'}</td>
+                            <td>${row.sector || '-'}</td>
+                            <td class="mono-text">${formatMoney(row.price)}</td>
+                            <td class="mono-text ${changeClass}">${changeSign}${formatPercent(row.changePercent)}</td>
+                            <td class="mono-text">${formatCompactNumber(row.marketCap)}</td>
+                            <td class="mono-text">${formatVolume(row.volume)}</td>
+                            <td class="mono-text">${row.beta ? row.beta.toFixed(2) : '-'}</td>
+                            <td class="mono-text">${row.dividend ? row.dividend.toFixed(2) + '%' : '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                resultsTable.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                resultsCountBadge.textContent = `${currentResults.length} companies found`;
+                
+                // Update header icons
+                document.querySelectorAll('.data-table th i').forEach(i => {
+                    i.className = 'fa-solid fa-sort';
+                });
+                
+                const activeTh = document.querySelector(`th[data-sort="${currentSort.column}"]`);
+                if (activeTh) {
+                    const icon = activeTh.querySelector('i');
+                    icon.className = currentSort.direction === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
+                }
+            };
+
+            // Handle Header Clicks for Sorting
+            document.querySelectorAll('.data-table th').forEach(th => {
+                th.addEventListener('click', () => {
+                    const column = th.getAttribute('data-sort');
+                    if (!column) return;
+                    
+                    if (currentSort.column === column) {
+                        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.column = column;
+                        currentSort.direction = 'desc';
+                    }
+                    
+                    renderTable();
+                });
+            });
+
+            // Setup
+            scanBtn.addEventListener('click', scanMarket);
+            loadSavedScreens();
+            
+            // Allow 'Enter' in inputs to trigger scan
+            document.querySelectorAll('.filter-input').forEach(el => {
+                el.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') scanMarket();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

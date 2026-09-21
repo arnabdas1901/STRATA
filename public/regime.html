@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0e1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/images/strata-logo.png">
+    <title>STRATA - Market Regime Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .regime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .regime-card {
+            background-color: var(--card-bg, #0f1629);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+            border-left-width: 4px;
+        }
+        
+        .regime-card.favorable { border-left-color: #10b981; }
+        .regime-card.neutral { border-left-color: #f59e0b; }
+        .regime-card.unfavorable { border-left-color: #ef4444; }
+        
+        .regime-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .regime-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin: 0;
+        }
+        
+        .regime-signal {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .signal-icon { font-size: 1.5rem; }
+        .favorable .regime-signal { color: #10b981; }
+        .neutral .regime-signal { color: #f59e0b; }
+        .unfavorable .regime-signal { color: #ef4444; }
+        
+        .regime-evidence {
+            margin-top: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 1rem;
+        }
+        
+        .evidence-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+        }
+        
+        .evidence-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .evidence-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: #cbd5e1;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .evidence-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        
+        .evidence-val {
+            font-family: 'JetBrains Mono', monospace;
+            color: #f8fafc;
+        }
+        
+        .summary-banner {
+            background-color: rgba(37, 99, 235, 0.1);
+            border-left: 4px solid #3b82f6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .summary-banner h3 {
+            margin: 0 0 0.5rem 0;
+            color: #60a5fa;
+            font-size: 1rem;
+        }
+        
+        .summary-text {
+            color: #e2e8f0;
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .disclaimer {
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: #64748b;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-brand-block">
+                    <div class="logo-title-row">
+                        <span class="logo-text">STRATA</span>
+                        <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker" onerror="this.style.display='none'">
+                    </div>
+                    <span class="logo-subtext">REAL-TIME MARKET ANALYTICS</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item" href="index.html"><i class="fa-solid fa-magnifying-glass-chart"></i><span>Equity Analysis</span></a>
+                <a class="nav-item" href="calculators.html"><i class="fa-solid fa-calculator"></i><span>Financial Calculators</span></a>
+                <a class="nav-item" href="portfolio.html"><i class="fa-solid fa-pie-chart"></i><span>Mock Portfolio</span></a>
+                <a class="nav-item" href="ai.html"><i class="fa-solid fa-brain"></i><span>AI Analyst</span></a>
+                <a class="nav-item" href="crypto.html"><i class="fa-solid fa-coins"></i><span>Crypto Analysis</span></a>
+                <a class="nav-item" href="commodities.html"><i class="fa-solid fa-wheat-awn"></i><span>Commodities</span></a>
+                <a class="nav-item" href="macro.html"><i class="fa-solid fa-earth-americas"></i><span>Global Inflation</span></a>
+                <a class="nav-item" href="yields.html"><i class="fa-solid fa-landmark"></i><span>Fixed Income</span></a>
+                <a class="nav-item" href="forex.html"><i class="fa-solid fa-money-bill-transfer"></i><span>Currencies</span></a>
+                <a class="nav-item" href="stress.html"><i class="fa-solid fa-shield-halved"></i><span>Stress Tester</span></a>
+                <a class="nav-item" href="research.html"><i class="fa-solid fa-microscope"></i><span>Research Terminal</span></a>
+                <a class="nav-item" href="screener.html"><i class="fa-solid fa-filter"></i><span>Screener</span></a>
+                <a class="nav-item" href="correlation.html"><i class="fa-solid fa-diagram-project"></i><span>Correlations</span></a>
+                <a class="nav-item" href="risk-lab.html"><i class="fa-solid fa-flask"></i><span>Risk Lab</span></a>
+                <a class="nav-item active" href="regime.html"><i class="fa-solid fa-gauge-high"></i><span>Market Regime</span></a>
+                <a class="nav-item" href="etf.html"><i class="fa-solid fa-layer-group"></i><span>ETF Analyzer</span></a>
+                <a class="nav-item" href="data-center.html"><i class="fa-solid fa-server"></i><span>Data Center</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-indicator connected"></span> Engine Operational
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header-bar">
+                <div class="top-brand-group">
+                    <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                    </button>
+                    <a href="index.html" class="top-app-brand">
+                        <div class="logo-brand-block">
+                            <div class="logo-title-row">
+                                <span class="top-app-logo-text">STRATA</span>
+                                <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile" onerror="this.style.display='none'">
+                            </div>
+                            <span class="top-app-tagline">REAL-TIME MARKET ANALYTICS</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="top-status-badge">
+                    <span class="status-indicator connected"></span>
+                    <span class="status-label">Operational</span>
+                </div>
+            </header>
+
+            <section class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <h1>Market Regime Dashboard</h1>
+                    <p style="color: #94a3b8; margin-top: 0.5rem;">Cross-asset conditions at a glance</p>
+                </div>
+                
+                <div id="loading-state" style="text-align: center; padding: 3rem; color: #94a3b8;">
+                    <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="margin-bottom: 1rem; color: #3b82f6;"></i>
+                    <p>Analyzing cross-asset market conditions...</p>
+                </div>
+                
+                <div id="error-state" style="display: none; padding: 2rem; background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; border-radius: 8px; margin-top: 1.5rem;">
+                    <h3 style="color: #fca5a5; margin-top: 0;">Error loading regime data</h3>
+                    <p id="error-message" style="color: #e2e8f0;">Please check if the backend server is running.</p>
+                </div>
+
+                <div id="dashboard-content" style="display: none;">
+                    <div class="regime-grid" id="regime-grid">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="summary-banner" id="summary-banner">
+                        <h3>Market Condition Summary</h3>
+                        <p class="summary-text" id="summary-text"></p>
+                    </div>
+
+                    <p class="disclaimer">This dashboard presents factual market observations. It does not constitute investment advice or forecast market direction.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Mobile Menu Toggle
+        document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+        });
+
+        // Close sidebar when clicking outside
+        document.addEventListener('click', (e) => {
+            const sidebar = document.querySelector('.sidebar');
+            const toggle = document.getElementById('mobile-menu-toggle');
+            if (window.innerWidth <= 1024 && sidebar?.classList.contains('mobile-open')) {
+                if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
+                    sidebar.classList.remove('mobile-open');
+                }
+            }
+        });
+
+        // Mapping for colors/icons
+        const getSignalDetails = (signal) => {
+            const s = (signal || '').toLowerCase();
+            if (s.includes('favorable') || s === 'bullish' || s === 'expansion') {
+                return { class: 'favorable', icon: '🟢', label: 'Favorable' };
+            }
+            if (s.includes('unfavorable') || s === 'bearish' || s === 'contraction') {
+                return { class: 'unfavorable', icon: '🔴', label: 'Unfavorable' };
+            }
+            return { class: 'neutral', icon: '🟡', label: 'Neutral' };
+        };
+
+        // Render card
+        const renderCard = (dimension, data) => {
+            const details = getSignalDetails(data.signal);
+            let evidenceHtml = '';
+            
+            if (data.evidence && Array.isArray(data.evidence) && data.evidence.length > 0) {
+                evidenceHtml = `
+                    <div class="regime-evidence">
+                        <div class="evidence-title">Key Evidence</div>
+                        <ul class="evidence-list">
+                            ${data.evidence.map(ev => `
+                                <li class="evidence-item">
+                                    <span>${ev.metric}</span>
+                                    <span class="evidence-val">${ev.value}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                evidenceHtml = `
+                    <div class="regime-evidence">
+                        <div class="evidence-title">Key Evidence</div>
+                        <ul class="evidence-list">
+                            <li class="evidence-item">
+                                <span>No data available</span>
+                            </li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="regime-card ${details.class}">
+                    <div class="regime-header">
+                        <h3 class="regime-title">${dimension}</h3>
+                        <div class="regime-signal">
+                            <span class="signal-icon">${details.icon}</span>
+                            <span>${details.label}</span>
+                        </div>
+                    </div>
+                    ${evidenceHtml}
+                </div>
+            `;
+        };
+
+        const loadData = async () => {
+            try {
+                const res = await fetch('/api/regime/current');
+                if (!res.ok) throw new Error(`API error: ${res.status}`);
+                
+                const data = await res.json();
+                
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('error-state').style.display = 'none';
+                document.getElementById('dashboard-content').style.display = 'block';
+
+                // We expect data to have structure like { dimensions: { Growth: { signal: '...', evidence: [...] }, ... }, summary: '...' }
+                // Fallback to dummy data mapping if API returns a different structure but we will try standard first
+                
+                const dimensions = data.dimensions || {};
+                const grid = document.getElementById('regime-grid');
+                grid.innerHTML = '';
+                
+                const expectedDims = ['Growth', 'Inflation', 'Liquidity', 'Credit', 'Volatility', 'Dollar'];
+                
+                expectedDims.forEach(dim => {
+                    const dimData = dimensions[dim] || { signal: 'neutral', evidence: [] };
+                    grid.innerHTML += renderCard(dim, dimData);
+                });
+
+                document.getElementById('summary-text').textContent = data.summary || 'Market regime data loaded successfully.';
+
+            } catch (err) {
+                console.error("Failed to load regime data:", err);
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('dashboard-content').style.display = 'none';
+                document.getElementById('error-state').style.display = 'block';
+                document.getElementById('error-message').textContent = err.message;
+            }
+        };
+
+        // Initialize and setup auto-refresh
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            // Refresh every 5 minutes (300,000 ms)
+            setInterval(loadData, 300000);
+        });
+    </script>
+</body>
+</html>
