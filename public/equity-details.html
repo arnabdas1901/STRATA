@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lightweight-charts@5/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -71,11 +73,7 @@
                     <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
-                            <a class="nav-item" href="research.html">
-                    <i class="fa-solid fa-microscope" aria-hidden="true"></i>
-                    <span>Research Terminal</span>
-                </a>
-                <a class="nav-item" href="screener.html">
+                            <a class="nav-item" href="screener.html">
                     <i class="fa-solid fa-filter" aria-hidden="true"></i>
                     <span>Screener</span>
                 </a>
@@ -377,6 +375,82 @@
                     <div class="ratios-container-card equity-reveal-card">
                         <h3>Key Valuation & Financial Ratios (TTM)</h3>
                         <div id="ratios-grid-target" class="ratios-data-grid">
+                        </div>
+                    </div>
+
+                    <!-- Deep Fundamental Analytics (Accordions) -->
+                    <div class="equity-reveal-card" style="background: transparent; border: none; padding: 0;">
+                        <h3 style="margin-bottom: 16px; color: #f8fafc; font-size: 16px;"><i class="fa-solid fa-microscope" style="color: #3b82f6; margin-right: 8px;"></i> Institutional Deep Dive</h3>
+                        
+                        <!-- Valuation History -->
+                        <div class="pro-accordion" id="acc-valuation">
+                            <div class="accordion-header" onclick="toggleDeepDive('valuation')">
+                                <div class="accordion-title"><i class="fa-solid fa-scale-balanced"></i> Historical Valuation Multiples</div>
+                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+                            </div>
+                            <div class="accordion-content">
+                                <div class="accordion-loader" id="loader-valuation">Click to load historical valuation...</div>
+                                <div id="content-valuation" style="display:none;">
+                                    <div class="chart-container-mini"><canvas id="valChart"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Capital Allocation -->
+                        <div class="pro-accordion" id="acc-capalloc">
+                            <div class="accordion-header" onclick="toggleDeepDive('capalloc')">
+                                <div class="accordion-title"><i class="fa-solid fa-money-bill-wave"></i> Capital Allocation (SEC 10-K)</div>
+                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+                            </div>
+                            <div class="accordion-content">
+                                <div class="accordion-loader" id="loader-capalloc">Click to load SEC capital allocation data...</div>
+                                <div id="content-capalloc" style="display:none;">
+                                    <div class="financial-data-grid" id="grid-capalloc"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Earnings Quality -->
+                        <div class="pro-accordion" id="acc-earnings-qual">
+                            <div class="accordion-header" onclick="toggleDeepDive('earnings-qual')">
+                                <div class="accordion-title"><i class="fa-solid fa-magnifying-glass-dollar"></i> Earnings Quality & Accruals</div>
+                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+                            </div>
+                            <div class="accordion-content">
+                                <div class="accordion-loader" id="loader-earnings-qual">Click to load earnings quality metrics...</div>
+                                <div id="content-earnings-qual" style="display:none;">
+                                    <div class="financial-data-grid" id="grid-earnings-qual"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risk Profile -->
+                        <div class="pro-accordion" id="acc-risk">
+                            <div class="accordion-header" onclick="toggleDeepDive('risk')">
+                                <div class="accordion-title"><i class="fa-solid fa-triangle-exclamation"></i> Risk & Drawdown Profile</div>
+                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+                            </div>
+                            <div class="accordion-content">
+                                <div class="accordion-loader" id="loader-risk">Click to load risk metrics...</div>
+                                <div id="content-risk" style="display:none;">
+                                    <div class="financial-data-grid" id="grid-risk"></div>
+                                    <div class="chart-container-mini"><canvas id="drawdownChart"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Segment Analysis -->
+                        <div class="pro-accordion" id="acc-segments">
+                            <div class="accordion-header" onclick="toggleDeepDive('segments')">
+                                <div class="accordion-title"><i class="fa-solid fa-chart-pie"></i> Revenue Segments</div>
+                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+                            </div>
+                            <div class="accordion-content">
+                                <div class="accordion-loader" id="loader-segments">Click to load SEC segment data...</div>
+                                <div id="content-segments" style="display:none;">
+                                    <div class="financial-data-grid" id="grid-segments"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
