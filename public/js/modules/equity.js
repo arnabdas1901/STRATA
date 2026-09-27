@@ -1732,31 +1732,17 @@ async function fetchAndRenderInsider(ticker) {
 
 
 
-// --- Deep Dive Analytics ---
-function setupAccordions() {
-    document.querySelectorAll('.accordion-header').forEach(header => {
-        header.addEventListener('click', () => {
-            const accordion = header.parentElement;
-            const section = accordion.id.replace('acc-', '');
-            
-            // Toggle
-            const isOpen = accordion.classList.contains('open');
-            document.querySelectorAll('.pro-accordion').forEach(a => a.classList.remove('open')); // Close others
-            
-            if (!isOpen) {
-                accordion.classList.add('open');
-                loadDeepDiveSection(section);
-            }
-        });
-    });
-}
 
+
+
+
+// --- Deep Dive Analytics ---
 const formatFinMoney = (val) => {
     if (val == null) return '--';
-    if (Math.abs(val) >= 1e9) return $ + (val / 1e9).toFixed(2) + 'B';
-    if (Math.abs(val) >= 1e6) return $ + (val / 1e6).toFixed(2) + 'M';
-    if (Math.abs(val) >= 1e3) return $ + (val / 1e3).toFixed(2) + 'K';
-    return $ + Number(val).toFixed(2);
+    if (Math.abs(val) >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
+    if (Math.abs(val) >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
+    if (Math.abs(val) >= 1e3) return `$${(val / 1e3).toFixed(2)}K`;
+    return `$${Number(val).toFixed(2)}`;
 };
 
 const deepDiveState = { valuation: false, capalloc: false, 'earnings-qual': false, risk: false, segments: false };
@@ -1764,12 +1750,12 @@ let ddCharts = {};
 
 async function loadDeepDiveSection(section) {
     if (!activeEquityTicker) return;
-    if (deepDiveState[section]) return; // already loaded
+    if (deepDiveState[section]) return;
     
-    const loader = document.getElementById(loader- + section);
-    const content = document.getElementById(content- + section);
-    loader.style.display = 'flex';
-    content.style.display = 'none';
+    const loader = document.getElementById(`loader-${section}`);
+    const content = document.getElementById(`content-${section}`);
+    if(loader) loader.style.display = 'flex';
+    if(content) content.style.display = 'none';
 
     try {
         if (section === 'valuation') await fetchValuation(activeEquityTicker);
@@ -1779,19 +1765,18 @@ async function loadDeepDiveSection(section) {
         if (section === 'segments') await fetchSegments(activeEquityTicker);
         
         deepDiveState[section] = true;
-        loader.style.display = 'none';
-        content.style.display = 'block';
+        if(loader) loader.style.display = 'none';
+        if(content) content.style.display = 'block';
     } catch(e) {
-        loader.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> Failed to load SEC/Provider data.';
+        if(loader) loader.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> Failed to load SEC/Provider data.';
     }
 }
 
 async function fetchValuation(ticker) {
-    const res = await fetchWithTimeout(${BACKEND_URL}/api/analytics/valuation-history/);
+    const res = await fetchWithTimeout(`${BACKEND_URL}/api/analytics/valuation-history/${ticker}`);
     const data = await safeJsonParse(res);
     if(!data || !data.history) throw new Error('No data');
     
-    // Sort chronological
     data.history.sort((a,b) => a.year - b.year);
     
     if(ddCharts['valuation']) ddCharts['valuation'].destroy();
@@ -1819,52 +1804,52 @@ async function fetchValuation(ticker) {
 }
 
 async function fetchCapAlloc(ticker) {
-    const res = await fetchWithTimeout(${BACKEND_URL}/api/sec/capital-allocation/);
+    const res = await fetchWithTimeout(`${BACKEND_URL}/api/sec/capital-allocation/${ticker}`);
     const data = await safeJsonParse(res);
     if(!data || !data.allocation || !data.allocation.length) throw new Error('No data');
     
     const latest = data.allocation[data.allocation.length - 1];
-    document.getElementById('grid-capalloc').innerHTML = 
-        <div class="fin-metric-card"><div class="fin-metric-label">CapEx (FY)</div><div class="fin-metric-val"></div></div>
-        <div class="fin-metric-card"><div class="fin-metric-label">Stock Buybacks</div><div class="fin-metric-val"></div></div>
-        <div class="fin-metric-card"><div class="fin-metric-label">Dividends Paid</div><div class="fin-metric-val"></div></div>
-        <div class="fin-metric-card"><div class="fin-metric-label">Debt Issuance</div><div class="fin-metric-val"></div></div>
-    ;
+    document.getElementById('grid-capalloc').innerHTML = `
+        <div class="fin-metric-card"><div class="fin-metric-label">CapEx (FY${latest.fy})</div><div class="fin-metric-val">${formatFinMoney(latest.capex)}</div></div>
+        <div class="fin-metric-card"><div class="fin-metric-label">Stock Buybacks</div><div class="fin-metric-val">${formatFinMoney(latest.buybacks)}</div></div>
+        <div class="fin-metric-card"><div class="fin-metric-label">Dividends Paid</div><div class="fin-metric-val">${formatFinMoney(latest.dividends)}</div></div>
+        <div class="fin-metric-card"><div class="fin-metric-label">Debt Issuance</div><div class="fin-metric-val">${formatFinMoney(latest.debtIssuance)}</div></div>
+    `;
 }
 
 async function fetchEarningsQual(ticker) {
-    const res = await fetchWithTimeout(${BACKEND_URL}/api/sec/earnings-quality/);
+    const res = await fetchWithTimeout(`${BACKEND_URL}/api/sec/earnings-quality/${ticker}`);
     const data = await safeJsonParse(res);
     if(!data || !data.quality) throw new Error('No data');
     
     const q = data.quality;
     const isGood = q.cashConversion && q.cashConversion > 0.8;
-    const badge = isGood ? <span class="fin-badge good"><i class="fa-solid fa-check"></i> High Quality</span> : <span class="fin-badge warn"><i class="fa-solid fa-triangle-exclamation"></i> Review</span>;
+    const badge = isGood ? `<span class="fin-badge good"><i class="fa-solid fa-check"></i> High Quality</span>` : `<span class="fin-badge warn"><i class="fa-solid fa-triangle-exclamation"></i> Review</span>`;
     
-    document.getElementById('grid-earnings-qual').innerHTML = 
-        <div class="fin-metric-card"><div class="fin-metric-label">Cash Conversion (OCF/NI)</div><div class="fin-metric-val"></div></div>
-        <div class="fin-metric-card"><div class="fin-metric-label">Accruals Ratio</div><div class="fin-metric-val"></div></div>
-        <div class="fin-metric-card"><div class="fin-metric-label">Dilution (Share Change)</div><div class="fin-metric-val"></div></div>
-        <div class="fin-metric-card"><div class="fin-metric-label">Quality Signal</div><div></div></div>
-    ;
+    document.getElementById('grid-earnings-qual').innerHTML = `
+        <div class="fin-metric-card"><div class="fin-metric-label">Cash Conversion (OCF/NI)</div><div class="fin-metric-val">${q.cashConversion ? (q.cashConversion).toFixed(2) + 'x' : '--'}</div></div>
+        <div class="fin-metric-card"><div class="fin-metric-label">Accruals Ratio</div><div class="fin-metric-val">${q.accrualsRatio ? (q.accrualsRatio * 100).toFixed(2) + '%' : '--'}</div></div>
+        <div class="fin-metric-card"><div class="fin-metric-label">Dilution (Share Change)</div><div class="fin-metric-val">${q.shareDilution ? (q.shareDilution * 100).toFixed(2) + '%' : '--'}</div></div>
+        <div class="fin-metric-card"><div class="fin-metric-label">Quality Signal</div><div>${badge}</div></div>
+    `;
 }
 
 async function fetchRisk(ticker) {
     const [profRes, drawRes] = await Promise.all([
-        fetchWithTimeout(${BACKEND_URL}/api/risk/profile/).catch(()=>null),
-        fetchWithTimeout(${BACKEND_URL}/api/risk/drawdown/).catch(()=>null)
+        fetchWithTimeout(`${BACKEND_URL}/api/risk/profile/${ticker}`).catch(()=>null),
+        fetchWithTimeout(`${BACKEND_URL}/api/risk/drawdown/${ticker}`).catch(()=>null)
     ]);
     const prof = await safeJsonParse(profRes);
     const draw = await safeJsonParse(drawRes);
     
     if(prof && prof.summary) {
         const s = prof.summary;
-        document.getElementById('grid-risk').innerHTML = 
-            <div class="fin-metric-card"><div class="fin-metric-label">Ann. Volatility</div><div class="fin-metric-val">%</div></div>
-            <div class="fin-metric-card"><div class="fin-metric-label">Beta vs SPY</div><div class="fin-metric-val"></div></div>
-            <div class="fin-metric-card"><div class="fin-metric-label">Max Drawdown</div><div class="fin-metric-val" style="color:#ef4444;">%</div></div>
-            <div class="fin-metric-card"><div class="fin-metric-label">Sharpe Ratio</div><div class="fin-metric-val"></div></div>
-        ;
+        document.getElementById('grid-risk').innerHTML = `
+            <div class="fin-metric-card"><div class="fin-metric-label">Ann. Volatility</div><div class="fin-metric-val">${(s.annualizedVol * 100).toFixed(2)}%</div></div>
+            <div class="fin-metric-card"><div class="fin-metric-label">Beta vs SPY</div><div class="fin-metric-val">${s.beta.toFixed(2)}</div></div>
+            <div class="fin-metric-card"><div class="fin-metric-label">Max Drawdown</div><div class="fin-metric-val" style="color:#ef4444;">${(s.maxDrawdown * 100).toFixed(2)}%</div></div>
+            <div class="fin-metric-card"><div class="fin-metric-label">Sharpe Ratio</div><div class="fin-metric-val">${s.sharpe.toFixed(2)}</div></div>
+        `;
     }
     
     if(draw && draw.drawdownSeries) {
@@ -1890,26 +1875,23 @@ async function fetchRisk(ticker) {
 }
 
 async function fetchSegments(ticker) {
-    const res = await fetchWithTimeout(${BACKEND_URL}/api/sec/segments/);
+    const res = await fetchWithTimeout(`${BACKEND_URL}/api/sec/segments/${ticker}`);
     const data = await safeJsonParse(res);
     if(!data || !data.segments || !data.segments.length) throw new Error('No data');
     
-    document.getElementById('grid-segments').innerHTML = data.segments.slice(0,6).map(s => 
+    document.getElementById('grid-segments').innerHTML = data.segments.slice(0,6).map(s => `
         <div class="fin-metric-card">
-            <div class="fin-metric-label" style="text-transform:none;" title=""></div>
-            <div class="fin-metric-val"></div>
+            <div class="fin-metric-label" style="text-transform:none;" title="${s.segment}">${s.segment.length > 25 ? s.segment.substring(0,25)+'...' : s.segment}</div>
+            <div class="fin-metric-val">${formatFinMoney(s.revenue)}</div>
         </div>
-    ).join('');
+    `).join('');
 }
-
-
-
 
 window.toggleDeepDive = function(section) {
     const accordion = document.getElementById('acc-' + section);
+    if (!accordion) return;
     const isOpen = accordion.classList.contains('open');
     
-    // Close others
     document.querySelectorAll('.pro-accordion').forEach(a => a.classList.remove('open'));
     
     if (!isOpen) {
@@ -1918,5 +1900,4 @@ window.toggleDeepDive = function(section) {
     }
 };
 
-// Also remove setupAccordions call since we are using inline onclick to avoid double binding
 

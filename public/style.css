@@ -8992,3 +8992,19 @@ button:focus-visible {
 .ai-deepdive-btn { margin-bottom: 24px; width: 100%; justify-content: center; }
 .accordion-loader { display: flex; align-items: center; gap: 12px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
 
+
+
+
+/* FIX SIDEBAR SCROLLING */
+.sidebar {
+    height: 100vh;
+}
+.nav-menu {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+.nav-menu::-webkit-scrollbar { width: 5px; }
+.nav-menu::-webkit-scrollbar-track { background: transparent; }
+.nav-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.nav-menu::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
