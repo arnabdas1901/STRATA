@@ -1,7 +1,6 @@
 (function() {
     const PAGES = [
         { title: 'Equity Analysis', url: 'index.html', icon: 'fa-magnifying-glass-chart', type: 'page' },
-        { title: 'Research Terminal', url: 'research.html', icon: 'fa-microscope', type: 'page' },
         { title: 'AI Analyst', url: 'ai.html', icon: 'fa-brain', type: 'page' },
         { title: 'Crypto Analysis', url: 'crypto.html', icon: 'fa-coins', type: 'page' },
         { title: 'Commodities', url: 'commodities.html', icon: 'fa-wheat-awn', type: 'page' },
@@ -12,11 +11,7 @@
         { title: 'Mock Portfolio', url: 'portfolio.html', icon: 'fa-pie-chart', type: 'page' },
         { title: 'Financial Calculators', url: 'calculators.html', icon: 'fa-calculator', type: 'page' },
         { title: 'Screener', url: 'screener.html', icon: 'fa-filter', type: 'page' },
-        { title: 'Correlations', url: 'correlation.html', icon: 'fa-diagram-project', type: 'page' },
-        { title: 'Risk Lab', url: 'risk-lab.html', icon: 'fa-flask', type: 'page' },
-        { title: 'Market Regime', url: 'regime.html', icon: 'fa-gauge-high', type: 'page' },
-        { title: 'ETF Analyzer', url: 'etf.html', icon: 'fa-layer-group', type: 'page' },
-        { title: 'Data Center', url: 'data-center.html', icon: 'fa-server', type: 'page' }
+        { title: 'Correlations', url: 'correlation.html', icon: 'fa-diagram-project', type: 'page' }
     ];
 
     let initialized = false;
@@ -221,7 +216,7 @@
                 const isCrypto = r.assetType === 'crypto';
                 results.push({
                     title: `${r.ticker} (${r.assetType})`,
-                    url: `${isCrypto ? 'crypto.html' : 'research.html'}?t=${r.ticker}`,
+                    url: `${isCrypto ? 'crypto-details.html?coin=' : 'equity-details.html?symbol='}${r.ticker}`,
                     icon: 'fa-clock',
                     category: 'Recent'
                 });
@@ -232,8 +227,8 @@
         if (query && query.length <= 5 && /^[a-z]+$/.test(query)) {
             const ticker = query.toUpperCase();
             results.push({
-                title: `Open ${ticker} in Research Terminal`,
-                url: `research.html?t=${ticker}`,
+                title: `Analyze ${ticker} in Equity Terminal`,
+                url: `equity-details.html?symbol=${ticker}`,
                 icon: 'fa-chart-line',
                 category: 'Equities'
             });

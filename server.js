@@ -65,7 +65,6 @@ const stressRoutes = require('./routes/stress');
 const yieldsRoutes = require('./routes/yields');
 
 // Import Routes — Phase 1: Data Integrity
-const healthRoutes = require('./routes/health');
 const secRoutes = require('./routes/sec');
 
 // Import Routes — Phase 2: Analytics
@@ -75,11 +74,9 @@ const riskRoutes = require('./routes/risk');
 
 // Import Routes — Phase 3: Terminal Features
 const screenerRoutes = require('./routes/screener');
-const regimeRoutes = require('./routes/regime');
 
 // Import Routes — Phase 4: Product
 const reportRoutes = require('./routes/report');
-const etfRoutes = require('./routes/etf');
 
 // Mount Routes — Original
 app.use('/api', equityRoutes); // contains /finnhub/* and /twelvedata/*
@@ -92,7 +89,6 @@ app.use('/api/stress', stressRoutes);
 app.use('/api/yields', yieldsRoutes);
 
 // Mount Routes — Phase 1: Data Integrity
-app.use('/api/health', healthRoutes);
 app.use('/api/sec', secRoutes);
 
 // Mount Routes — Phase 2: Analytics
@@ -102,11 +98,9 @@ app.use('/api/risk', riskRoutes);
 
 // Mount Routes — Phase 3: Terminal Features
 app.use('/api/screener', screenerRoutes);
-app.use('/api/regime', regimeRoutes);
 
 // Mount Routes — Phase 4: Product
 app.use('/api/report', reportRoutes);
-app.use('/api/etf', etfRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });

@@ -253,11 +253,7 @@
                 
                 <a class="nav-item active" href="screener.html"><i class="fa-solid fa-filter"></i><span>Screener</span></a>
                 <a class="nav-item" href="correlation.html"><i class="fa-solid fa-diagram-project"></i><span>Correlations</span></a>
-                <a class="nav-item" href="risk-lab.html"><i class="fa-solid fa-flask"></i><span>Risk Lab</span></a>
-                <a class="nav-item" href="regime.html"><i class="fa-solid fa-gauge-high"></i><span>Market Regime</span></a>
-                <a class="nav-item" href="etf.html"><i class="fa-solid fa-layer-group"></i><span>ETF Analyzer</span></a>
-                <a class="nav-item" href="data-center.html"><i class="fa-solid fa-server"></i><span>Data Center</span></a>
-            </nav>
+                </nav>
             <div class="sidebar-footer">
                 <span class="status-indicator connected"></span> Engine Operational
             </div>
@@ -623,8 +619,8 @@
                     if (!res.ok) throw new Error('API Error');
                     const data = await res.json();
                     
-                    // The API might wrap in { data: [] } or just return array
-                    currentResults = Array.isArray(data) ? data : (data.data || []);
+                    // The API returns { results: [...] }
+                    currentResults = Array.isArray(data) ? data : (data.results || data.data || []);
                     
                     // Default sort
                     currentSort.column = filters.sortBy;
@@ -674,20 +670,22 @@
                 const sorted = sortData(currentResults, currentSort.column, currentSort.direction);
                 
                 resultsBody.innerHTML = sorted.map(row => {
-                    const changeClass = row.changePercent >= 0 ? 'text-green' : 'text-red';
-                    const changeSign = row.changePercent >= 0 ? '+' : '';
+                    const chg = row.changesPercentage !== undefined ? row.changesPercentage : (row.changePercent || 0);
+                    const divVal = row.lastAnnualDividend !== undefined ? row.lastAnnualDividend : (row.dividend || null);
+                    const changeClass = chg >= 0 ? 'text-green' : 'text-red';
+                    const changeSign = chg >= 0 ? '+' : '';
                     
                     return `
-                        <tr onclick="window.location.href='research.html?t=${row.symbol}'">
+                        <tr onclick="window.location.href='equity-details.html?symbol=${row.symbol}'" style="cursor: pointer;">
                             <td class="mono-text symbol-cell">${row.symbol}</td>
                             <td class="company-cell" title="${row.companyName}">${row.companyName || '-'}</td>
                             <td>${row.sector || '-'}</td>
                             <td class="mono-text">${formatMoney(row.price)}</td>
-                            <td class="mono-text ${changeClass}">${changeSign}${formatPercent(row.changePercent)}</td>
+                            <td class="mono-text ${changeClass}">${changeSign}${formatPercent(chg)}</td>
                             <td class="mono-text">${formatCompactNumber(row.marketCap)}</td>
                             <td class="mono-text">${formatVolume(row.volume)}</td>
                             <td class="mono-text">${row.beta ? row.beta.toFixed(2) : '-'}</td>
-                            <td class="mono-text">${row.dividend ? row.dividend.toFixed(2) + '%' : '-'}</td>
+                            <td class="mono-text">${divVal !== null && divVal !== undefined ? divVal.toFixed(2) + '%' : '-'}</td>
                         </tr>
                     `;
                 }).join('');
