@@ -40,7 +40,7 @@ function getMedian(array) {
 async function fetchPeers(ticker) {
     try {
         const url = `https://finnhub.io/api/v1/stock/peers?symbol=${ticker}&token=${process.env.FINNHUB_API_KEY}`;
-        const peers = await fetchJson(url);
+        const { data: peers } = await fetchJson(url);
         return Array.isArray(peers) ? peers.filter(p => p !== ticker).slice(0, 5) : [];
     } catch (e) {
         console.error(`Failed to fetch peers for ${ticker}:`, e.message);
@@ -63,12 +63,12 @@ router.get('/valuation-history/:ticker', async (req, res) => {
         const [companyFacts, yahooData, fmpMetrics] = await Promise.allSettled([
             fetchCompanyFacts(ticker).catch(() => ({})),
             fetchYahooTimeSeries(ticker, '5y').catch(() => []),
-            fetchFmpMetrics(ticker).catch(() => ({}))
+            fetchFmpMetrics(ticker).catch(() => null)
         ]);
 
         const facts = companyFacts.status === 'fulfilled' ? companyFacts.value : {};
         const yData = yahooData.status === 'fulfilled' ? yahooData.value : [];
-        const fMetrics = fmpMetrics.status === 'fulfilled' ? fmpMetrics.value : [];
+        const fMetrics = fmpMetrics.status === 'fulfilled' ? fmpMetrics.value : null;
 
         // Approximate historical extraction
         const history = [];
@@ -76,9 +76,10 @@ router.get('/valuation-history/:ticker', async (req, res) => {
         const psArray = [];
 
         // If we have actual historical FMP metrics, use them to build the history
-        if (Array.isArray(fMetrics) && fMetrics.length > 0) {
-            for (let i = 0; i < Math.min(fMetrics.length, 5); i++) {
-                const m = fMetrics[i];
+        const metricsList = Array.isArray(fMetrics) ? fMetrics : (fMetrics && !fMetrics.error ? [fMetrics] : []);
+        if (metricsList.length > 0) {
+            for (let i = 0; i < Math.min(metricsList.length, 5); i++) {
+                const m = metricsList[i];
                 const period = m.date ? m.date.substring(0, 4) : `${new Date().getFullYear() - i}`;
                 const price = m.price || m.stockPrice || 0; // fallback if needed
                 const eps = m.eps || 0;
@@ -145,7 +146,7 @@ router.get('/growth-quality/:ticker', async (req, res) => {
 
         // Normally we'd extract from SEC XBRL here.
         // As a robust placeholder for complex SEC XBRL parsing, we'll use FMP metrics if available.
-        const fMetrics = await fetchFmpMetrics(ticker).catch(() => []);
+        const fMetrics = await fetchFmpMetrics(ticker).catch(() => null);
         
         const margins = [];
         let latestNetIncome = null;
@@ -154,39 +155,21 @@ router.get('/growth-quality/:ticker', async (req, res) => {
         let cagr = { revenue3Y: null, revenue5Y: null, eps3Y: null, eps5Y: null, fcf3Y: null, fcf5Y: null };
         let cashConversion = null;
 
-        if (Array.isArray(fMetrics) && fMetrics.length > 0) {
-            for (let i = 0; i < Math.min(fMetrics.length, 5); i++) {
-                const m = fMetrics[i];
-                const period = m.date ? m.date.substring(0, 4) : `${new Date().getFullYear() - i}`;
-                
-                margins.push({
-                    period,
-                    gross: m.grossProfitMargin ? Number((m.grossProfitMargin * 100).toFixed(1)) : null,
-                    operating: m.operatingProfitMargin ? Number((m.operatingProfitMargin * 100).toFixed(1)) : null,
-                    net: m.netProfitMargin ? Number((m.netProfitMargin * 100).toFixed(1)) : null,
-                    fcf: m.freeCashFlowMargin ? Number((m.freeCashFlowMargin * 100).toFixed(1)) : null
-                });
-            }
+        if (fMetrics && !fMetrics.error) {
+            const m = fMetrics;
+            const period = m.date ? m.date.substring(0, 4) : `${new Date().getFullYear()}`;
+            
+            margins.push({
+                period,
+                gross: m.grossProfitMargin ? Number((m.grossProfitMargin * 100).toFixed(1)) : null,
+                operating: m.operatingProfitMargin ? Number((m.operatingProfitMargin * 100).toFixed(1)) : null,
+                net: m.netProfitMargin ? Number((m.netProfitMargin * 100).toFixed(1)) : null,
+                fcf: m.freeCashFlowMargin ? Number((m.freeCashFlowMargin * 100).toFixed(1)) : null
+            });
 
-            const latest = fMetrics[0];
-            const year3 = fMetrics.length > 3 ? fMetrics[3] : null;
-            const year5 = fMetrics.length > 5 ? fMetrics[5] : (fMetrics.length > 0 ? fMetrics[fMetrics.length - 1] : null);
-
-            latestNetIncome = latest.netIncome;
-            latestFcf = latest.freeCashFlow;
+            latestNetIncome = m.netIncome;
+            latestFcf = m.freeCashFlow;
             cashConversion = (latestNetIncome && latestNetIncome > 0) ? Number((latestFcf / latestNetIncome).toFixed(2)) : null;
-
-            if (year3) {
-                cagr.revenue3Y = computeCAGR(year3.revenue, latest.revenue, 3);
-                cagr.eps3Y = computeCAGR(year3.eps, latest.eps, 3);
-                cagr.fcf3Y = computeCAGR(year3.freeCashFlow, latest.freeCashFlow, 3);
-            }
-            if (year5) {
-                const yCount = Math.min(5, fMetrics.length - 1);
-                cagr.revenue5Y = computeCAGR(year5.revenue, latest.revenue, yCount);
-                cagr.eps5Y = computeCAGR(year5.eps, latest.eps, yCount);
-                cagr.fcf5Y = computeCAGR(year5.freeCashFlow, latest.freeCashFlow, yCount);
-            }
         }
 
         const result = {
@@ -243,32 +226,24 @@ router.get('/earnings-quality/:ticker', async (req, res) => {
             metrics.push(...eqData.metrics);
         } else {
             // Fallback proxy using FMP
-            const fMetrics = await fetchFmpMetrics(ticker).catch(() => []);
-            if (fMetrics.length > 0) {
-                for(let i=0; i<Math.min(fMetrics.length, 3); i++) {
-                    const m = fMetrics[i];
-                    const prev = fMetrics[i+1];
-                    const netIncome = m.netIncome || 0;
-                    const ocf = m.operatingCashFlow || 0;
-                    const assets = m.totalAssets || 1;
-                    const revenue = m.revenue || 1;
-                    const accruals = (netIncome - ocf) / assets;
-                    
-                    let revGrowth = prev && prev.revenue ? ((revenue / prev.revenue) - 1) * 100 : 0;
-                    let recGrowth = prev && prev.receivables ? ((m.receivables / prev.receivables) - 1) * 100 : 0;
-                    let invGrowth = prev && prev.inventory ? ((m.inventory / prev.inventory) - 1) * 100 : 0;
+            const fMetrics = await fetchFmpMetrics(ticker).catch(() => null);
+            if (fMetrics && !fMetrics.error) {
+                const m = fMetrics;
+                const netIncome = m.netIncome || 0;
+                const ocf = m.operatingCashFlow || 0;
+                const assets = m.totalAssets || 1;
+                const accruals = (netIncome - ocf) / assets;
 
-                    metrics.push({
-                        period: m.date ? m.date.substring(0, 4) : String(new Date().getFullYear() - i),
-                        accruals: Number(accruals.toFixed(3)),
-                        receivablesGrowth: Number(recGrowth.toFixed(1)),
-                        revenueGrowth: Number(revGrowth.toFixed(1)),
-                        inventoryGrowth: Number(invGrowth.toFixed(1)),
-                        sbcRatio: m.stockBasedCompensation && netIncome ? Number((m.stockBasedCompensation / netIncome).toFixed(3)) : 0.05,
-                        shareChange: prev && prev.weightedAverageSharesOut ? Number((((m.weightedAverageSharesOut / prev.weightedAverageSharesOut) - 1) * 100).toFixed(1)) : 0,
-                        cashConversion: netIncome > 0 ? Number(((m.freeCashFlow || ocf) / netIncome).toFixed(2)) : 1.0
-                    });
-                }
+                metrics.push({
+                    period: m.date ? m.date.substring(0, 4) : String(new Date().getFullYear()),
+                    accruals: Number(accruals.toFixed(3)),
+                    receivablesGrowth: 0,
+                    revenueGrowth: 0,
+                    inventoryGrowth: 0,
+                    sbcRatio: m.stockBasedCompensation && netIncome ? Number((m.stockBasedCompensation / netIncome).toFixed(3)) : 0.05,
+                    shareChange: 0,
+                    cashConversion: netIncome > 0 ? Number(((m.freeCashFlow || ocf) / netIncome).toFixed(2)) : 1.0
+                });
             }
         }
 
@@ -322,13 +297,13 @@ router.get('/dupont/:ticker', async (req, res) => {
         const cached = DUPONT_CACHE.get(ticker);
         if (cached) return res.json(cached);
 
-        const targetMetrics = await fetchFmpMetrics(ticker).catch(() => []);
+        const targetMetrics = await fetchFmpMetrics(ticker).catch(() => null);
         const peerTickers = await fetchPeers(ticker);
 
         let dupont = { netMargin: null, assetTurnover: null, equityMultiplier: null, roe: null };
 
-        if (targetMetrics.length > 0) {
-            const m = targetMetrics[0];
+        if (targetMetrics && !targetMetrics.error) {
+            const m = targetMetrics;
             const netIncome = m.netIncome || 0;
             const revenue = m.revenue || 1;
             const assets = m.totalAssets || 1;
@@ -347,9 +322,9 @@ router.get('/dupont/:ticker', async (req, res) => {
         const peerRoes = [];
 
         for (const pt of peerTickers) {
-            const pMetrics = await fetchFmpMetrics(pt).catch(() => []);
-            if (pMetrics.length > 0) {
-                const m = pMetrics[0];
+            const pMetrics = await fetchFmpMetrics(pt).catch(() => null);
+            if (pMetrics && !pMetrics.error) {
+                const m = pMetrics;
                 const netIncome = m.netIncome || 0;
                 const revenue = m.revenue || 1;
                 const assets = m.totalAssets || 1;
@@ -423,39 +398,60 @@ router.get('/peers-comp/:ticker', async (req, res) => {
         const pes = [];
 
         for (const t of allTickers) {
-            const mData = await fetchFmpMetrics(t).catch(() => []);
-            if (mData.length > 0) {
-                const m = mData[0];
-                const prev = mData.length > 1 ? mData[1] : null;
-                
-                const revenueGrowth = prev && prev.revenue ? ((m.revenue / prev.revenue) - 1) * 100 : null;
-                const gm = m.grossProfitMargin ? m.grossProfitMargin * 100 : null;
-                const om = m.operatingProfitMargin ? m.operatingProfitMargin * 100 : null;
-                const roic = m.roic ? m.roic * 100 : null;
-                const fcfMargin = m.freeCashFlowMargin ? m.freeCashFlowMargin * 100 : null;
-                const pe = m.peRatio || null;
-                
-                metricsMap[t] = {
-                    ticker: t,
-                    name: t, // Basic fallback name
-                    revenueGrowth: revenueGrowth ? Number(revenueGrowth.toFixed(1)) : null,
-                    grossMargin: gm ? Number(gm.toFixed(1)) : null,
-                    operatingMargin: om ? Number(om.toFixed(1)) : null,
-                    roic: roic ? Number(roic.toFixed(1)) : null,
-                    fcfMargin: fcfMargin ? Number(fcfMargin.toFixed(1)) : null,
-                    pe: pe ? Number(pe.toFixed(1)) : null,
-                    evEbitda: m.enterpriseValueOverEBITDA ? Number(m.enterpriseValueOverEBITDA.toFixed(1)) : null,
-                    fcfYield: m.freeCashFlowYield ? Number((m.freeCashFlowYield * 100).toFixed(1)) : null,
-                    debtEbitda: m.debtToEbitda ? Number(m.debtToEbitda.toFixed(1)) : null
-                };
+            let mData = await fetchFmpMetrics(t).catch(() => null);
+            let revenueGrowth = null, gm = null, om = null, roic = null, fcfMargin = null, pe = null, evEbitda = null, fcfYield = null, debtEbitda = null;
 
-                if (t !== ticker) {
-                    if (revenueGrowth != null) revGrowths.push(revenueGrowth);
-                    if (gm != null) grossMargins.push(gm);
-                    if (om != null) opMargins.push(om);
-                    if (roic != null) roics.push(roic);
-                    if (pe != null) pes.push(pe);
+            if (mData && !mData.error) {
+                revenueGrowth = mData.revenueGrowth ? mData.revenueGrowth * 100 : null;
+                gm = (mData.grossProfitMargin ?? mData.grossProfitMarginTTM) ? (mData.grossProfitMargin ?? mData.grossProfitMarginTTM) * 100 : null;
+                om = (mData.operatingProfitMargin ?? mData.operatingProfitMarginTTM) ? (mData.operatingProfitMargin ?? mData.operatingProfitMarginTTM) * 100 : null;
+                roic = (mData.roic ?? mData.roicTTM) ? (mData.roic ?? mData.roicTTM) * 100 : null;
+                fcfMargin = (mData.freeCashFlowMargin ?? mData.freeCashFlowMarginTTM) ? (mData.freeCashFlowMargin ?? mData.freeCashFlowMarginTTM) * 100 : null;
+                pe = mData.peRatio || mData.peRatioTTM || null;
+                evEbitda = mData.enterpriseValueOverEBITDA ?? mData.enterpriseValueMultipleTTM ?? null;
+                fcfYield = mData.freeCashFlowYield ?? mData.freeCashFlowYieldTTM ?? null;
+                debtEbitda = mData.debtToEbitda ?? mData.netDebtToEBITDATTM ?? null;
+            } else {
+                // Free tier fallback to Finnhub metric
+                try {
+                    const fh = await fetchJson(`https://finnhub.io/api/v1/stock/metric?symbol=${t}&metric=all&token=${process.env.FINNHUB_API_KEY}`);
+                    const fm = fh?.data?.metric;
+                    if (fm) {
+                        revenueGrowth = fm.revenueGrowth3Y ?? fm.revenueGrowth5Y ?? null;
+                        gm = fm.grossMarginTTM ?? fm.grossMarginAnnual ?? null;
+                        om = fm.operatingMarginTTM ?? fm.operatingMarginAnnual ?? null;
+                        roic = fm.roicTTM ?? fm.roicAnnual ?? fm.roeTTM ?? null;
+                        fcfMargin = fm.netProfitMarginTTM ?? null;
+                        pe = fm.peTTM ?? fm.peBasicExclExtraTTM ?? null;
+                        evEbitda = fm['ev/ebitdaTTM'] ?? fm.currentEv ?? null;
+                        fcfYield = fm.dividendYieldIndicatedAnnual ?? null;
+                        debtEbitda = fm.totalDebtToEquityAnnual ?? fm['totalDebt/totalEquityQuarterly'] ?? null;
+                    }
+                } catch (e) {
+                    // ignore
                 }
+            }
+
+            metricsMap[t] = {
+                ticker: t,
+                name: t,
+                revenueGrowth: revenueGrowth != null ? Number(revenueGrowth.toFixed(1)) : null,
+                grossMargin: gm != null ? Number(gm.toFixed(1)) : null,
+                operatingMargin: om != null ? Number(om.toFixed(1)) : null,
+                roic: roic != null ? Number(roic.toFixed(1)) : null,
+                fcfMargin: fcfMargin != null ? Number(fcfMargin.toFixed(1)) : null,
+                pe: pe != null ? Number(pe.toFixed(1)) : null,
+                evEbitda: evEbitda != null ? Number(evEbitda.toFixed(1)) : null,
+                fcfYield: fcfYield != null ? Number((fcfYield * 100).toFixed(1)) : null,
+                debtEbitda: debtEbitda != null ? Number(debtEbitda.toFixed(1)) : null
+            };
+
+            if (t !== ticker) {
+                if (revenueGrowth != null) revGrowths.push(revenueGrowth);
+                if (gm != null) grossMargins.push(gm);
+                if (om != null) opMargins.push(om);
+                if (roic != null) roics.push(roic);
+                if (pe != null) pes.push(pe);
             }
         }
 

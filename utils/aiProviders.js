@@ -166,7 +166,7 @@ async function retryWithBackoff(fn, maxRetries = 2) {
 }
 
 async function generateWithGroq(prompt) {
-    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    const model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -203,7 +203,7 @@ async function generateWithGroq(prompt) {
 }
 
 async function generateWithGemini(prompt) {
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
     const geminiUrl =
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
@@ -247,13 +247,43 @@ async function generateWithGemini(prompt) {
 }
 
 async function generateAiAnalysis(prompt) {
-    const provider = getAiProvider();
-    if (provider === 'groq') return { analysis: await retryWithBackoff(() => generateWithGroq(prompt)), provider: 'groq' };
-    if (provider === 'gemini') return { analysis: await retryWithBackoff(() => generateWithGemini(prompt)), provider: 'gemini' };
-    const err = new Error(
-        'No AI API key configured. Add GROQ_API_KEY (free at console.groq.com, no credit card) or GEMINI_API_KEY to .env'
-    );
-    err.statusCode = 503;
+    const hasGroq = !!process.env.GROQ_API_KEY;
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+
+    if (!hasGroq && !hasGemini) {
+        const err = new Error(
+            'No AI API key configured. Add GROQ_API_KEY (free at console.groq.com, no credit card) or GEMINI_API_KEY to .env'
+        );
+        err.statusCode = 503;
+        throw err;
+    }
+
+    // Try Groq first
+    if (hasGroq) {
+        try {
+            const analysis = await retryWithBackoff(() => generateWithGroq(prompt));
+            return { analysis, provider: 'groq' };
+        } catch (groqErr) {
+            console.warn('Groq AI failed, attempting Gemini fallback:', groqErr.message);
+            // Fall through to Gemini if available
+            if (!hasGemini) throw groqErr;
+        }
+    }
+
+    // Try Gemini (primary or fallback)
+    if (hasGemini) {
+        try {
+            const analysis = await retryWithBackoff(() => generateWithGemini(prompt));
+            return { analysis, provider: 'gemini' };
+        } catch (geminiErr) {
+            console.error('Gemini AI also failed:', geminiErr.message);
+            throw geminiErr;
+        }
+    }
+
+    // Should not reach here, but safety net
+    const err = new Error('All AI providers failed.');
+    err.statusCode = 502;
     throw err;
 }
 

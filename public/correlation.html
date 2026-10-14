@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0e1a">
     <title>Cross-Asset Correlation Matrix | STRATA</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -307,17 +309,32 @@
         </aside>
 
         <main class="main-content">
-            <header class="mobile-header">
-                <button class="mobile-menu-btn" id="mobileMenuBtn">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <div class="mobile-logo">STRATA</div>
+            <header class="top-header-bar">
+                <div class="top-brand-group">
+                    <button id="mobile-menu-toggle" class="mobile-toggle-btn" aria-label="Open mobile menu">
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                    </button>
+                    <a href="index.html" class="top-app-brand">
+                        <div class="logo-brand-block">
+                            <div class="logo-title-row">
+                                <span class="top-app-logo-text">STRATA</span>
+                                <img src="images/strata-logo.webp" alt="Strata" class="brand-logo-sticker-mobile" onerror="this.style.display='none'">
+                            </div>
+                            <span class="top-app-tagline">REAL-TIME MARKET ANALYTICS</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="top-status-badge">
+                    <span class="status-indicator connected"></span>
+                    <span class="status-label">Operational</span>
+                </div>
             </header>
 
-            <div class="page-header">
-                <h1>Cross-Asset Correlation Matrix</h1>
-                <p>Analyze price relationships across different asset classes</p>
-            </div>
+            <section id="dashboard-correlation" class="dashboard-viewport active">
+                <div class="dashboard-header-block">
+                    <h1>Cross-Asset Correlation Matrix</h1>
+                    <p class="subtitle">Analyze price relationships and statistical co-movements across equities, commodities, fixed income, and crypto</p>
+                </div>
 
             <div class="controls-panel">
                 <div class="controls-row">
@@ -395,20 +412,11 @@
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+        </section>
+    </main>
+</div>
 
     <script>
-        // Mobile menu toggle
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const sidebar = document.querySelector('.sidebar');
-        
-        if (mobileMenuBtn && sidebar) {
-            mobileMenuBtn.addEventListener('click', () => {
-                sidebar.classList.toggle('active');
-            });
-        }
-
         // State
         let selectedPeriod = '90';
 
@@ -630,5 +638,8 @@
             fetchAndRenderMatrix();
         });
     </script>
+
+    <div id="global-toast-notification" class="toast-system hidden-toast"></div>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

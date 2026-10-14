@@ -125,8 +125,8 @@ ${evidencePack}`;
                 ticker: ticker,
                 title: `${ticker} — Equity Research Report`,
                 generatedAt: new Date().toISOString(),
-                content: reportContent,
-                provider: aiProvider.provider,
+                content: typeof reportContent === 'string' ? reportContent : (reportContent?.analysis || ''),
+                provider: reportContent?.provider || aiProvider?.provider || 'groq',
                 model: aiProvider.model,
                 dataSources: ["SEC EDGAR", "Finnhub", "FRED"]
             }
