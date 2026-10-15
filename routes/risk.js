@@ -5,7 +5,7 @@ const { MemoryCache } = require('../utils/cache');
 const { wrapWithProvenance, DATA_QUALITY } = require('../utils/provenance');
 const { fetchYahooChart } = require('../utils/equityProviders');
 
-const cache = new MemoryCache();
+const cache = new MemoryCache('risk', 12 * 60 * 60 * 1000);
 
 function computeReturns(prices) {
     const returns = [];
@@ -56,7 +56,7 @@ router.get('/profile/:ticker', async (req, res) => {
         const period = req.query.period || '1y';
         const cacheKey = `risk_profile_${ticker}_${period}`;
         
-        const cached = cache.get(cacheKey);
+        const cached = cache.getData(cacheKey);
         if (cached) {
             return res.json(cached);
         }
@@ -158,8 +158,9 @@ router.get('/profile/:ticker', async (req, res) => {
 
         const sharpe = annualizedVol === 0 ? 0 : (annualMeanReturn - riskFreeRate) / annualizedVol;
 
-        const negativeReturns = assetReturns.filter(r => r < 0);
-        const downsideDev = stddev(negativeReturns, 0) * Math.sqrt(252);
+        // Institutional Sortino ratio denominator: semi-variance over all N periods
+        const downsideVarSum = assetReturns.reduce((acc, r) => acc + (r < 0 ? Math.pow(r, 2) : 0), 0);
+        const downsideDev = assetReturns.length > 0 ? Math.sqrt(downsideVarSum / assetReturns.length) * Math.sqrt(252) : 0;
         const sortino = downsideDev === 0 ? 0 : (annualMeanReturn - riskFreeRate) / downsideDev;
 
         const calmar = maxDrawdown === 0 ? 0 : annualMeanReturn / Math.abs(maxDrawdown);
@@ -212,7 +213,7 @@ router.get('/drawdown/:ticker', async (req, res) => {
         const period = req.query.period || '1y';
         const cacheKey = `risk_drawdown_${ticker}_${period}`;
 
-        const cached = cache.get(cacheKey);
+        const cached = cache.getData(cacheKey);
         if (cached) {
             return res.json(cached);
         }

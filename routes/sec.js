@@ -18,7 +18,7 @@ const { MemoryCache } = require('../utils/cache');
 // Import AI provider for the diff summary
 const { generateAiAnalysis } = require('../utils/aiProviders');
 
-// Initialize caches
+// Initialize caches using standard (name, ttlMs)
 const FACTS_CACHE = new MemoryCache('sec-facts', 24 * 60 * 60 * 1000); // 24h
 const FILINGS_CACHE = new MemoryCache('sec-filings', 6 * 60 * 60 * 1000); // 6h
 const SEGMENTS_CACHE = new MemoryCache('sec-segments', 24 * 60 * 60 * 1000); // 24h
@@ -37,7 +37,7 @@ router.get('/facts/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let facts = FACTS_CACHE.get(ticker);
+        let facts = FACTS_CACHE.getData(ticker);
         let freshness = FRESHNESS.CACHED;
         
         if (!facts) {
@@ -76,7 +76,7 @@ router.get('/filings/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let filings = FILINGS_CACHE.get(ticker);
+        let filings = FILINGS_CACHE.getData(ticker);
         let freshness = FRESHNESS.CACHED;
         
         if (!filings) {
@@ -115,7 +115,7 @@ router.get('/segments/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let segments = SEGMENTS_CACHE.get(ticker);
+        let segments = SEGMENTS_CACHE.getData(ticker);
         let freshness = FRESHNESS.CACHED;
         
         if (!segments) {
@@ -127,8 +127,11 @@ router.get('/segments/:ticker', async (req, res) => {
             freshness = FRESHNESS.REALTIME;
         }
 
+        // Support both { segments: [...] } and direct array callers
+        const segmentArray = Array.isArray(segments) ? segments : (segments.segments || []);
+
         res.json(wrapWithProvenance(
-            { ticker, segments },
+            { ticker, segments: segmentArray, raw: segments },
             {
                 provider: 'sec',
                 timestamp: new Date().toISOString(),
@@ -154,7 +157,7 @@ router.get('/capital-allocation/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let allocation = CAPALLOC_CACHE.get(ticker);
+        let allocation = CAPALLOC_CACHE.getData(ticker);
         let freshness = FRESHNESS.CACHED;
         
         if (!allocation) {
@@ -193,7 +196,7 @@ router.get('/earnings-quality/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let quality = QUALITY_CACHE.get(ticker);
+        let quality = QUALITY_CACHE.getData(ticker);
         let freshness = FRESHNESS.CACHED;
         
         if (!quality) {
@@ -226,16 +229,15 @@ router.get('/earnings-quality/:ticker', async (req, res) => {
  */
 function getMetricValue(timeSeries, periodDate) {
     if (!timeSeries || !Array.isArray(timeSeries)) return null;
-    // Attempt to find the matching period. Assumes timeSeries elements have end/period dates.
-    const point = timeSeries.find(p => (p.end === periodDate) || (p.val !== undefined && p.end && p.end.startsWith(periodDate)));
-    return point ? point.val : null;
+    const point = timeSeries.find(p => (p.end === periodDate) || (p.period === periodDate) || (p.val !== undefined && p.end && p.end.startsWith(periodDate)));
+    return point ? point.val : (point ? point.value : null);
 }
 
 /**
  * Helper function to compute changes between two values
  */
 function computeChange(currentVal, previousVal) {
-    if (currentVal === null || previousVal === null) return null;
+    if (currentVal === null || previousVal === null || currentVal === undefined || previousVal === undefined) return null;
     
     const change = currentVal - previousVal;
     let changePercent = null;
@@ -247,7 +249,7 @@ function computeChange(currentVal, previousVal) {
         current: currentVal,
         previous: previousVal,
         change: change,
-        changePercent: changePercent ? parseFloat(changePercent.toFixed(2)) : null,
+        changePercent: changePercent != null ? parseFloat(changePercent.toFixed(2)) : null,
         direction: change > 0 ? "up" : (change < 0 ? "down" : "flat")
     };
 }
@@ -266,12 +268,12 @@ router.get('/filing-diff/:ticker', async (req, res) => {
         const type = req.query.type || '10-Q';
         const cacheKey = `${ticker}-${type}`;
         
-        let diffData = DIFF_CACHE.get(cacheKey);
+        let diffData = DIFF_CACHE.getData(cacheKey);
         let freshness = FRESHNESS.CACHED;
         
         if (!diffData) {
             // 1. Fetch filings to identify the last two periods
-            let filings = FILINGS_CACHE.get(ticker);
+            let filings = FILINGS_CACHE.getData(ticker);
             if (!filings) {
                 filings = await fetchCompanyFilings(ticker);
             }
@@ -286,12 +288,11 @@ router.get('/filing-diff/:ticker', async (req, res) => {
                 return res.status(404).json({ error: `Not enough ${type} filings found for ${ticker} to generate a diff.` });
             }
             
-            // Assume filings are sorted newest first. Get the latest two.
             const currentFilingInfo = targetFilings[0];
             const previousFilingInfo = targetFilings[1];
             
             // 2. Fetch XBRL company facts
-            let facts = FACTS_CACHE.get(ticker);
+            let facts = FACTS_CACHE.getData(ticker);
             if (!facts) {
                 facts = await fetchCompanyFacts(ticker);
             }
@@ -300,49 +301,57 @@ router.get('/filing-diff/:ticker', async (req, res) => {
                 return res.status(404).json({ error: `Facts not found for ${ticker}` });
             }
 
-            // Extract time series for key metrics
-            // (Assumes extractFinancialTimeSeries returns standard time series arrays)
-            const metricsToExtract = [
-                { key: 'revenue', name: 'Revenues' }, // Might need multiple mapping in real scenario
-                { key: 'netIncome', name: 'NetIncomeLoss' },
-                { key: 'assets', name: 'Assets' },
-                { key: 'liabilities', name: 'Liabilities' },
-                { key: 'cash', name: 'CashAndCashEquivalentsAtCarryingValue' },
-                { key: 'debt', name: 'LongTermDebt' },
-                { key: 'operatingCashFlow', name: 'NetCashProvidedByUsedInOperatingActivities' },
-                { key: 'eps', name: 'EarningsPerShareBasic' }
-            ];
+            // Expanded GAAP concept lists to support varying taxonomy standards
+            const conceptsMap = {
+                revenue: ['RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenues', 'SalesRevenueNet', 'RevenuesNetOfInterestExpense'],
+                netIncome: ['NetIncomeLoss', 'ProfitLoss'],
+                assets: ['Assets'],
+                liabilities: ['Liabilities'],
+                cash: ['CashAndCashEquivalentsAtCarryingValue', 'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents'],
+                debt: ['LongTermDebt', 'LongTermDebtNoncurrent', 'DebtInstrumentCarryingAmount'],
+                operatingCashFlow: ['NetCashProvidedByOperatingActivities', 'NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'],
+                eps: ['EarningsPerShareDiluted', 'EarningsPerShareBasic']
+            };
 
             const extractedMetrics = {};
-            metricsToExtract.forEach(m => {
-                extractedMetrics[m.key] = extractFinancialTimeSeries(facts, m.name);
-            });
+            for (const [key, conceptList] of Object.entries(conceptsMap)) {
+                let series = [];
+                for (const concept of conceptList) {
+                    const result = extractFinancialTimeSeries(facts, concept);
+                    if (result && result.length > 0) {
+                        series = result;
+                        break;
+                    }
+                }
+                extractedMetrics[key] = series;
+            }
 
             // 3. Compare key financial metrics
-            const currentPeriod = currentFilingInfo.reportDate || currentFilingInfo.period || currentFilingInfo.filedDate; // Fallbacks based on data shape
+            const currentPeriod = currentFilingInfo.reportDate || currentFilingInfo.period || currentFilingInfo.filedDate;
             const previousPeriod = previousFilingInfo.reportDate || previousFilingInfo.period || previousFilingInfo.filedDate;
 
             const changes = {};
-            metricsToExtract.forEach(m => {
-                const currentVal = getMetricValue(extractedMetrics[m.key], currentPeriod);
-                const previousVal = getMetricValue(extractedMetrics[m.key], previousPeriod);
+            for (const key of Object.keys(conceptsMap)) {
+                const currentVal = getMetricValue(extractedMetrics[key], currentPeriod);
+                const previousVal = getMetricValue(extractedMetrics[key], previousPeriod);
                 
                 const metricChange = computeChange(currentVal, previousVal);
                 if (metricChange) {
-                    changes[m.key] = metricChange;
+                    changes[key] = metricChange;
                 }
-            });
+            }
 
             // 4. Generate AI summary
             let aiSummary = null;
             if (Object.keys(changes).length > 0) {
                 try {
-                    const prompt = `You are a financial analyst. Analyze the following changes between the latest two ${type} SEC filings for ${ticker}. 
-The data shows current value, previous value, change, percentage change, and direction for key metrics.
-Data: ${JSON.stringify(changes, null, 2)}
-Provide a brief 2-3 sentence summary of the overall financial trajectory, highlighting the most significant changes and key takeaways.`;
+                    const prompt = `You are an institutional financial analyst. Analyze the following changes between the latest two ${type} SEC filings for ${ticker}. 
+Data shows current value, previous value, change, percentage change, and direction for key financial metrics:
+${JSON.stringify(changes, null, 2)}
+Provide a concise, 2-3 sentence institutional verdict on the trajectory, highlighting revenue/cash flow trends and any margin or debt risks.`;
                     
-                    aiSummary = await generateAiAnalysis(prompt);
+                    const aiRes = await generateAiAnalysis(prompt);
+                    aiSummary = typeof aiRes === 'string' ? aiRes : (aiRes?.analysis || 'Filing comparison analysis completed.');
                 } catch (aiError) {
                     console.error('AI Summary failed for filing diff:', aiError.message || aiError);
                     aiSummary = "AI summary generation failed or is unavailable.";

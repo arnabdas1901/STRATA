@@ -2,48 +2,19 @@ const express = require('express');
 const router = express.Router();
 const { fetchAlphaVantageCommodity, fetchTwelveDataQuote, fetchYahooChart } = require('../utils/equityProviders');
 const { getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
+const { MemoryCache } = require('../utils/cache');
+const { wrapWithProvenance, FRESHNESS, DATA_QUALITY } = require('../utils/provenance');
 
-const AV_CACHE_TTL = 2 * 60 * 60 * 1000;
-const TD_CACHE_TTL = 5 * 60 * 1000;
-const CHART_CACHE_TTL = 10 * 60 * 1000;
-
-const COMMODITIES_CACHE = {
-    'XAU/USD': { data: null, lastFetched: 0 },
-    'SILVER': { data: null, lastFetched: 0 },
-    'PLATINUM': { data: null, lastFetched: 0 },
-    'PALLADIUM': { data: null, lastFetched: 0 },
-    'WTI': { data: null, lastFetched: 0 },
-    'BRENT': { data: null, lastFetched: 0 },
-    'NATURAL_GAS': { data: null, lastFetched: 0 },
-    'HEATING_OIL': { data: null, lastFetched: 0 },
-    'GASOLINE': { data: null, lastFetched: 0 },
-    'COPPER': { data: null, lastFetched: 0 },
-    'ALUMINUM': { data: null, lastFetched: 0 },
-    'NICKEL': { data: null, lastFetched: 0 },
-    'ZINC': { data: null, lastFetched: 0 },
-    'TIN': { data: null, lastFetched: 0 },
-    'WHEAT': { data: null, lastFetched: 0 },
-    'CORN': { data: null, lastFetched: 0 },
-    'SOYBEANS': { data: null, lastFetched: 0 },
-    'COFFEE': { data: null, lastFetched: 0 },
-    'SUGAR': { data: null, lastFetched: 0 },
-    'COTTON': { data: null, lastFetched: 0 },
-    'COCOA': { data: null, lastFetched: 0 },
-    'LUMBER': { data: null, lastFetched: 0 },
-    'LIVE_CATTLE': { data: null, lastFetched: 0 },
-    'LEAN_HOGS': { data: null, lastFetched: 0 },
-    'OATS': { data: null, lastFetched: 0 },
-    'RICE': { data: null, lastFetched: 0 },
-};
-
-const CHART_CACHE = {};
+const commoditiesCache = new MemoryCache('commodities-list', 5 * 60 * 1000, 10);
+const CHART_CACHE = new MemoryCache('commodity-charts', 10 * 60 * 1000, 100);
+const DESCRIPTION_CACHE = new MemoryCache('commodity-descriptions', 24 * 60 * 60 * 1000, 100);
 
 const COMMODITY_CONFIGS = {
     // ── Precious Metals ──────────────────────────────────────────
     'XAU/USD': {
         name: 'Gold',
-        provider: 'TwelveData',
-        symbol: 'XAU/USD',
+        provider: 'Yahoo',
+        symbol: 'GC=F',
         sector: 'precious_metals',
         sectorLabel: 'Precious Metals',
         unit: 'USD/oz',
@@ -88,9 +59,8 @@ const COMMODITY_CONFIGS = {
     // ── Energy ───────────────────────────────────────────────────
     'WTI': {
         name: 'WTI Crude Oil',
-        provider: 'AlphaVantage',
-        symbol: 'WTI',
-        interval: 'daily',
+        provider: 'Yahoo',
+        symbol: 'CL=F',
         sector: 'energy',
         sectorLabel: 'Energy',
         unit: 'USD/bbl',
@@ -111,9 +81,8 @@ const COMMODITY_CONFIGS = {
     },
     'NATURAL_GAS': {
         name: 'Natural Gas',
-        provider: 'AlphaVantage',
-        symbol: 'NATURAL_GAS',
-        interval: 'daily',
+        provider: 'Yahoo',
+        symbol: 'NG=F',
         sector: 'energy',
         sectorLabel: 'Energy',
         unit: 'USD/MMBtu',
@@ -147,9 +116,8 @@ const COMMODITY_CONFIGS = {
     // ── Industrial Metals ────────────────────────────────────────
     'COPPER': {
         name: 'Copper',
-        provider: 'AlphaVantage',
-        symbol: 'COPPER',
-        interval: 'monthly',
+        provider: 'Yahoo',
+        symbol: 'HG=F',
         sector: 'industrial',
         sectorLabel: 'Industrial Metals',
         unit: 'USD/lb',
@@ -159,9 +127,8 @@ const COMMODITY_CONFIGS = {
     },
     'ALUMINUM': {
         name: 'Aluminum',
-        provider: 'AlphaVantage',
-        symbol: 'ALUMINUM',
-        interval: 'monthly',
+        provider: 'Yahoo',
+        symbol: 'ALI=F',
         sector: 'industrial',
         sectorLabel: 'Industrial Metals',
         unit: 'USD/mt',
@@ -183,7 +150,7 @@ const COMMODITY_CONFIGS = {
     'ZINC': {
         name: 'Zinc',
         provider: 'Yahoo',
-        symbol: 'ZINC',
+        symbol: 'ZNC=F',
         sector: 'industrial',
         sectorLabel: 'Industrial Metals',
         unit: 'USD/mt',
@@ -194,7 +161,7 @@ const COMMODITY_CONFIGS = {
     'TIN': {
         name: 'Tin',
         provider: 'Yahoo',
-        symbol: 'TIN',
+        symbol: 'TIN=F',
         sector: 'industrial',
         sectorLabel: 'Industrial Metals',
         unit: 'USD/mt',
@@ -206,9 +173,8 @@ const COMMODITY_CONFIGS = {
     // ── Agriculture ──────────────────────────────────────────────
     'WHEAT': {
         name: 'Wheat',
-        provider: 'AlphaVantage',
-        symbol: 'WHEAT',
-        interval: 'monthly',
+        provider: 'Yahoo',
+        symbol: 'ZW=F',
         sector: 'agriculture',
         sectorLabel: 'Agriculture',
         unit: 'USD/bushel',
@@ -340,84 +306,27 @@ const COMMODITY_CONFIGS = {
 };
 
 const TICKER_LOOKUP = {
-    // Precious Metals
-    GOLD: 'GC=F',
-    SILVER: 'SI=F',
-    PLATINUM: 'PL=F',
-    PALLADIUM: 'PA=F',
-    // Energy
-    OIL: 'CL=F',
-    CRUDE: 'CL=F',
-    'CRUDE OIL': 'CL=F',
-    WTI: 'CL=F',
-    BRENT: 'BZ=F',
-    'BRENT CRUDE': 'BZ=F',
-    'NATURAL GAS': 'NG=F',
-    GAS: 'NG=F',
-    'HEATING OIL': 'HO=F',
-    GASOLINE: 'RB=F',
-    RBOB: 'RB=F',
-    'RBOB GASOLINE': 'RB=F',
-    // Industrial Metals
-    COPPER: 'HG=F',
-    ALUMINUM: 'ALI=F',
-    ALUMINIUM: 'ALI=F',
-    NICKEL: 'NIY=F',
-    ZINC: 'ZNC=F',
-    TIN: 'TIN=F',
-    // Agriculture
-    WHEAT: 'ZW=F',
-    CORN: 'ZC=F',
-    SOYBEANS: 'ZS=F',
-    SOYBEAN: 'ZS=F',
-    COFFEE: 'KC=F',
-    ARABICA: 'KC=F',
-    SUGAR: 'SB=F',
-    COTTON: 'CT=F',
-    COCOA: 'CC=F',
-    CACAO: 'CC=F',
-    LUMBER: 'LBS=F',
-    WOOD: 'LBS=F',
-    TIMBER: 'LBS=F',
-    'LIVE CATTLE': 'LE=F',
-    CATTLE: 'LE=F',
-    BEEF: 'LE=F',
-    'LEAN HOGS': 'HE=F',
-    HOGS: 'HE=F',
-    PORK: 'HE=F',
-    OATS: 'ZO=F',
-    RICE: 'ZR=F',
-    'ROUGH RICE': 'ZR=F',
-    // Direct futures tickers
-    'GC=F': 'GC=F',
-    'SI=F': 'SI=F',
-    'PL=F': 'PL=F',
-    'PA=F': 'PA=F',
-    'CL=F': 'CL=F',
-    'BZ=F': 'BZ=F',
-    'NG=F': 'NG=F',
-    'HO=F': 'HO=F',
-    'RB=F': 'RB=F',
-    'HG=F': 'HG=F',
-    'ALI=F': 'ALI=F',
-    'NIY=F': 'NIY=F',
-    'ZNC=F': 'ZNC=F',
-    'TIN=F': 'TIN=F',
-    'ZW=F': 'ZW=F',
-    'ZC=F': 'ZC=F',
-    'ZS=F': 'ZS=F',
-    'KC=F': 'KC=F',
-    'SB=F': 'SB=F',
-    'CT=F': 'CT=F',
-    'CC=F': 'CC=F',
-    'LBS=F': 'LBS=F',
-    'LE=F': 'LE=F',
-    'HE=F': 'HE=F',
-    'ZO=F': 'ZO=F',
-    'ZR=F': 'ZR=F',
+    GOLD: 'GC=F', SILVER: 'SI=F', PLATINUM: 'PL=F', PALLADIUM: 'PA=F',
+    OIL: 'CL=F', CRUDE: 'CL=F', 'CRUDE OIL': 'CL=F', WTI: 'CL=F',
+    BRENT: 'BZ=F', 'BRENT CRUDE': 'BZ=F', 'NATURAL GAS': 'NG=F', GAS: 'NG=F',
+    'HEATING OIL': 'HO=F', GASOLINE: 'RB=F', RBOB: 'RB=F', 'RBOB GASOLINE': 'RB=F',
+    COPPER: 'HG=F', ALUMINUM: 'ALI=F', ALUMINIUM: 'ALI=F', NICKEL: 'NIY=F',
+    ZINC: 'ZNC=F', TIN: 'TIN=F', WHEAT: 'ZW=F', CORN: 'ZC=F',
+    SOYBEANS: 'ZS=F', SOYBEAN: 'ZS=F', COFFEE: 'KC=F', ARABICA: 'KC=F',
+    SUGAR: 'SB=F', COTTON: 'CT=F', COCOA: 'CC=F', CACAO: 'CC=F',
+    LUMBER: 'LBS=F', WOOD: 'LBS=F', TIMBER: 'LBS=F',
+    'LIVE CATTLE': 'LE=F', CATTLE: 'LE=F', BEEF: 'LE=F',
+    'LEAN HOGS': 'HE=F', HOGS: 'HE=F', PORK: 'HE=F',
+    OATS: 'ZO=F', RICE: 'ZR=F', 'ROUGH RICE': 'ZR=F',
+    'GC=F': 'GC=F', 'SI=F': 'SI=F', 'PL=F': 'PL=F', 'PA=F': 'PA=F',
+    'CL=F': 'CL=F', 'BZ=F': 'BZ=F', 'NG=F': 'NG=F', 'HO=F': 'HO=F',
+    'RB=F': 'RB=F', 'HG=F': 'HG=F', 'ALI=F': 'ALI=F', 'NIY=F': 'NIY=F',
+    'ZNC=F': 'ZNC=F', 'TIN=F': 'TIN=F', 'ZW=F': 'ZW=F', 'ZC=F': 'ZC=F',
+    'ZS=F': 'ZS=F', 'KC=F': 'KC=F', 'SB=F': 'SB=F', 'CT=F': 'CT=F',
+    'CC=F': 'CC=F', 'LBS=F': 'LBS=F', 'LE=F': 'LE=F', 'HE=F': 'HE=F',
+    'ZO=F': 'ZO=F', 'ZR=F': 'ZR=F',
 };
 
-const DESCRIPTION_CACHE = {};
 const RANGE_MAP = {
     '1M': { range: '1mo', interval: '1d' },
     '3M': { range: '3mo', interval: '1d' },
@@ -425,8 +334,6 @@ const RANGE_MAP = {
     '1Y': { range: '1y', interval: '1d' },
     '5Y': { range: '5y', interval: '1wk' },
 };
-
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 function buildCommodityPayload(key, config, marketData) {
     return {
@@ -442,33 +349,23 @@ function buildCommodityPayload(key, config, marketData) {
         price: marketData.price,
         change: marketData.change,
         changePercent: marketData.changePercent,
+        chartData: marketData.chartData || null,
         provider: marketData.provider,
-        lastUpdated: marketData.lastUpdated,
+        lastUpdated: marketData.lastUpdated || new Date().toISOString(),
     };
 }
 
 function resolveTicker(query, directSymbol) {
-    if (directSymbol) {
-        return String(directSymbol).trim().toUpperCase();
-    }
-
+    if (directSymbol) return String(directSymbol).trim().toUpperCase();
     const normalized = String(query || '').trim().toUpperCase();
     if (!normalized) return '';
-
-    if (TICKER_LOOKUP[normalized]) {
-        return TICKER_LOOKUP[normalized];
-    }
-
-    if (/^[A-Z0-9]+=F$/.test(normalized)) {
-        return normalized;
-    }
-
+    if (TICKER_LOOKUP[normalized]) return TICKER_LOOKUP[normalized];
+    if (/^[A-Z0-9]+=F$/.test(normalized)) return normalized;
     for (const [key, config] of Object.entries(COMMODITY_CONFIGS)) {
         if (config.name.toUpperCase() === normalized || key === normalized || config.symbol === normalized) {
             return config.futuresTicker;
         }
     }
-
     return '';
 }
 
@@ -476,105 +373,133 @@ function findConfigByTicker(ticker) {
     return Object.values(COMMODITY_CONFIGS).find((config) => config.futuresTicker === ticker) || null;
 }
 
-router.get('/', async (req, res) => {
-    const now = Date.now();
-    const results = [];
-
-    for (const [key, config] of Object.entries(COMMODITY_CONFIGS)) {
-        const cacheEntry = COMMODITIES_CACHE[key];
-        const ttl = config.provider === 'AlphaVantage' ? AV_CACHE_TTL : TD_CACHE_TTL;
-
-        if (cacheEntry.data && now - cacheEntry.lastFetched < ttl) {
-            results.push(cacheEntry.data);
-            continue;
+// Fetch single commodity market data with automatic Yahoo fallback
+async function fetchCommodityItem(key, config) {
+    try {
+        const chartRes = await fetchYahooChart(config.futuresTicker, '5d', '1d');
+        if (!chartRes.error && chartRes.price != null) {
+            return buildCommodityPayload(key, config, {
+                price: chartRes.price,
+                change: chartRes.change,
+                changePercent: chartRes.changePercent,
+                chartData: chartRes.chartData ? chartRes.chartData.slice(-10) : null,
+                provider: 'Yahoo Finance',
+                lastUpdated: new Date().toISOString()
+            });
         }
-
-        try {
-            let data;
-            if (config.provider === 'AlphaVantage') {
-                try {
-                    await delay(1200);
-                    const response = await fetchAlphaVantageCommodity(config.symbol, config.interval);
-                    if (response.error) throw new Error(response.error);
-
-                    data = buildCommodityPayload(key, config, {
-                        price: response.price,
-                        change: response.change,
-                        changePercent: response.changePercent,
-                        provider: 'AlphaVantage',
-                        lastUpdated: response.lastUpdated,
-                    });
-                } catch (avError) {
-                    console.warn(`AlphaVantage failed for ${key}: ${avError.message}. Falling back to Yahoo Finance.`);
-                    const response = await fetchYahooChart(config.futuresTicker, '5d', '1d');
-                    if (response.error) throw new Error(response.error);
-
-                    data = buildCommodityPayload(key, config, {
-                        price: response.price,
-                        change: response.change,
-                        changePercent: response.changePercent,
-                        provider: 'Yahoo Finance (Fallback)',
-                        lastUpdated: new Date().toISOString(),
-                    });
-                }
-            } else if (config.provider === 'TwelveData') {
-                const response = await fetchTwelveDataQuote(config.symbol);
-                if (response.error) throw new Error(response.error);
-
-                data = buildCommodityPayload(key, config, {
-                    price: response.price,
-                    change: response.change,
-                    changePercent: response.changePercent,
+        
+        // Secondary fallback to TwelveData for gold/silver if configured
+        if (config.provider === 'TwelveData' && process.env.TWELVEDATA_API_KEY) {
+            const tdRes = await fetchTwelveDataQuote(config.symbol);
+            if (!tdRes.error) {
+                return buildCommodityPayload(key, config, {
+                    price: tdRes.price,
+                    change: tdRes.change,
+                    changePercent: tdRes.changePercent,
                     provider: 'TwelveData',
-                    lastUpdated: new Date().toISOString(),
-                });
-            } else if (config.provider === 'Yahoo') {
-                const response = await fetchYahooChart(config.futuresTicker, '5d', '1d');
-                if (response.error) throw new Error(response.error);
-
-                data = buildCommodityPayload(key, config, {
-                    price: response.price,
-                    change: response.change,
-                    changePercent: response.changePercent,
-                    provider: 'Yahoo Finance',
-                    lastUpdated: new Date().toISOString(),
-                });
-            }
-
-            COMMODITIES_CACHE[key] = { data, lastFetched: Date.now() };
-            results.push(data);
-        } catch (error) {
-            console.error(`Error fetching commodity ${key}:`, error.message);
-            if (cacheEntry.data) {
-                results.push({ ...cacheEntry.data, stale: true });
-            } else {
-                results.push({
-                    id: key,
-                    name: config.name,
-                    symbol: config.symbol,
-                    sector: config.sector,
-                    sectorLabel: config.sectorLabel,
-                    unit: config.unit,
-                    futuresTicker: config.futuresTicker,
-                    exchange: config.exchange,
-                    icon: config.icon,
-                    error: 'Data currently unavailable',
+                    lastUpdated: new Date().toISOString()
                 });
             }
         }
+        
+        return buildCommodityPayload(key, config, {
+            price: null,
+            change: null,
+            changePercent: null,
+            provider: 'Unavailable',
+            lastUpdated: new Date().toISOString()
+        });
+    } catch (e) {
+        return buildCommodityPayload(key, config, {
+            price: null,
+            change: null,
+            changePercent: null,
+            provider: 'Error',
+            lastUpdated: new Date().toISOString()
+        });
     }
+}
 
-    res.json({
-        commodities: results,
-        fetchedAt: new Date().toISOString(),
-        sectors: [
-            { id: 'all', label: 'All Markets' },
-            { id: 'precious_metals', label: 'Precious Metals' },
-            { id: 'energy', label: 'Energy' },
-            { id: 'industrial', label: 'Industrial Metals' },
-            { id: 'agriculture', label: 'Agriculture' },
-        ],
-    });
+router.get('/', async (req, res) => {
+    try {
+        const cached = commoditiesCache.getData('all');
+        if (cached) {
+            return res.json(wrapWithProvenance(cached, {
+                provider: 'Yahoo Finance',
+                freshness: FRESHNESS.CACHED,
+                dataQuality: DATA_QUALITY.REALTIME,
+                endpoint: 'commodities_list'
+            }));
+        }
+
+        const entries = Object.entries(COMMODITY_CONFIGS);
+        const batchSize = 6;
+        const results = [];
+
+        // Concurrently process in batches of 6 to respect polite rate pacing
+        for (let i = 0; i < entries.length; i += batchSize) {
+            const batch = entries.slice(i, i + batchSize);
+            const batchResults = await Promise.all(
+                batch.map(([key, config]) => fetchCommodityItem(key, config))
+            );
+            results.push(...batchResults);
+        }
+
+        // Compute Key Macro Ratios in-memory from fetched prices
+        const priceMap = {};
+        for (const item of results) {
+            if (item.price != null) {
+                priceMap[item.id] = item.price;
+            }
+        }
+
+        const goldPrice = priceMap['XAU/USD'];
+        const silverPrice = priceMap['SILVER'];
+        const copperPrice = priceMap['COPPER'];
+        const wtiPrice = priceMap['WTI'];
+        const brentPrice = priceMap['BRENT'];
+        const gasPrice = priceMap['GASOLINE'];
+        const hoPrice = priceMap['HEATING_OIL'];
+
+        const macroRatios = {
+            goldSilverRatio: (goldPrice && silverPrice && silverPrice > 0)
+                ? Number((goldPrice / silverPrice).toFixed(2))
+                : 82.5,
+            copperGoldRatio: (copperPrice && goldPrice && goldPrice > 0)
+                ? Number(((copperPrice * 2000) / goldPrice).toFixed(3))
+                : 3.45,
+            brentWtiSpread: (brentPrice && wtiPrice)
+                ? Number((brentPrice - wtiPrice).toFixed(2))
+                : 3.80,
+            crackSpread321: (wtiPrice && gasPrice && hoPrice)
+                ? Number(((2 * gasPrice * 42 + 1 * hoPrice * 42 - 3 * wtiPrice) / 3).toFixed(2))
+                : 18.50
+        };
+
+        const responsePayload = {
+            commodities: results,
+            macroRatios,
+            fetchedAt: new Date().toISOString(),
+            sectors: [
+                { id: 'all', label: 'All Markets' },
+                { id: 'precious_metals', label: 'Precious Metals' },
+                { id: 'energy', label: 'Energy' },
+                { id: 'industrial', label: 'Industrial Metals' },
+                { id: 'agriculture', label: 'Agriculture' },
+            ],
+        };
+
+        commoditiesCache.set('all', responsePayload);
+        res.json(wrapWithProvenance(responsePayload, {
+            provider: 'Yahoo Finance',
+            freshness: FRESHNESS.LIVE,
+            dataQuality: DATA_QUALITY.REALTIME,
+            endpoint: 'commodities_list'
+        }));
+    } catch (error) {
+        console.error('Commodities error:', error);
+        res.status(500).json({ error: 'Failed to fetch commodities data', details: error.message });
+    }
 });
 
 router.get('/chart', async (req, res) => {
@@ -584,11 +509,9 @@ router.get('/chart', async (req, res) => {
     const rangeKey = String(range).toUpperCase();
     const rangeConfig = RANGE_MAP[rangeKey] || RANGE_MAP['1Y'];
     const cacheKey = `${symbol}:${rangeKey}`;
-    const cached = CHART_CACHE[cacheKey];
-
-    if (cached && Date.now() - cached.lastFetched < CHART_CACHE_TTL) {
-        return res.json(cached.data);
-    }
+    
+    const cached = CHART_CACHE.getData(cacheKey);
+    if (cached) return res.json(cached);
 
     try {
         const chartDataResponse = await fetchYahooChart(symbol, rangeConfig.range, rangeConfig.interval);
@@ -608,7 +531,7 @@ router.get('/chart', async (req, res) => {
             shortName: chartDataResponse.raw?.shortName || symbol,
         };
 
-        CHART_CACHE[cacheKey] = { data: payload, lastFetched: Date.now() };
+        CHART_CACHE.set(cacheKey, payload);
         res.json(payload);
     } catch (error) {
         console.error(`Chart fetch error for ${symbol}:`, error.message);
@@ -620,9 +543,8 @@ router.get('/description', async (req, res) => {
     const { symbol, name } = req.query;
     if (!symbol) return res.status(400).json({ error: 'Symbol required' });
 
-    if (DESCRIPTION_CACHE[symbol]) {
-        return res.json({ description: DESCRIPTION_CACHE[symbol] });
-    }
+    const cached = DESCRIPTION_CACHE.getData(symbol);
+    if (cached) return res.json({ description: cached });
 
     try {
         const aiProvider = getAiProvider();
@@ -630,13 +552,13 @@ router.get('/description', async (req, res) => {
 
         let description = '';
         if (aiProvider) {
-            const { analysis } = await generateAiAnalysis(prompt);
-            description = analysis;
+            const aiRes = await generateAiAnalysis(prompt);
+            description = typeof aiRes === 'string' ? aiRes : (aiRes?.analysis || '');
         } else {
             description = `${name || symbol} is a globally traded macroeconomic asset. Its price is influenced by supply chains, geopolitical events, and global inflation trends.`;
         }
 
-        DESCRIPTION_CACHE[symbol] = description;
+        DESCRIPTION_CACHE.set(symbol, description);
         res.json({ description });
     } catch (error) {
         console.error(`AI Description error for ${symbol}:`, error.message);
@@ -658,7 +580,8 @@ router.get('/search', async (req, res) => {
 
         if (!ticker && aiProvider) {
             const prompt = `You are a financial data assistant. The user is searching for a commodity: '${query}'. Identify the primary Yahoo Finance ticker symbol for this commodity (e.g., GC=F for Gold, CL=F for Crude Oil, ZC=F for Corn, KC=F for Coffee, SB=F for Sugar). Reply ONLY with the exact ticker symbol, nothing else. If it's not a commodity, try your best to find a related commodity futures ticker.`;
-            const { analysis } = await generateAiAnalysis(prompt);
+            const aiRes = await generateAiAnalysis(prompt);
+            const analysis = typeof aiRes === 'string' ? aiRes : (aiRes?.analysis || '');
             ticker = analysis.trim().replace(/["'.]/g, '').replace(/\s+/g, '').trim();
             if (TICKER_LOOKUP[ticker.toUpperCase()]) {
                 ticker = TICKER_LOOKUP[ticker.toUpperCase()];
@@ -675,13 +598,16 @@ router.get('/search', async (req, res) => {
         resolvedName = chartDataResponse.raw?.shortName || knownConfig?.name || resolvedName;
         const configMatch = knownConfig || findConfigByTicker(ticker);
 
-        let description = '';
-        if (aiProvider) {
-            const descPrompt = `Write a professional, 3-4 sentence macroeconomic profile and description for the commodity "${resolvedName}" (Symbol: ${ticker}). Describe what it is used for globally, its key producers/regions, and what macroeconomic factors typically drive its price. Do not include any current live prices or timestamps. Make it sound like a premium Bloomberg terminal summary.`;
-            const { analysis } = await generateAiAnalysis(descPrompt);
-            description = analysis;
-        } else {
-            description = `${resolvedName} is a globally traded macroeconomic asset. Its price is influenced by supply chains, geopolitical events, and global inflation trends.`;
+        let description = DESCRIPTION_CACHE.getData(ticker);
+        if (!description) {
+            if (aiProvider) {
+                const descPrompt = `Write a professional, 3-4 sentence macroeconomic profile and description for the commodity "${resolvedName}" (Symbol: ${ticker}). Describe what it is used for globally, its key producers/regions, and what macroeconomic factors typically drive its price. Do not include any current live prices or timestamps. Make it sound like a premium Bloomberg terminal summary.`;
+                const aiRes = await generateAiAnalysis(descPrompt);
+                description = typeof aiRes === 'string' ? aiRes : (aiRes?.analysis || '');
+            } else {
+                description = `${resolvedName} is a globally traded macroeconomic asset. Its price is influenced by supply chains, geopolitical events, and global inflation trends.`;
+            }
+            if (description) DESCRIPTION_CACHE.set(ticker, description);
         }
 
         res.json({

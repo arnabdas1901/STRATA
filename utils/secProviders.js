@@ -8,17 +8,26 @@ const SEC_HEADERS = {
     'Accept': 'application/json' 
 };
 
-// Simple rate limiter
+const { MemoryCache } = require('./cache');
+
+// In-memory caches for SEC XBRL facts and company filings
+const factsCache = new MemoryCache('sec-facts', 24 * 60 * 60 * 1000, 50);
+const filingsCache = new MemoryCache('sec-filings', 6 * 60 * 60 * 1000, 100);
+const inFlightFacts = new Map();
+const inFlightFilings = new Map();
+
+// Race-condition-free atomic rate limiter (SEC allows 10 req/sec; 150ms delay)
 let lastRequestTime = 0;
-const rateLimitDelayMs = 150; // SEC allows 10 requests/second, so ~100ms. We use 150ms to be safe.
+const rateLimitDelayMs = 150;
 
 async function enforceRateLimit() {
     const now = Date.now();
-    const timeSinceLast = now - lastRequestTime;
-    if (timeSinceLast < rateLimitDelayMs) {
-        await new Promise(resolve => setTimeout(resolve, rateLimitDelayMs - timeSinceLast));
+    const nextAllowed = Math.max(now, lastRequestTime + rateLimitDelayMs);
+    lastRequestTime = nextAllowed;
+    const waitMs = nextAllowed - now;
+    if (waitMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, waitMs));
     }
-    lastRequestTime = Date.now();
 }
 
 async function fetchWithRetry(url, options = {}, retries = 3) {
@@ -95,50 +104,93 @@ async function lookupCikByTicker(ticker) {
 }
 
 async function fetchCompanyFacts(ticker) {
-    try {
-        const cik = await lookupCikByTicker(ticker);
-        if (!cik) return null;
-        
-        const url = `${SEC_BASE}/api/xbrl/companyfacts/CIK${cik}.json`;
-        return await fetchWithRetry(url, { headers: SEC_HEADERS });
-    } catch (error) {
-        console.error(`Error fetching company facts for ${ticker}:`, error.message);
-        return null;
+    if (!ticker) return null;
+    const tickerUpper = ticker.toUpperCase();
+
+    // Check memory cache
+    const cached = factsCache.getData(tickerUpper);
+    if (cached) return cached;
+
+    // Check in-flight requests deduplication
+    if (inFlightFacts.has(tickerUpper)) {
+        return await inFlightFacts.get(tickerUpper);
     }
+
+    const fetchPromise = (async () => {
+        try {
+            const cik = await lookupCikByTicker(tickerUpper);
+            if (!cik) return null;
+            
+            const url = `${SEC_BASE}/api/xbrl/companyfacts/CIK${cik}.json`;
+            const data = await fetchWithRetry(url, { headers: SEC_HEADERS });
+            if (data) {
+                factsCache.set(tickerUpper, data);
+            }
+            return data;
+        } catch (error) {
+            console.error(`Error fetching company facts for ${tickerUpper}:`, error.message);
+            return null;
+        } finally {
+            inFlightFacts.delete(tickerUpper);
+        }
+    })();
+
+    inFlightFacts.set(tickerUpper, fetchPromise);
+    return await fetchPromise;
 }
 
 async function fetchCompanyFilings(ticker) {
-    try {
-        const cik = await lookupCikByTicker(ticker);
-        if (!cik) return null;
-        
-        const url = `${SEC_BASE}/submissions/CIK${cik}.json`;
-        const data = await fetchWithRetry(url, { headers: SEC_HEADERS });
-        
-        if (!data || !data.filings || !data.filings.recent) return [];
-        
-        const recent = data.filings.recent;
-        const result = [];
-        
-        for (let i = 0; i < recent.accessionNumber.length; i++) {
-            const form = recent.form[i];
-            if (['10-K', '10-Q', '8-K'].includes(form)) {
-                result.push({
-                    accessionNumber: recent.accessionNumber[i],
-                    filingDate: recent.filingDate[i],
-                    reportDate: recent.reportDate[i],
-                    form: form,
-                    primaryDocument: recent.primaryDocument[i],
-                    description: recent.primaryDocDescription[i] || ''
-                });
-            }
-        }
-        
-        return result;
-    } catch (error) {
-        console.error(`Error fetching company filings for ${ticker}:`, error.message);
-        return [];
+    if (!ticker) return [];
+    const tickerUpper = ticker.toUpperCase();
+
+    // Check memory cache
+    const cached = filingsCache.getData(tickerUpper);
+    if (cached) return cached;
+
+    // Check in-flight requests deduplication
+    if (inFlightFilings.has(tickerUpper)) {
+        return await inFlightFilings.get(tickerUpper);
     }
+
+    const fetchPromise = (async () => {
+        try {
+            const cik = await lookupCikByTicker(tickerUpper);
+            if (!cik) return [];
+            
+            const url = `${SEC_BASE}/submissions/CIK${cik}.json`;
+            const data = await fetchWithRetry(url, { headers: SEC_HEADERS });
+            
+            if (!data || !data.filings || !data.filings.recent) return [];
+            
+            const recent = data.filings.recent;
+            const result = [];
+            
+            for (let i = 0; i < recent.accessionNumber.length; i++) {
+                const form = recent.form[i];
+                if (['10-K', '10-Q', '8-K'].includes(form)) {
+                    result.push({
+                        accessionNumber: recent.accessionNumber[i],
+                        filingDate: recent.filingDate[i],
+                        reportDate: recent.reportDate[i],
+                        form: form,
+                        primaryDocument: recent.primaryDocument[i],
+                        description: recent.primaryDocDescription[i] || ''
+                    });
+                }
+            }
+            
+            filingsCache.set(tickerUpper, result);
+            return result;
+        } catch (error) {
+            console.error(`Error fetching company filings for ${tickerUpper}:`, error.message);
+            return [];
+        } finally {
+            inFlightFilings.delete(tickerUpper);
+        }
+    })();
+
+    inFlightFilings.set(tickerUpper, fetchPromise);
+    return await fetchPromise;
 }
 
 function extractFinancialTimeSeries(facts, concept, unit = 'USD') {
@@ -324,6 +376,7 @@ async function fetchCapitalAllocation(ticker) {
             
             result.push({
                 year: fy,
+                fy: fy,
                 operatingCashFlow: ocfVal,
                 capex: capexVal,
                 freeCashFlow: ocfVal - capexVal,
@@ -368,6 +421,7 @@ async function fetchEarningsQualityData(ticker) {
             
             result.push({
                 year: fy,
+                fy: fy,
                 netIncome: getVal(netIncome),
                 operatingCashFlow: getVal(ocf),
                 totalAssets: getVal(totalAssets),

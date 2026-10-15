@@ -2,6 +2,25 @@ const express = require('express');
 const router = express.Router();
 const { fetchYahooChart, fetchTwelveDataQuote } = require('../utils/equityProviders');
 const { getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
+const { MemoryCache } = require('../utils/cache');
+const { wrapWithProvenance, FRESHNESS, DATA_QUALITY } = require('../utils/provenance');
+
+const fredSeriesCache = new MemoryCache('fred-series', 6 * 60 * 60 * 1000, 50);
+
+// Polynomial approximation of cumulative normal distribution (Abramowitz & Stegun 26.2.17)
+function normalCDF(x) {
+    const t = 1 / (1 + 0.2316419 * Math.abs(x));
+    const d = 0.3989422804014327 * Math.exp(-x * x / 2);
+    const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    return x > 0 ? 1 - p : p;
+}
+
+// Estrella & Mishkin (1998) Federal Reserve 12-month recession probit model
+function computeRecessionProb(spread10y3m) {
+    if (spread10y3m == null) return null;
+    const z = -0.5333 - 0.6330 * spread10y3m;
+    return Number((normalCDF(z) * 100).toFixed(1));
+}
 
 // ── Cache Configuration ────────────────────────────────────────────────────────
 const YIELD_CACHE = {
@@ -62,7 +81,7 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── FRED API Helper Functions ──────────────────────────────────────────────────
 const FRED_MATURITIES = {
-    '3M': 'DGS3M',
+    '3M': 'DGS3MO', // Official FRED 3-Month Treasury Constant Maturity series ID
     '2Y': 'DGS2',
     '5Y': 'DGS5',
     '10Y': 'DGS10',
@@ -70,6 +89,9 @@ const FRED_MATURITIES = {
 };
 
 async function fetchFREDSeries(seriesId) {
+    const cached = fredSeriesCache.getData(seriesId);
+    if (cached) return cached;
+
     const apiKey = process.env.FRED_API_KEY;
     if (!apiKey) return { error: 'Missing FRED API key' };
 
@@ -83,7 +105,9 @@ async function fetchFREDSeries(seriesId) {
         }
 
         const validObs = data.observations.filter(o => o.value && o.value !== '.');
-        return { observations: validObs };
+        const result = { observations: validObs };
+        fredSeriesCache.set(seriesId, result);
+        return result;
     } catch (err) {
         return { error: err.message };
     }
@@ -378,11 +402,16 @@ router.get('/', async (req, res) => {
         });
 
         const y10 = yields['10Y']?.yield;
+        const y5 = yields['5Y']?.yield;
         const y2 = yields['2Y']?.yield;
         const y3m = yields['3M']?.yield;
 
         const spread10Y2Y = (y10 != null && y2 != null) ? parseFloat((y10 - y2).toFixed(3)) : null;
         const spread10Y3M = (y10 != null && y3m != null) ? parseFloat((y10 - y3m).toFixed(3)) : null;
+        const butterfly2s5s10s = (y2 != null && y5 != null && y10 != null) ? parseFloat(((2 * y5 - (y2 + y10)) * 100).toFixed(1)) : null;
+
+        const curveRegime = spread10Y2Y == null ? 'Unknown' : (spread10Y2Y < 0 ? 'Inverted' : (spread10Y2Y <= 0.40 ? 'Flat' : 'Normal'));
+        const recessionProbabilityPct = computeRecessionProb(spread10Y3M);
 
         const recessionRisk = (spread10Y2Y != null && spread10Y3M != null)
             ? assessRecessionRisk(spread10Y2Y, spread10Y3M)
@@ -403,16 +432,30 @@ router.get('/', async (req, res) => {
 
         const payload = {
             yields,
-            spreads: { '10Y2Y': spread10Y2Y, '10Y3M': spread10Y3M },
+            spreads: {
+                '10Y2Y': spread10Y2Y,
+                '10Y3M': spread10Y3M,
+                'butterfly2s5s10s': butterfly2s5s10s
+            },
+            curveRegime,
+            recessionProbabilityPct,
+            butterfly2s5s10s,
             recessionRisk,
             fedFundsRate: fedFundsPayload,
             errors: errors.length > 0 ? errors : undefined,
             fetchedAt: new Date().toISOString(),
         };
 
-        YIELD_CACHE.data = payload;
+        const responsePayload = wrapWithProvenance(payload, {
+            provider: 'FRED & Treasury Markets',
+            freshness: FRESHNESS.LIVE,
+            dataQuality: DATA_QUALITY.OFFICIAL,
+            endpoint: 'yields_curve'
+        });
+
+        YIELD_CACHE.data = responsePayload;
         YIELD_CACHE.lastFetched = now;
-        res.json(payload);
+        res.json(responsePayload);
     } catch (error) {
         console.error('Yields route error:', error);
         if (YIELD_CACHE.data) return res.json(YIELD_CACHE.data);

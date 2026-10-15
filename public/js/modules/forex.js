@@ -210,10 +210,105 @@ async function loadLatestForexRates() {
             const eurUsdRate = 1 / eurMetric.rate;
             kpiEurUsd.innerHTML = `${eurUsdRate.toFixed(4)} <i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 0.7em;"></i>`;
         }
+
+        const strength = data.strengthRanking || data.strength;
+        if (strength) {
+            renderRelativeStrength(strength);
+        }
+        const matrix = data.crossMatrix || data.matrix;
+        if (matrix) {
+            renderG8Matrix(matrix);
+        }
     } catch (err) {
         console.warn('Could not load latest forex rates', err);
         showToast('Unable to refresh forex benchmarks. Showing the latest available data.');
     }
+}
+
+function renderRelativeStrength(strength) {
+    const container = document.getElementById('forex-strength-container');
+    if (!container || !Array.isArray(strength)) return;
+
+    const flagMap = {
+        USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', JPY: '🇯🇵',
+        CHF: '🇨🇭', CAD: '🇨🇦', AUD: '🇦🇺', NZD: '🇳🇿'
+    };
+
+    const maxAbs = Math.max(...strength.map(s => Math.abs(s.score || 0)), 1);
+
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px;">
+            ${strength.map((s, idx) => {
+                const isPos = (s.score || 0) >= 0;
+                const sign = isPos ? '+' : '';
+                const color = isPos ? '#10b981' : '#ef4444';
+                const rankBadge = idx === 0 ? '👑 #1' : `#${idx + 1}`;
+                const barWidth = Math.min(Math.abs((s.score || 0) / maxAbs) * 100, 100).toFixed(0);
+                return `
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 12px; text-align: center;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #64748b; margin-bottom: 6px;">
+                            <span>${rankBadge}</span>
+                            <span>${flagMap[s.currency] || ''}</span>
+                        </div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: #f8fafc; font-family: var(--font-mono); margin-bottom: 4px;">
+                            ${s.currency}
+                        </div>
+                        <div style="font-size: 0.85rem; font-weight: 600; color: ${color}; font-family: var(--font-mono); margin-bottom: 8px;">
+                            ${sign}${(s.score || 0).toFixed(2)}%
+                        </div>
+                        <div style="height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;">
+                            <div style="height: 100%; width: ${barWidth}%; background: ${color}; border-radius: 2px; margin: 0 auto;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderG8Matrix(matrix) {
+    const container = document.getElementById('forex-matrix-container');
+    if (!container || !matrix) return;
+
+    const currencies = Object.keys(matrix);
+    if (currencies.length === 0) return;
+
+    let html = `
+        <table class="financial-data-table" style="text-align: center; width: 100%;">
+            <thead>
+                <tr>
+                    <th style="text-align: left; color: #94a3b8;">Base \\ Quote</th>
+                    ${currencies.map(c => `<th>${c}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    currencies.forEach(base => {
+        html += `<tr><td style="text-align: left; font-weight: 700; color: #38bdf8;">${base}</td>`;
+        currencies.forEach(quote => {
+            if (base === quote) {
+                html += `<td style="background: rgba(255,255,255,0.04); color: #64748b; font-family: var(--font-mono);">1.0000</td>`;
+            } else {
+                const rate = matrix[base]?.[quote];
+                const display = rate != null ? Number(rate).toFixed(4) : '—';
+                const pair = `${base}/${quote}`;
+                html += `
+                    <td class="font-mono" style="cursor: pointer; transition: background 0.15s;" 
+                        title="Click to analyze ${pair}" 
+                        onclick="window.location.href='forex-details.html?symbol=${encodeURIComponent(pair)}'"
+                        onmouseover="this.style.background='rgba(59,130,246,0.15)'"
+                        onmouseout="this.style.background='transparent'">
+                        ${display}
+                    </td>
+                `;
+            }
+        });
+        html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
 }
 
 // ── Details Page: Full Pair Analysis ───────────────────────────────────────────

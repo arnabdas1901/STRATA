@@ -40,7 +40,7 @@ async function loadYieldData() {
         loadBreakevens();
         loadYieldHeatmap();
         loadMortgageSpread();
-        populateButterfly(payload.yields);
+        populateButterfly(payload.yields, payload.spreads);
 
     } catch (err) {
         console.error('Yield data fetch error:', err);
@@ -128,10 +128,28 @@ function populateRecessionRisk(risk) {
     const icon = document.getElementById('yields-risk-icon');
     const level = document.getElementById('yields-risk-level');
     const desc = document.getElementById('yields-risk-description');
+    const probEl = document.getElementById('recession-prob-val');
+    const regimeEl = document.getElementById('curve-regime-val');
 
     if (level) {
         level.innerText = risk.level;
         level.style.color = risk.color;
+    }
+    if (probEl) {
+        if (risk.probabilityPct != null) {
+            probEl.innerText = `${risk.probabilityPct}%`;
+            probEl.style.color = risk.probabilityPct > 40 ? '#ef4444' : (risk.probabilityPct > 20 ? '#f59e0b' : '#10b981');
+        } else {
+            probEl.innerText = '—';
+        }
+    }
+    if (regimeEl) {
+        if (risk.curveRegime) {
+            regimeEl.innerText = risk.curveRegime;
+            regimeEl.style.color = risk.curveRegime.includes('Inverted') ? '#ef4444' : (risk.curveRegime.includes('Flat') ? '#f59e0b' : '#38bdf8');
+        } else {
+            regimeEl.innerText = '—';
+        }
     }
     if (icon && risk.icon) {
         icon.className = `fa-solid ${risk.icon}`;
@@ -843,17 +861,19 @@ function renderHeatmapTable(container, heatmap) {
 }
 
 // ── Curve Butterfly Spread ────────────────────────────────────────────────────
-function populateButterfly(yields) {
+function populateButterfly(yields, spreads) {
     const y2 = yields['2Y']?.yield;
     const y5 = yields['5Y']?.yield;
     const y10 = yields['10Y']?.yield;
     const y30 = yields['30Y']?.yield;
 
-    // Butterfly: 2*(5Y) - 2Y - 10Y
+    // Butterfly: 2*(5Y) - 2Y - 10Y (or from server payload)
     const butterflyEl = document.getElementById('butterfly-value');
-    if (butterflyEl && y2 != null && y5 != null && y10 != null) {
-        const bfly = 2 * y5 - y2 - y10;
-        const bps = Math.round(bfly * 100);
+    const bps = spreads?.butterfly2s5s10s != null
+        ? Math.round(spreads.butterfly2s5s10s)
+        : (y2 != null && y5 != null && y10 != null ? Math.round((2 * y5 - y2 - y10) * 100) : null);
+
+    if (butterflyEl && bps != null) {
         butterflyEl.innerText = `${bps > 0 ? '+' : ''}${bps} bps`;
         butterflyEl.style.color = bps >= 0 ? '#10b981' : '#ef4444';
     }
@@ -868,9 +888,7 @@ function populateButterfly(yields) {
 
     // Belly signal
     const bellyEl = document.getElementById('belly-signal');
-    if (bellyEl && y2 != null && y5 != null && y10 != null) {
-        const bfly = 2 * y5 - y2 - y10;
-        const bps = Math.round(bfly * 100);
+    if (bellyEl && bps != null) {
         if (bps > 10) {
             bellyEl.innerText = 'CHEAP';
             bellyEl.style.color = '#10b981';

@@ -109,6 +109,15 @@ function renderCalcInputs(type) {
                     <span id="calc-sip-inflation-val" class="range-display-value">6%</span>
                 </div>
             </div>
+
+            <div class="input-field-group" style="margin-top: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <label for="calc-real-toggle" style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-coins" style="color: #f59e0b;"></i>
+                    <span>Adjust Chart for Inflation (Real Terms)</span>
+                </label>
+                <input type="checkbox" id="calc-real-toggle" style="width: 18px; height: 18px; accent-color: #3b82f6; cursor: pointer;">
+            </div>
+
             <button class="primary-btn fluid-btn" onclick="window.runCalc()">Calculate Returns</button>
             <div class="calc-definition-card">
                 <div class="calc-def-header">
@@ -212,6 +221,49 @@ function renderCalcInputs(type) {
         syncDualInput('calc-fire-pre-rate');
         syncDualInput('calc-fire-post-rate');
         wireInflationSlider('calc-fire-inflation', 'calc-fire-inflation-val');
+    } else if (type === 'dcf') {
+        wrapper.innerHTML = `
+            ${createDualInput('calc-dcf-fcf', 'Base Free Cash Flow (FCF)', 500, 1, 50000, 10, '$', 'M')}
+            ${createDualInput('calc-dcf-growth', '5-Year Growth Rate', 10, -20, 50, 0.5, '', '%')}
+            ${createDualInput('calc-dcf-stepup', 'Annual Growth Step-Down/Up', -1, -10, 10, 0.5, '', '%')}
+            ${createDualInput('calc-dcf-wacc', 'Discount Rate (WACC)', 9.5, 4, 25, 0.25, '', '%')}
+            ${createDualInput('calc-dcf-terminal', 'Terminal Growth Rate', 2.5, 0, 6, 0.25, '', '%')}
+            ${createDualInput('calc-dcf-shares', 'Shares Outstanding', 100, 1, 10000, 5, '', 'M')}
+            ${createDualInput('calc-dcf-debt', 'Net Debt (+Debt / -Cash)', 50, -50000, 100000, 50, '$', 'M')}
+
+            <div class="input-field-group inflation-input-group">
+                <label><i class="fa-solid fa-chart-line"></i> Inflation Rate (Annual %)</label>
+                <div class="range-input-row">
+                    <input type="range" id="calc-dcf-inflation" min="0" max="15" step="0.5" value="3" class="inflation-slider">
+                    <span id="calc-dcf-inflation-val" class="range-display-value">3%</span>
+                </div>
+            </div>
+
+            <div class="input-field-group" style="margin-top: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <label for="calc-real-toggle" style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-coins" style="color: #f59e0b;"></i>
+                    <span>Adjust for Inflation (Real Terms)</span>
+                </label>
+                <input type="checkbox" id="calc-real-toggle" style="width: 18px; height: 18px; accent-color: #3b82f6; cursor: pointer;">
+            </div>
+
+            <button class="primary-btn fluid-btn" onclick="window.runCalc()">Calculate Intrinsic Valuation</button>
+            <div class="calc-definition-card">
+                <div class="calc-def-header">
+                    <i class="fa-solid fa-calculator calc-def-icon dcf-icon" style="color: #06b6d4;"></i>
+                    <span class="calc-def-term">Discounted Cash Flow (DCF) Valuation</span>
+                </div>
+                <p class="calc-def-text">A multi-stage discounted cash flow model projecting 5 years of free cash flows with annual step-adjustment, discounting at WACC, and capitalizing terminal value with Gordon Growth.</p>
+            </div>
+        `;
+        syncDualInput('calc-dcf-fcf');
+        syncDualInput('calc-dcf-growth');
+        syncDualInput('calc-dcf-stepup');
+        syncDualInput('calc-dcf-wacc');
+        syncDualInput('calc-dcf-terminal');
+        syncDualInput('calc-dcf-shares');
+        syncDualInput('calc-dcf-debt');
+        wireInflationSlider('calc-dcf-inflation', 'calc-dcf-inflation-val');
     }
     window.runCalc = calculateCurrent;
     calculateCurrent();
@@ -224,6 +276,132 @@ function calculateCurrent() {
     else if (activeCalcType === 'emi') calculateEMI();
     else if (activeCalcType === 'swp') calculateSWP();
     else if (activeCalcType === 'fire') calculateFIRE();
+    else if (activeCalcType === 'dcf') calculateDCF();
+}
+
+// ─── DCF Calculation ────────────────────────────────────────────────
+
+function calculateDCF() {
+    const fcf0 = parseFloat(document.getElementById('calc-dcf-fcf')?.value) || 0;
+    const baseGrowth = parseFloat(document.getElementById('calc-dcf-growth')?.value) || 0;
+    const stepUp = parseFloat(document.getElementById('calc-dcf-stepup')?.value) || 0;
+    const wacc = parseFloat(document.getElementById('calc-dcf-wacc')?.value) || 0;
+    const terminalRate = parseFloat(document.getElementById('calc-dcf-terminal')?.value) || 0;
+    const shares = parseFloat(document.getElementById('calc-dcf-shares')?.value) || 1;
+    const netDebt = parseFloat(document.getElementById('calc-dcf-debt')?.value) || 0;
+    const inflationRate = parseFloat(document.getElementById('calc-dcf-inflation')?.value) || 0;
+    const isReal = document.getElementById('calc-real-toggle')?.checked || false;
+
+    if (fcf0 <= 0 || wacc <= terminalRate) return;
+
+    const waccDec = wacc / 100;
+    const tgDec = terminalRate / 100;
+
+    let pvCashFlows = 0;
+    let runningFCF = fcf0;
+    const yearLabels = [];
+    const cfNominal = [];
+    const cfPV = [];
+    const tableRows = [];
+
+    for (let t = 1; t <= 5; t++) {
+        const yearGrowth = (baseGrowth + (t - 1) * stepUp) / 100;
+        runningFCF = runningFCF * (1 + yearGrowth);
+        const discountFactor = 1 / Math.pow(1 + waccDec, t);
+        const pv = runningFCF * discountFactor;
+        pvCashFlows += pv;
+
+        const realFCF = runningFCF / Math.pow(1 + inflationRate / 100, t);
+
+        yearLabels.push(`Yr ${t}`);
+        cfNominal.push(Math.round(runningFCF));
+        cfPV.push(Math.round(pv));
+
+        tableRows.push([
+            `Year ${t}`,
+            `$${runningFCF.toFixed(1)}M (${((yearGrowth) * 100).toFixed(1)}%)`,
+            discountFactor.toFixed(4),
+            `$${pv.toFixed(1)}M`,
+            `$${realFCF.toFixed(1)}M`
+        ]);
+    }
+
+    renderDataTable(['Period', 'Projected FCF', 'Discount Factor', 'PV of FCF', 'Real FCF (Inf-Adj)'], tableRows);
+
+    // Terminal Value
+    const tvNominal = (runningFCF * (1 + tgDec)) / (waccDec - tgDec);
+    const pvTerminal = tvNominal / Math.pow(1 + waccDec, 5);
+
+    const enterpriseValue = pvCashFlows + pvTerminal;
+    const equityValue = enterpriseValue - netDebt;
+    const fairValuePerShare = shares > 0 ? (equityValue / shares) : 0;
+    const realFairValue = fairValuePerShare / Math.pow(1 + inflationRate / 100, 5);
+
+    const displayCF = isReal
+        ? cfNominal.map((v, i) => Math.round(v / Math.pow(1 + inflationRate / 100, i + 1)))
+        : cfNominal;
+
+    renderCalcResults(
+        ['PV of 5Y Cash Flows', 'PV of Terminal Value'],
+        [Math.round(pvCashFlows), Math.round(pvTerminal)],
+        ['#3b82f6', '#06b6d4'],
+        `
+        <div class="metric-card">
+            <span class="metric-title">Enterprise Value (EV)</span>
+            <span class="metric-value" style="color: #3b82f6;">$${enterpriseValue.toFixed(1)}M</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-title">Equity Value</span>
+            <span class="metric-value" style="color: #10b981;">$${equityValue.toFixed(1)}M</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-title">Intrinsic Value / Share <span class="metric-badge badge-nominal">Nominal</span></span>
+            <span class="metric-value font-mono" style="color: #10b981; font-size: 1.5rem;">$${fairValuePerShare.toFixed(2)}</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-title">Real Intrinsic Value <span class="metric-badge badge-real">Real</span></span>
+            <span class="metric-value font-mono" style="color: #f59e0b; font-size: 1.5rem;">$${realFairValue.toFixed(2)}</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-title">PV of 5-Yr FCF</span>
+            <span class="metric-value">$${pvCashFlows.toFixed(1)}M (${((pvCashFlows / enterpriseValue) * 100).toFixed(1)}%)</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-title">PV of Terminal Value</span>
+            <span class="metric-value">$${pvTerminal.toFixed(1)}M (${((pvTerminal / enterpriseValue) * 100).toFixed(1)}%)</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-title">Terminal Exit Multiple</span>
+            <span class="metric-value">${(tvNominal / runningFCF).toFixed(1)}x FCF</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-title">WACC Spread over TG</span>
+            <span class="metric-value">${(wacc - terminalRate).toFixed(2)}%</span>
+        </div>
+        `,
+        {
+            type: 'bar',
+            labels: yearLabels,
+            datasets: [
+                {
+                    label: isReal ? 'Real FCF ($M)' : 'Projected FCF ($M)',
+                    data: displayCF,
+                    backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1,
+                    borderRadius: 3
+                },
+                {
+                    label: 'Present Value ($M)',
+                    data: cfPV,
+                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    borderRadius: 3
+                }
+            ]
+        }
+    );
 }
 
 // ─── SIP Calculation: Step-Up + Inflation-Adjusted ──────────────────
@@ -334,18 +512,22 @@ function calculateSIP() {
             labels: yearLabels,
             datasets: [
                 {
-                    label: 'Total Invested',
-                    data: yearInvestedCumulative,
+                    label: (document.getElementById('calc-real-toggle')?.checked) ? 'Real Invested (Inf-Adj)' : 'Total Invested',
+                    data: (document.getElementById('calc-real-toggle')?.checked)
+                        ? yearInvestedCumulative.map((inv, i) => Math.round(inv / Math.pow(1 + inflationRate / 100, i + 1)))
+                        : yearInvestedCumulative,
                     backgroundColor: 'rgba(59, 130, 246, 0.75)',
                     borderColor: '#3b82f6',
                     borderWidth: 1,
                     borderRadius: 3
                 },
                 {
-                    label: 'Wealth Gains',
-                    data: yearGainsCumulative,
-                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
-                    borderColor: '#10b981',
+                    label: (document.getElementById('calc-real-toggle')?.checked) ? 'Real Wealth Gains (Inf-Adj)' : 'Wealth Gains',
+                    data: (document.getElementById('calc-real-toggle')?.checked)
+                        ? yearGainsCumulative.map((gain, i) => Math.round(gain / Math.pow(1 + inflationRate / 100, i + 1)))
+                        : yearGainsCumulative,
+                    backgroundColor: (document.getElementById('calc-real-toggle')?.checked) ? 'rgba(245, 158, 11, 0.75)' : 'rgba(16, 185, 129, 0.75)',
+                    borderColor: (document.getElementById('calc-real-toggle')?.checked) ? '#f59e0b' : '#10b981',
                     borderWidth: 1,
                     borderRadius: 3
                 }

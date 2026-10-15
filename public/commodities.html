@@ -128,6 +128,8 @@
                 </div>
 
                 <div id="commodity-landing-view">
+                    <div class="macro-ratio-strip" id="commodity-macro-ratios" style="display:none; margin-bottom: 20px;"></div>
+
                     <div class="commodities-sector-strip" id="commodities-sector-filter" role="tablist" aria-label="Filter by sector">
                         <button class="commodities-sector-btn active" data-sector="all" role="tab" aria-selected="true">All Markets</button>
                         <button class="commodities-sector-btn" data-sector="precious_metals" role="tab" aria-selected="false">Precious Metals</button>
@@ -155,13 +157,14 @@
                                         <th scope="col" class="num-col">Last</th>
                                         <th scope="col" class="num-col">Chg</th>
                                         <th scope="col" class="num-col">Chg %</th>
+                                        <th scope="col" class="num-col" style="text-align: center;">5D Trend</th>
                                         <th scope="col">Unit</th>
                                         <th scope="col">Updated</th>
                                     </tr>
                                 </thead>
                                 <tbody id="commodity-table-body">
                                     <tr class="commodities-loading-row">
-                                        <td colspan="8">
+                                        <td colspan="9">
                                             <div class="commodities-skeleton-row"></div>
                                             <div class="commodities-skeleton-row"></div>
                                             <div class="commodities-skeleton-row"></div>

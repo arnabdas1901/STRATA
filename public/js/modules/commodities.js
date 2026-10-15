@@ -140,17 +140,75 @@ async function loadCommodityDashboard() {
 
         if (payload?.commodities && Array.isArray(payload.commodities)) {
             commoditiesData = payload.commodities;
+            renderMacroRatios(payload.macroRatios);
             renderCommodityTable(commoditiesData);
             updateFeedStatus(payload);
         } else {
-            tableBody.innerHTML = '<tr><td colspan="8" class="commodities-empty-cell">Unable to load market data.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" class="commodities-empty-cell">Unable to load market data.</td></tr>';
             feedStatus && (feedStatus.textContent = 'Feed unavailable');
         }
     } catch (error) {
         console.error('Failed to load commodities:', error);
-        tableBody.innerHTML = '<tr><td colspan="8" class="commodities-empty-cell">Connection error. Retry shortly.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" class="commodities-empty-cell">Connection error. Retry shortly.</td></tr>';
         feedStatus && (feedStatus.textContent = 'Feed disconnected');
     }
+}
+
+function renderMacroRatios(ratios) {
+    const container = document.getElementById('commodity-macro-ratios');
+    if (!container || !ratios) return;
+
+    const cards = [
+        {
+            title: 'Gold / Silver Ratio',
+            value: ratios.goldSilverRatio != null ? ratios.goldSilverRatio.toFixed(1) : '—',
+            subtitle: ratios.goldSilverRatio > 80 ? 'Defensive Macro / High Gold Premium' : 'Risk-On / Industrial Demand'
+        },
+        {
+            title: 'Copper / Gold Ratio',
+            value: ratios.copperGoldRatio != null ? (ratios.copperGoldRatio * 1000).toFixed(2) + 'm' : '—',
+            subtitle: 'Global Manufacturing & Growth Barometer'
+        },
+        {
+            title: 'Brent / WTI Spread',
+            value: ratios.brentWtiSpread != null ? `$${ratios.brentWtiSpread.toFixed(2)}/bbl` : '—',
+            subtitle: 'Seaborne vs US Domestic Crude Premium'
+        },
+        {
+            title: '3:2:1 Crack Spread',
+            value: ratios.crackSpread321 != null ? `$${ratios.crackSpread321.toFixed(2)}/bbl` : '—',
+            subtitle: 'Refinery Product Processing Margin'
+        }
+    ];
+
+    container.style.display = 'grid';
+    container.innerHTML = cards.map(c => `
+        <div class="macro-ratio-card">
+            <div class="ratio-header">
+                <span class="ratio-title">${c.title}</span>
+            </div>
+            <div class="ratio-value">${c.value}</div>
+            <div class="ratio-subtitle">${c.subtitle}</div>
+        </div>
+    `).join('');
+}
+
+function renderMiniSparkline(sparklineData, isPositive) {
+    if (!Array.isArray(sparklineData) || sparklineData.length < 2) return '<span style="color:#64748b;">—</span>';
+    const min = Math.min(...sparklineData);
+    const max = Math.max(...sparklineData);
+    const range = (max - min) || 1;
+    const width = 64;
+    const height = 20;
+    const points = sparklineData.map((val, idx) => {
+        const x = (idx / (sparklineData.length - 1)) * width;
+        const y = height - ((val - min) / range) * (height - 4) - 2;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const strokeColor = isPositive ? '#10b981' : '#ef4444';
+    return `<svg width="${width}" height="${height}" style="vertical-align: middle; overflow: visible;">
+        <polyline fill="none" stroke="${strokeColor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" points="${points}" />
+    </svg>`;
 }
 
 function updateFeedStatus(payload) {
@@ -208,7 +266,7 @@ function renderCommodityTable(items) {
 
     const filtered = filterBySector(items);
     if (filtered.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="8" class="commodities-empty-cell">No instruments in this sector.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" class="commodities-empty-cell">No instruments in this sector.</td></tr>';
         return;
     }
 
@@ -227,7 +285,7 @@ function renderCommodityTable(items) {
                     </td>
                     <td><span class="commodities-sector-tag">${item.sectorLabel || '—'}</span></td>
                     <td>${item.exchange || '—'}</td>
-                    <td class="num-col" colspan="4"><span class="commodities-unavailable">Unavailable</span></td>
+                    <td class="num-col" colspan="5"><span class="commodities-unavailable">Unavailable</span></td>
                     <td>—</td>
                 </tr>
             `;
@@ -253,6 +311,7 @@ function renderCommodityTable(items) {
                 <td class="num-col commodities-mono">${formatCommodityPrice(item.price, item.unit)}</td>
                 <td class="num-col commodities-mono ${changeClass}">${formatChange(item.change)}</td>
                 <td class="num-col commodities-mono ${changeClass}">${formatChangePercent(item.changePercent)}</td>
+                <td class="num-col" style="text-align: center;">${renderMiniSparkline(item.sparkline5d, changeVal >= 0)}</td>
                 <td class="commodities-unit-cell">${item.unit || 'USD'}</td>
                 <td class="commodities-time-cell">${formatTimestamp(item.lastUpdated)}</td>
             </tr>

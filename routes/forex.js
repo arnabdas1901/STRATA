@@ -3,13 +3,13 @@ const router = express.Router();
 const { fetchAlphaVantageForexDaily } = require('../utils/equityProviders');
 const { getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
 const { normalizeForexPair } = require('../utils/api');
+const { MemoryCache } = require('../utils/cache');
+const { wrapWithProvenance, DATA_QUALITY, FRESHNESS } = require('../utils/provenance');
 
 // ── Caches ─────────────────────────────────────────────────────────────────────
-const LATEST_RATES_CACHE = { data: null, lastFetched: 0, ttlMs: 5 * 60 * 1000 };
-const SEARCH_CACHE = {};
-const SEARCH_CACHE_TTL = 10 * 60 * 1000;
-const FOREX_ANALYSIS_CACHE = {};
-const FOREX_ANALYSIS_TTL = 30 * 60 * 1000; // 30 minutes
+const latestRatesCache = new MemoryCache('forex-latest', 5 * 60 * 1000, 10);
+const searchCache = new MemoryCache('forex-search', 10 * 60 * 1000, 100);
+const analysisCache = new MemoryCache('forex-analysis', 30 * 60 * 1000, 100);
 
 const RATE_LIMIT_WINDOW = 60 * 1000;
 const RATE_LIMIT_MAX = 10;
@@ -27,14 +27,38 @@ function checkForexRateLimit(ip) {
     return true;
 }
 
-setInterval(() => {
-    const now = Date.now();
-    for (const [ip, record] of forexRateLimitStore) {
-        if (now - record.windowStart > RATE_LIMIT_WINDOW * 2) {
-            forexRateLimitStore.delete(ip);
+const G8_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'];
+
+function computeG8CrossMatrix(usdRates) {
+    const allRates = { USD: 1.0, ...usdRates };
+    const matrix = {};
+    for (const base of G8_CURRENCIES) {
+        matrix[base] = {};
+        for (const quote of G8_CURRENCIES) {
+            if (base === quote) {
+                matrix[base][quote] = 1.0;
+            } else {
+                const crossRate = (allRates[quote] && allRates[base]) ? (allRates[quote] / allRates[base]) : null;
+                matrix[base][quote] = crossRate != null ? Number(crossRate.toFixed(4)) : null;
+            }
         }
     }
-}, RATE_LIMIT_WINDOW).unref();
+    return matrix;
+}
+
+function computeG8StrengthRanking(dailyChanges) {
+    const scores = [];
+    for (const c of G8_CURRENCIES) {
+        if (c === 'USD') continue;
+        const change = dailyChanges[c]?.changePercent || 0;
+        // In Frankfurter, rate is USD -> C. If rate increased, C weakened against USD (-change).
+        scores.push({ currency: c, score: Number((-change).toFixed(2)) });
+    }
+    const avgUsdGain = scores.reduce((sum, s) => sum - s.score, 0) / (scores.length || 1);
+    scores.push({ currency: 'USD', score: Number(avgUsdGain.toFixed(2)) });
+    scores.sort((a, b) => b.score - a.score);
+    return scores;
+}
 
 function parseForexPair(pair) {
     const normalized = normalizeForexPair(pair);
@@ -44,9 +68,14 @@ function parseForexPair(pair) {
 }
 
 router.get('/latest', async (req, res) => {
-    const now = Date.now();
-    if (LATEST_RATES_CACHE.data && now - LATEST_RATES_CACHE.lastFetched < LATEST_RATES_CACHE.ttlMs) {
-        return res.json(LATEST_RATES_CACHE.data);
+    const cached = latestRatesCache.getData('latest');
+    if (cached) {
+        return res.json(wrapWithProvenance(cached, {
+            provider: 'Frankfurter (ECB)',
+            freshness: FRESHNESS.CACHED,
+            dataQuality: DATA_QUALITY.OFFICIAL,
+            endpoint: 'forex_latest'
+        }));
     }
 
     try {
@@ -86,11 +115,14 @@ router.get('/latest', async (req, res) => {
                 };
             }
             
-            // Map the full history for this currency for sparkline rendering
             sparklineData[curr] = dates
                 .map(d => Number(data.rates[d]?.[curr]))
                 .filter(v => Number.isFinite(v));
         }
+
+        // Derive G8 Cross Matrix and Relative Currency Strength
+        const crossMatrix = computeG8CrossMatrix(rates);
+        const strengthRanking = computeG8StrengthRanking(dailyChanges);
 
         const payload = {
             base: 'USD',
@@ -99,17 +131,21 @@ router.get('/latest', async (req, res) => {
             rates,
             changes: dailyChanges,
             sparklines: sparklineData,
+            crossMatrix,
+            strengthRanking,
+            g8Currencies: G8_CURRENCIES,
             lastRefreshed: new Date().toISOString()
         };
 
-        LATEST_RATES_CACHE.data = payload;
-        LATEST_RATES_CACHE.lastFetched = now;
-        return res.json(payload);
+        latestRatesCache.set('latest', payload);
+        return res.json(wrapWithProvenance(payload, {
+            provider: 'Frankfurter (ECB)',
+            freshness: FRESHNESS.LIVE,
+            dataQuality: DATA_QUALITY.OFFICIAL,
+            endpoint: 'forex_latest'
+        }));
     } catch (error) {
         console.error('Forex Latest Error:', error);
-        if (LATEST_RATES_CACHE.data) {
-            return res.json(LATEST_RATES_CACHE.data);
-        }
         return res.status(500).json({ error: 'Failed to fetch latest exchange rates' });
     }
 });
@@ -124,10 +160,15 @@ router.get('/search', async (req, res) => {
 
     const { fromSymbol, toSymbol, pair: normalizedPair } = parsed;
     const cacheKey = `${fromSymbol}_${toSymbol}_${days}`;
-    const now = Date.now();
-    const cached = SEARCH_CACHE[cacheKey];
-    if (cached && now - cached.lastFetched < SEARCH_CACHE_TTL) {
-        return res.json(cached.data);
+    
+    const cached = searchCache.getData(cacheKey);
+    if (cached) {
+        return res.json(wrapWithProvenance(cached, {
+            provider: 'Frankfurter (ECB)',
+            freshness: FRESHNESS.CACHED,
+            dataQuality: DATA_QUALITY.OFFICIAL,
+            endpoint: 'forex_search'
+        }));
     }
 
     let payload = null;
@@ -177,7 +218,7 @@ router.get('/search', async (req, res) => {
     } catch (fbError) {
         console.warn(`Frankfurter failed for ${fromSymbol}/${toSymbol}: ${fbError.message}. Trying Polygon.io.`);
 
-        // 1. Fallback: Polygon.io (highly stable, covers all currencies)
+        // 1. Fallback: Polygon.io
         if (process.env.POLYGON_API_KEY && !payload) {
             try {
                 const endDateStr = new Date().toISOString().split('T')[0];
@@ -218,7 +259,7 @@ router.get('/search', async (req, res) => {
             }
         }
 
-        // 2. Fallback: Alpha Vantage (secondary fallback, rate limited)
+        // 2. Fallback: Alpha Vantage
         if (!payload) {
             try {
                 const avData = await fetchAlphaVantageForexDaily(fromSymbol, toSymbol);
@@ -244,8 +285,13 @@ router.get('/search', async (req, res) => {
         }
     }
 
-    SEARCH_CACHE[cacheKey] = { data: payload, lastFetched: now };
-    return res.json(payload);
+    searchCache.set(cacheKey, payload);
+    return res.json(wrapWithProvenance(payload, {
+        provider: payload.provider || 'Frankfurter',
+        freshness: FRESHNESS.LIVE,
+        dataQuality: DATA_QUALITY.OFFICIAL,
+        endpoint: 'forex_search'
+    }));
 });
 
 // On-demand AI macro analysis endpoint (with caching)
@@ -267,21 +313,18 @@ router.post('/analyze', async (req, res) => {
         }
 
         const cacheKey = `${fromSymbol}_${toSymbol}`;
-        const now = Date.now();
-        const cached = FOREX_ANALYSIS_CACHE[cacheKey];
-        if (cached && now - cached.timestamp < FOREX_ANALYSIS_TTL) {
-            return res.json({ analysis: cached.analysis, cached: true });
+        const cached = analysisCache.getData(cacheKey);
+        if (cached) {
+            return res.json({ analysis: cached, cached: true });
         }
 
         const prompt = `You are a Chief FX Strategist. Write a professional, concise (3-4 sentences) macroeconomic analysis for the currency pair ${fromSymbol}/${toSymbol}. The current exchange rate is ${Number(price).toFixed(4)}.
 Assess the general monetary policy divergence or economic drivers impacting this pair. Do not include conversational filler or disclaimers. Make it sound like a premium Bloomberg terminal insight.`;
 
         const aiResponse = await generateAiAnalysis(prompt);
-        FOREX_ANALYSIS_CACHE[cacheKey] = {
-            analysis: aiResponse.analysis,
-            timestamp: now
-        };
-        return res.json({ analysis: aiResponse.analysis });
+        const analysis = typeof aiResponse === 'string' ? aiResponse : (aiResponse.analysis || '');
+        analysisCache.set(cacheKey, analysis);
+        return res.json({ analysis });
     } catch (aiError) {
         console.error('Forex AI Analysis Error:', aiError);
         return res.status(500).json({ error: 'Failed to generate AI macro profile.' });

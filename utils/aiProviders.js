@@ -151,12 +151,30 @@ const getAiProvider = () => {
     return null;
 };
 
+const getAiProviderInfo = () => {
+    if (process.env.GROQ_API_KEY) {
+        return {
+            provider: 'groq',
+            model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+        };
+    }
+    if (process.env.GEMINI_API_KEY) {
+        let model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+        if (model === 'gemini-3.8-flash') model = 'gemini-2.5-flash';
+        return {
+            provider: 'gemini',
+            model
+        };
+    }
+    return { provider: null, model: null };
+};
+
 async function retryWithBackoff(fn, maxRetries = 2) {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
             return await fn();
         } catch (err) {
-            const isTransient = [429, 500, 502, 503].includes(err.statusCode);
+            const isTransient = [429, 500, 502, 503, 504].includes(err.statusCode);
             if (!isTransient || attempt === maxRetries) throw err;
             const delayMs = 1000 * Math.pow(2, attempt);
             console.warn(`AI retry ${attempt + 1}/${maxRetries} after ${delayMs}ms: ${err.message}`);
@@ -165,8 +183,11 @@ async function retryWithBackoff(fn, maxRetries = 2) {
     }
 }
 
-async function generateWithGroq(prompt) {
-    const model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+async function generateWithGroq(prompt, options = {}) {
+    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    const maxTokens = options.maxTokens || 1024;
+    const temperature = options.temperature ?? 0.6;
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -179,8 +200,8 @@ async function generateWithGroq(prompt) {
                 { role: 'system', content: prompt },
                 { role: 'user', content: 'Execute the analysis as instructed above.' }
             ],
-            temperature: 0.6,
-            max_tokens: 1024,
+            temperature,
+            max_tokens: maxTokens,
         }),
     });
 
@@ -189,7 +210,7 @@ async function generateWithGroq(prompt) {
         const message = data?.error?.message || 'Groq API request failed';
         console.error('Groq API Error:', data);
         const err = new Error(message);
-        err.statusCode = 502;
+        err.statusCode = response.status || 502;
         throw err;
     }
 
@@ -202,8 +223,13 @@ async function generateWithGroq(prompt) {
     return text.trim();
 }
 
-async function generateWithGemini(prompt) {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+async function generateWithGemini(prompt, options = {}) {
+    let model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    if (model === 'gemini-3.8-flash') model = 'gemini-2.5-flash';
+
+    const maxTokens = options.maxTokens || 1024;
+    const temperature = options.temperature ?? 0.6;
+
     const geminiUrl =
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
@@ -213,8 +239,8 @@ async function generateWithGemini(prompt) {
         body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
-                temperature: 0.6,
-                maxOutputTokens: 1024,
+                temperature,
+                maxOutputTokens: maxTokens,
             },
         }),
     });
@@ -228,7 +254,7 @@ async function generateWithGemini(prompt) {
         }
         console.error('Gemini API Error:', data);
         const err = new Error(message);
-        err.statusCode = 502;
+        err.statusCode = response.status || 502;
         throw err;
     }
 
@@ -246,7 +272,7 @@ async function generateWithGemini(prompt) {
     return text.trim();
 }
 
-async function generateAiAnalysis(prompt) {
+async function generateAiAnalysis(prompt, options = {}) {
     const hasGroq = !!process.env.GROQ_API_KEY;
     const hasGemini = !!process.env.GEMINI_API_KEY;
 
@@ -261,7 +287,7 @@ async function generateAiAnalysis(prompt) {
     // Try Groq first
     if (hasGroq) {
         try {
-            const analysis = await retryWithBackoff(() => generateWithGroq(prompt));
+            const analysis = await retryWithBackoff(() => generateWithGroq(prompt, options));
             return { analysis, provider: 'groq' };
         } catch (groqErr) {
             console.warn('Groq AI failed, attempting Gemini fallback:', groqErr.message);
@@ -273,7 +299,7 @@ async function generateAiAnalysis(prompt) {
     // Try Gemini (primary or fallback)
     if (hasGemini) {
         try {
-            const analysis = await retryWithBackoff(() => generateWithGemini(prompt));
+            const analysis = await retryWithBackoff(() => generateWithGemini(prompt, options));
             return { analysis, provider: 'gemini' };
         } catch (geminiErr) {
             console.error('Gemini AI also failed:', geminiErr.message);
@@ -376,24 +402,46 @@ function buildEvidencePack(ticker, data) {
     }
     
     // Capital Allocation
-    if (data.capitalAllocation && data.capitalAllocation.allocation) {
+    if (data.capitalAllocation) {
         pack += `### CAPITAL ALLOCATION — Source: SEC EDGAR\n`;
-        const alloc = data.capitalAllocation.allocation;
-        if (alloc.capex) pack += `CapEx: ${JSON.stringify(alloc.capex.slice(-2))}\n`;
-        if (alloc.buybacks) pack += `Buybacks: ${JSON.stringify(alloc.buybacks.slice(-2))}\n`;
-        if (alloc.dividends) pack += `Dividends: ${JSON.stringify(alloc.dividends.slice(-2))}\n`;
+        if (Array.isArray(data.capitalAllocation)) {
+            for (const item of data.capitalAllocation.slice(-3)) {
+                pack += `FY${item.year || item.fy}: OCF=$${((item.operatingCashFlow || 0) / 1e9).toFixed(1)}B, CapEx=$${((item.capex || 0) / 1e9).toFixed(1)}B, FCF=$${((item.freeCashFlow || 0) / 1e9).toFixed(1)}B, Buybacks=$${((item.buybacks || 0) / 1e9).toFixed(1)}B, Dividends=$${((item.dividends || 0) / 1e9).toFixed(1)}B\n`;
+            }
+        } else if (data.capitalAllocation.allocation) {
+            const alloc = data.capitalAllocation.allocation;
+            if (alloc.capex) pack += `CapEx: ${JSON.stringify(alloc.capex.slice(-2))}\n`;
+            if (alloc.buybacks) pack += `Buybacks: ${JSON.stringify(alloc.buybacks.slice(-2))}\n`;
+            if (alloc.dividends) pack += `Dividends: ${JSON.stringify(alloc.dividends.slice(-2))}\n`;
+        }
         pack += `\n`;
     }
     
     // Earnings Quality
-    if (data.earningsQuality && data.earningsQuality.quality) {
+    if (data.earningsQuality) {
         pack += `### EARNINGS QUALITY — Source: SEC EDGAR\n`;
-        const eq = data.earningsQuality.quality;
-        if (eq.cashConversion) pack += `Cash Conversion: ${eq.cashConversion}\n`;
-        if (eq.accruals) pack += `Accruals Ratio: ${eq.accruals}\n`;
+        if (Array.isArray(data.earningsQuality)) {
+            for (const item of data.earningsQuality.slice(-3)) {
+                const cfo = item.operatingCashFlow || 0;
+                const ni = item.netIncome || 0;
+                const conv = ni !== 0 ? (cfo / ni).toFixed(2) : 'N/A';
+                pack += `FY${item.year || item.fy}: Net Income=$${(ni / 1e9).toFixed(1)}B, OCF=$${(cfo / 1e9).toFixed(1)}B (Cash Conv: ${conv}x), SBC=$${((item.stockBasedCompensation || 0) / 1e6).toFixed(0)}M\n`;
+            }
+        } else if (data.earningsQuality.quality) {
+            const eq = data.earningsQuality.quality;
+            if (eq.cashConversion) pack += `Cash Conversion: ${eq.cashConversion}\n`;
+            if (eq.accruals) pack += `Accruals Ratio: ${eq.accruals}\n`;
+        }
         pack += `\n`;
     }
     
+    // Analyst Recommendations
+    if (data.recommendations && data.recommendations.length > 0) {
+        pack += `### ANALYST RECOMMENDATIONS — Source: Finnhub\n`;
+        const rec = data.recommendations[0];
+        pack += `Strong Buy: ${rec.strongBuy || 0}, Buy: ${rec.buy || 0}, Hold: ${rec.hold || 0}, Sell: ${rec.sell || 0}, Strong Sell: ${rec.strongSell || 0} (Period: ${rec.period || 'Latest'})\n\n`;
+    }
+
     // Peer context
     if (data.peers && data.peers.length > 0) {
         pack += `### PEER COMPARISON\n`;
@@ -419,6 +467,7 @@ module.exports = {
     AI_FRAME_INSTRUCTIONS,
     buildAiPrompt,
     getAiProvider,
+    getAiProviderInfo,
     generateAiAnalysis,
     pickMetricsForAi,
     buildEvidencePack

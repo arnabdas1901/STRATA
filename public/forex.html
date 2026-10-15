@@ -292,8 +292,28 @@
                             <div class="bracket-name">South African Rand</div>
                             <div class="bracket-symbol font-mono">USD/ZAR</div>
                             <div class="bracket-price font-mono">--</div>
-                            <div class="bracket-change font-mono">--</div>
-                            <div class="bracket-sparkline" data-curr="ZAR"></div>
+                        </div>
+                </div>
+
+                <!-- Institutional Currency Analytics: Relative Strength & G8 Cross Matrix -->
+                <div class="forex-institutional-section" style="margin-top: 32px;">
+                    <!-- Relative Strength Ranking Bar -->
+                    <div class="chart-container-card borderless-card" style="margin-bottom: 24px;">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-ranking-star"></i> G8 Currency Relative Strength (24H Momentum)</h3>
+                        </div>
+                        <div id="forex-strength-container" class="forex-strength-wrapper" style="padding: 16px 20px;">
+                            <div class="pulse-text" style="color: #64748b;">Calculating relative strength…</div>
+                        </div>
+                    </div>
+
+                    <!-- G8 Cross-Rate Matrix -->
+                    <div class="chart-container-card borderless-card">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-table-cells"></i> G8 FX Cross-Rate Matrix</h3>
+                        </div>
+                        <div class="financial-table-wrapper" id="forex-matrix-container" style="overflow-x: auto; padding: 12px 20px 20px;">
+                            <div class="pulse-text" style="color: #64748b;">Generating cross-rates…</div>
                         </div>
                     </div>
                 </div>

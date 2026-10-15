@@ -110,6 +110,15 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'forex-api', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/cache-stats', (req, res) => {
+    const { getAllCacheStats } = require('./utils/cache');
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        caches: getAllCacheStats()
+    });
+});
+
 // Error Handling Middleware
 app.use((error, req, res, next) => {
     if (error?.message === 'CORS origin not allowed') {
@@ -123,16 +132,14 @@ app.use((error, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
-        const { getAiProvider } = require('./utils/aiProviders');
-        const aiProvider = getAiProvider();
+        const { getAiProviderInfo } = require('./utils/aiProviders');
+        const aiInfo = getAiProviderInfo();
         console.log(`==================================================`);
         console.log(`🚀 STRATA Research Terminal Active!`);
         console.log(`🔗 Open the app: http://localhost:${PORT}`);
-        console.log(`📡 API Modules: 17 (equity, crypto, macro, ai, commodities, forex, stress, yields, health, sec, analytics, correlations, risk, screener, regime, report, etf)`);
-        if (aiProvider === 'groq') {
-            console.log(`🤖 AI Advisor: Groq (${process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'})`);
-        } else if (aiProvider === 'gemini') {
-            console.log(`🤖 AI Advisor: Gemini (${process.env.GEMINI_MODEL || 'gemini-2.5-flash'})`);
+        console.log(`📡 API Modules: 14 (equity, crypto, macro, commodities, forex, ai, stress, yields, sec, analytics, correlations, risk, screener, report)`);
+        if (aiInfo.provider) {
+            console.log(`🤖 AI Advisor: ${aiInfo.provider.toUpperCase()} (${aiInfo.model})`);
         } else {
             console.log(`⚠️  AI Advisor: no API key (add GROQ_API_KEY to .env)`);
         }

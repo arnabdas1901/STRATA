@@ -5,7 +5,9 @@
 
 const FRESHNESS = {
     LIVE: 'live',
+    REALTIME: 'live',
     CACHED: 'cached',
+    DAILY: 'cached',
     STALE: 'stale',
     FALLBACK: 'fallback',
     ESTIMATED: 'estimated',
@@ -14,10 +16,15 @@ const FRESHNESS = {
 
 const DATA_QUALITY = {
     OFFICIAL: 'official',
+    EXACT: 'official',
+    STATIC: 'official',
     PROVIDER: 'provider',
+    REALTIME: 'provider',
+    DELAYED: 'provider',
     PROXY: 'proxy',
     ESTIMATED: 'estimated',
-    SYNTHETIC: 'synthetic'
+    SYNTHETIC: 'synthetic',
+    MOCK: 'synthetic'
 };
 
 const PROVIDER_NAMES = {
@@ -35,7 +42,8 @@ const PROVIDER_NAMES = {
     groq: 'Groq AI',
     gemini: 'Google Gemini',
     computed: 'STRATA Analytics',
-    simulated: 'Simulated Data'
+    simulated: 'Simulated Data',
+    local: 'STRATA Local'
 };
 
 /**
@@ -57,26 +65,41 @@ function computeFreshness(cachedAt, ttlMs) {
 }
 
 /**
- * Wraps data with provenance metadata.
+ * Wraps data with provenance metadata. Resilient to object or positional options.
  * @param {Object} data - The primary data to return
- * @param {Object} opts - Provenance options
+ * @param {Object|string} opts - Provenance options or provider string
  * @returns {Object} Data wrapped with _meta provenance object
  */
-function wrapWithProvenance(data, opts = {}) {
+function wrapWithProvenance(data, opts = {}, ...extraArgs) {
+    let options = {};
+    if (typeof opts === 'string') {
+        options.provider = opts;
+        if (extraArgs[0]) {
+            options.dataQuality = extraArgs[0];
+        }
+        if (extraArgs[1]) {
+            options.sources = extraArgs[1];
+        }
+    } else if (opts && typeof opts === 'object') {
+        options = { ...opts };
+    }
+
     const dataObj = (data && typeof data === 'object' && !Array.isArray(data)) ? data : { data };
     
     return {
         ...dataObj,
         _meta: {
-            provider: opts.provider || undefined,
-            fallbackUsed: opts.fallbackUsed || false,
-            fallbackProvider: opts.fallbackProvider || undefined,
-            fetchedAt: new Date().toISOString(),
-            cachedAt: opts.cachedAt || undefined,
-            ttl: opts.ttl || undefined,
-            freshness: opts.freshness || FRESHNESS.LIVE,
-            dataQuality: opts.dataQuality || DATA_QUALITY.PROVIDER,
-            note: opts.note || undefined
+            provider: options.provider || undefined,
+            endpoint: options.endpoint || undefined,
+            fallbackUsed: options.fallbackUsed || false,
+            fallbackProvider: options.fallbackProvider || undefined,
+            fetchedAt: options.timestamp || options.fetchedAt || new Date().toISOString(),
+            cachedAt: options.cachedAt || undefined,
+            ttl: options.ttl || undefined,
+            latencyMs: options.latencyMs != null ? options.latencyMs : undefined,
+            freshness: options.freshness || FRESHNESS.LIVE,
+            dataQuality: options.dataQuality || options.quality || DATA_QUALITY.PROVIDER,
+            note: options.note || undefined
         }
     };
 }

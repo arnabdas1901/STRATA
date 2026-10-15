@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { MemoryCache } = require('../utils/cache');
-const { wrapWithProvenance, DATA_QUALITY } = require('../utils/provenance');
+const { wrapWithProvenance, DATA_QUALITY, FRESHNESS } = require('../utils/provenance');
 const { fetchYahooChart } = require('../utils/equityProviders');
 
-const cache = new MemoryCache();
+const cache = new MemoryCache('correlations', 6 * 60 * 60 * 1000, 50);
 
 const DEFAULT_ASSETS = ['SPY', 'QQQ', 'GLD', 'USO', 'BTC-USD', 'DX-Y.NYB', 'TLT'];
 const DEFAULT_LABELS = ['S&P 500', 'NASDAQ', 'Gold', 'Oil', 'Bitcoin', 'US Dollar', '20Y Treasury'];
@@ -35,38 +35,75 @@ function computePearson(x, y) {
     return num / Math.sqrt(denX * denY);
 }
 
-router.get('/matrix', async (req, res) => {
+function mean(arr) {
+    if (arr.length === 0) return 0;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function stddev(arr) {
+    if (arr.length === 0) return 0;
+    const avg = mean(arr);
+    const varSum = arr.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0);
+    return Math.sqrt(varSum / arr.length);
+}
+
+async function handleMatrix(req, res) {
     try {
-        let assets = req.query.assets ? req.query.assets.split(',').map(s => s.trim()) : DEFAULT_ASSETS;
-        let labels = req.query.labels ? req.query.labels.split(',').map(s => s.trim()) : DEFAULT_LABELS;
-        const period = parseInt(req.query.period) || 90;
-        const range = RANGE_MAP[period] || '3mo';
-        
-        // If custom assets, we don't have predefined labels for all, just use tickers as labels
-        if (req.query.assets && !req.query.labels) {
-            labels = assets;
+        const params = { ...req.query, ...req.body };
+        let assets = params.assets || params.symbols;
+        if (typeof assets === 'string') {
+            assets = assets.split(',').map(s => s.trim().toUpperCase());
+        } else if (Array.isArray(assets)) {
+            assets = assets.map(s => String(s).trim().toUpperCase());
+        } else {
+            assets = DEFAULT_ASSETS;
         }
+
+        let labels = params.labels;
+        if (typeof labels === 'string') {
+            labels = labels.split(',').map(s => s.trim());
+        } else if (Array.isArray(labels)) {
+            labels = labels.map(s => String(s).trim());
+        } else {
+            labels = (params.assets || params.symbols) ? assets : DEFAULT_LABELS;
+        }
+
+        let period = params.period;
+        if (period === '1mo' || period === '30') period = 30;
+        else if (period === '3mo' || period === '90') period = 90;
+        else if (period === '1y' || period === '365' || period === '1Y') period = 365;
+        else period = parseInt(period) || 90;
+
+        const range = RANGE_MAP[period] || '3mo';
 
         const cacheKey = `${assets.join(',')}_${period}`;
-        const cached = cache.get(cacheKey);
+        const cached = cache.getData(cacheKey);
         if (cached) {
-            return res.json(cached);
+            return res.json(wrapWithProvenance(cached, {
+                provider: 'Yahoo Finance',
+                freshness: FRESHNESS.CACHED,
+                dataQuality: DATA_QUALITY.PROVIDER,
+                endpoint: 'correlations_matrix'
+            }));
         }
+
+        // Parallelize fetching charts across all selected assets
+        const chartResponses = await Promise.all(
+            assets.map(asset => fetchYahooChart(asset, range, '1d').catch(err => ({ error: err.message })))
+        );
 
         const charts = [];
-        for (const asset of assets) {
-            try {
-                const chartData = await fetchYahooChart(asset, range, '1d');
-                if (chartData.error || !chartData.chartData || chartData.chartData.length === 0) {
-                    return res.status(400).json({ error: `No data available for ${asset}` });
-                }
-                charts.push(chartData.chartData); // [{time (unix), close}]
-            } catch (err) {
-                return res.status(400).json({ error: `Failed to fetch data for ${asset}: ${err.message}` });
+        const rawChartMetas = [];
+        for (let idx = 0; idx < assets.length; idx++) {
+            const chartData = chartResponses[idx];
+            if (chartData.error || !chartData.chartData || chartData.chartData.length === 0) {
+                return res.status(400).json({ error: `No market data available for asset ${assets[idx]}` });
             }
+            charts.push(chartData.chartData);
+            rawChartMetas.push(chartData);
         }
 
-        // Convert unix timestamps to date strings and build date-keyed maps
+        // Build date-keyed maps
         const dateMaps = charts.map(cd => {
             const map = {};
             cd.forEach(point => {
@@ -76,24 +113,48 @@ router.get('/matrix', async (req, res) => {
             return map;
         });
 
-        // Find common dates across all assets
+        // Find common intersecting trading dates across all assets
         const allDateSets = dateMaps.map(m => new Set(Object.keys(m)));
         const firstDates = Object.keys(dateMaps[0]);
         let commonDates = firstDates.filter(date => allDateSets.every(set => set.has(date)));
         commonDates.sort();
 
         if (commonDates.length < 5) {
-            return res.status(400).json({ error: 'Not enough overlapping data points across assets' });
+            return res.status(400).json({ error: 'Not enough overlapping date points across chosen assets' });
         }
 
         // Extract aligned prices
         const prices = dateMaps.map(map => commonDates.map(date => map[date]));
 
-        // Compute returns
+        // Compute returns for correlation and per-asset statistics
         const returns = prices.map(p => computeReturns(p));
+        const riskFreeRate = 0.045;
 
-        // Compute correlation matrix
+        const assetStats = assets.map((sym, idx) => {
+            const r = returns[idx];
+            const p = prices[idx];
+            const startPrice = p[0];
+            const endPrice = p[p.length - 1];
+            const periodChangePct = startPrice > 0 ? Number((((endPrice - startPrice) / startPrice) * 100).toFixed(2)) : 0;
+            const annReturn = Number((mean(r) * 252 * 100).toFixed(2));
+            const annVol = Number((stddev(r) * Math.sqrt(252) * 100).toFixed(2));
+            const sharpe = annVol > 0 ? Number(((annReturn / 100 - riskFreeRate) / (annVol / 100)).toFixed(2)) : 0;
+
+            return {
+                symbol: sym,
+                label: labels[idx] || sym,
+                currentPrice: Number(endPrice.toFixed(2)),
+                periodChangePct,
+                annualizedReturnPct: annReturn,
+                annualizedVolPct: annVol,
+                sharpeRatio: sharpe
+            };
+        });
+
+        // Compute Pearson correlation matrix
         const matrix = [];
+        const offDiagonalCorrelations = [];
+
         for (let i = 0; i < assets.length; i++) {
             const row = [];
             for (let j = 0; j < assets.length; j++) {
@@ -102,30 +163,50 @@ router.get('/matrix', async (req, res) => {
                 } else if (j < i) {
                     row.push(matrix[j][i]);
                 } else {
-                    row.push(parseFloat(computePearson(returns[i], returns[j]).toFixed(4)));
+                    const corr = parseFloat(computePearson(returns[i], returns[j]).toFixed(4));
+                    row.push(corr);
+                    offDiagonalCorrelations.push(corr);
                 }
             }
             matrix.push(row);
         }
 
+        // Compute Institutional Diversification Score
+        const avgCorr = offDiagonalCorrelations.length > 0 
+            ? mean(offDiagonalCorrelations) 
+            : 0;
+        const diversificationScore = Math.max(0, Math.min(100, Math.round((1 - avgCorr) * 50 + 50)));
+        const diversificationRating = diversificationScore >= 70 ? 'High Diversification' : (diversificationScore >= 45 ? 'Moderate Diversification' : 'Concentrated / High Co-Movement');
+
         const result = {
             assets,
             labels,
             period,
-            matrix
+            matrix,
+            assetStats,
+            diversification: {
+                score: diversificationScore,
+                rating: diversificationRating,
+                avgCorrelation: Number(avgCorr.toFixed(3))
+            }
         };
 
         const finalResult = wrapWithProvenance(result, {
-            provider: 'yahoo',
-            dataQuality: DATA_QUALITY.PROVIDER
+            provider: 'Yahoo Finance',
+            freshness: FRESHNESS.LIVE,
+            dataQuality: DATA_QUALITY.PROVIDER,
+            endpoint: 'correlations_matrix'
         });
 
-        cache.set(cacheKey, finalResult, 6 * 60 * 60 * 1000); // 6 hours
+        cache.set(cacheKey, result);
         res.json(finalResult);
     } catch (error) {
         console.error('Error in /correlations/matrix:', error);
-        res.status(500).json({ error: 'Failed to generate correlation matrix' });
+        res.status(500).json({ error: 'Failed to generate correlation matrix', details: error.message });
     }
-});
+}
+
+router.get('/matrix', handleMatrix);
+router.post('/matrix', handleMatrix);
 
 module.exports = router;

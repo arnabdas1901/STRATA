@@ -227,17 +227,19 @@ export function setupAiAdvisor() {
 
     renderHistoryStrip();
 
-    // Check for autoRun parameter from US Equity redirect
+    // Check for autoRun or symbol parameter from US Equity or Command Palette redirect
     const urlParams = new URLSearchParams(window.location.search);
     const queryTicker = urlParams.get('symbol') || urlParams.get('ticker');
-    const autoRun = urlParams.get('autoRun') === 'true';
+    const autoRun = urlParams.get('autoRun');
     if (queryTicker && input) {
         input.value = queryTicker.trim().toUpperCase();
-        if (autoRun) {
-            setTimeout(() => {
+        setTimeout(() => {
+            if (autoRun === 'true' || autoRun === 'all') {
                 executeAllFrames();
-            }, 200);
-        }
+            } else {
+                executeAiAnalysis();
+            }
+        }, 200);
     }
 }
 
@@ -368,6 +370,58 @@ function renderDataContext(data) {
                 ${distFrom52H}
             </span>
         `;
+    }
+
+    // Quant Scorecard
+    const scorecardEl = document.getElementById('ai-quant-scorecard-wrapper');
+    if (scorecardEl && data.quantScorecard) {
+        const qs = data.quantScorecard;
+        const ratingColors = {
+            'STRONG BUY': '#10b981',
+            'BUY': '#22c55e',
+            'HOLD': '#eab308',
+            'SELL': '#ef4444'
+        };
+        const ratingColor = ratingColors[qs.rating] || '#3b82f6';
+        
+        const f = qs.factors || {};
+        const factorList = [
+            { name: 'Valuation', score: f.valuation?.score ?? 50, status: f.valuation?.status || 'Neutral' },
+            { name: 'Profitability', score: f.profitability?.score ?? 50, status: f.profitability?.status || 'Neutral' },
+            { name: 'Solvency', score: f.solvency?.score ?? 50, status: f.solvency?.status || 'Neutral' },
+            { name: 'Momentum', score: f.momentum?.score ?? 50, status: f.momentum?.status || 'Neutral' }
+        ];
+
+        scorecardEl.style.display = 'flex';
+        scorecardEl.innerHTML = `
+            <div class="ai-scorecard-composite">
+                <div class="ai-score-ring" style="border-color: ${ratingColor}; color: ${ratingColor};">
+                    ${qs.compositeScore}
+                </div>
+                <div class="ai-scorecard-meta">
+                    <span class="ai-scorecard-title">Institutional Quant Score</span>
+                    <span class="ai-scorecard-rating" style="color: ${ratingColor};">${qs.rating}</span>
+                </div>
+            </div>
+            <div class="ai-scorecard-factors">
+                ${factorList.map(fac => {
+                    const barColor = fac.score >= 70 ? '#10b981' : (fac.score >= 45 ? '#eab308' : '#ef4444');
+                    return `
+                        <div class="ai-factor-card">
+                            <div class="ai-factor-label">
+                                <span>${fac.name}</span>
+                                <span style="font-family: var(--font-mono); color: ${barColor}; font-weight: 600;">${fac.score} (${fac.status})</span>
+                            </div>
+                            <div class="ai-factor-bar-bg">
+                                <div class="ai-factor-bar-fill" style="width: ${fac.score}%; background: ${barColor};"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    } else if (scorecardEl) {
+        scorecardEl.style.display = 'none';
     }
 
     // Metrics grid

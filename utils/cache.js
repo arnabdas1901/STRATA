@@ -2,17 +2,34 @@ const cacheRegistry = [];
 
 /**
  * A standard memory cache that stores multiple key-value pairs with TTL and eviction.
+ * Supports flexible constructor signatures for backwards-compatibility.
  */
 class MemoryCache {
     /**
-     * @param {string} name - Name of the cache (for stats/debugging)
+     * @param {string|number|Object} name - Name of the cache (or ttlMs/options object)
      * @param {number} ttlMs - Time to live in milliseconds
      * @param {number} maxEntries - Maximum number of entries before eviction
      */
     constructor(name, ttlMs, maxEntries = 100) {
-        this.name = name;
-        this.ttlMs = ttlMs;
-        this.maxEntries = maxEntries;
+        if (typeof name === 'number') {
+            this.name = 'cache';
+            this.ttlMs = name < 86400 ? name * 1000 : name;
+            this.maxEntries = typeof ttlMs === 'number' ? ttlMs : maxEntries;
+        } else if (typeof name === 'object' && name !== null) {
+            this.name = name.name || 'cache';
+            this.ttlMs = name.ttlMs || (name.ttlSeconds ? name.ttlSeconds * 1000 : 60 * 60 * 1000);
+            this.maxEntries = name.maxEntries || maxEntries;
+        } else {
+            this.name = typeof name === 'string' && name ? name : 'cache';
+            this.ttlMs = typeof ttlMs === 'number' && ttlMs > 0 ? ttlMs : 60 * 60 * 1000;
+            this.maxEntries = typeof maxEntries === 'number' && maxEntries > 0 ? maxEntries : 100;
+        }
+
+        // Safety fallback: default to 1 hour so entries never become immortal
+        if (!this.ttlMs || this.ttlMs <= 0) {
+            this.ttlMs = 60 * 60 * 1000;
+        }
+
         this.store = new Map();
         
         // Stats
@@ -25,8 +42,9 @@ class MemoryCache {
     
     /**
      * Retrieves an entry from the cache.
+     * If data already has `_meta`, returns data directly to prevent double-wrapping.
      * @param {string} key - Cache key
-     * @returns {Object|null} - The cached object { data, meta } or null if missing/expired
+     * @returns {Object|null} - Cached payload or null
      */
     get(key) {
         const entry = this.store.get(key);
@@ -46,16 +64,50 @@ class MemoryCache {
         }
         
         this.hits++;
+
+        // If the stored data is already an object containing `_meta`,
+        // return data directly to avoid breaking response shapes on cache hits.
+        if (entry.data && typeof entry.data === 'object' && !Array.isArray(entry.data) && entry.data._meta) {
+            return entry.data;
+        }
         
         return {
             data: entry.data,
             meta: {
                 cachedAt: entry.cachedAt,
                 ttl: this.ttlMs,
-                freshness: 'cached', // 'cached' as it hasn't expired
+                freshness: 'cached',
                 provenance: entry.provenance
             }
         };
+    }
+
+    /**
+     * Retrieves the raw unwrapped data directly from the cache without { data, meta } wrapping.
+     * @param {string} key - Cache key
+     * @returns {any|null}
+     */
+    getData(key) {
+        const entry = this.store.get(key);
+        if (!entry) {
+            this.misses++;
+            return null;
+        }
+        const now = Date.now();
+        if (now - entry.cachedAt > this.ttlMs) {
+            this.store.delete(key);
+            this.misses++;
+            return null;
+        }
+        this.hits++;
+        return entry.data;
+    }
+
+    /**
+     * Alias for getData.
+     */
+    getRaw(key) {
+        return this.getData(key);
     }
     
     /**
@@ -70,7 +122,6 @@ class MemoryCache {
             // Trim oldest 20%
             const trimCount = Math.ceil(this.maxEntries * 0.2);
             let count = 0;
-            // Map iterates in insertion order, so we can trim the oldest elements first
             for (const [k] of this.store) {
                 if (count >= trimCount) break;
                 this.store.delete(k);
@@ -81,7 +132,7 @@ class MemoryCache {
         
         this.store.set(key, {
             data,
-            provenance,
+            provenance: typeof provenance === 'object' ? provenance : null,
             cachedAt: Date.now()
         });
     }
@@ -153,9 +204,9 @@ class SingletonCache {
      * @param {string} name - Name of the cache
      * @param {number} ttlMs - Time to live in milliseconds
      */
-    constructor(name, ttlMs) {
-        this.name = name;
-        this.ttlMs = ttlMs;
+    constructor(name, ttlMs = 60 * 60 * 1000) {
+        this.name = typeof name === 'string' && name ? name : 'singleton-cache';
+        this.ttlMs = typeof ttlMs === 'number' && ttlMs > 0 ? ttlMs : 60 * 60 * 1000;
         this.entry = null;
         
         // Stats
@@ -186,6 +237,10 @@ class SingletonCache {
         }
         
         this.hits++;
+
+        if (this.entry.data && typeof this.entry.data === 'object' && !Array.isArray(this.entry.data) && this.entry.data._meta) {
+            return this.entry.data;
+        }
         
         return {
             data: this.entry.data,
@@ -197,6 +252,21 @@ class SingletonCache {
             }
         };
     }
+
+    getData() {
+        if (!this.entry) {
+            this.misses++;
+            return null;
+        }
+        const now = Date.now();
+        if (now - this.entry.cachedAt > this.ttlMs) {
+            this.entry = null;
+            this.misses++;
+            return null;
+        }
+        this.hits++;
+        return this.entry.data;
+    }
     
     /**
      * Sets the single cache entry.
@@ -206,7 +276,7 @@ class SingletonCache {
     set(data, provenance = null) {
         this.entry = {
             data,
-            provenance,
+            provenance: typeof provenance === 'object' ? provenance : null,
             cachedAt: Date.now()
         };
     }

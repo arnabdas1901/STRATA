@@ -1,4 +1,5 @@
 const { parseMarketNumber } = require('./api');
+const { MemoryCache } = require('./cache');
 
 async function fetchFinnhubQuote(symbol) {
     if (!process.env.FINNHUB_API_KEY) {
@@ -473,6 +474,31 @@ async function fetchAlphaVantageForexDaily(fromSymbol, toSymbol) {
     }
 }
 
+const finnhubMetricsCache = new MemoryCache('finnhub-metrics', 2 * 60 * 60 * 1000, 100);
+
+async function fetchCachedFinnhubMetrics(symbol) {
+    if (!symbol) return null;
+    const sym = symbol.toUpperCase();
+    const cached = finnhubMetricsCache.getData(sym);
+    if (cached) return cached;
+
+    if (!process.env.FINNHUB_API_KEY) return null;
+    try {
+        const url = `https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(sym)}&metric=all&token=${process.env.FINNHUB_API_KEY}`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data && (data.metric || data.series)) {
+            finnhubMetricsCache.set(sym, data);
+            return data;
+        }
+        return null;
+    } catch (err) {
+        console.warn(`Failed to fetch Finnhub metrics for ${sym}:`, err.message);
+        return null;
+    }
+}
+
 module.exports = {
     fetchFinnhubQuote,
     fetchFinnhubHistory,
@@ -484,6 +510,7 @@ module.exports = {
     fetchYahooTimeSeries,
     fetchYahooChart,
     fetchFmpMetrics,
+    fetchCachedFinnhubMetrics,
     fetchAlphaVantageCommodity,
     fetchAlphaVantageForexDaily
 };

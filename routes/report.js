@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { normalizeTicker, fetchJson } = require('../utils/api');
 const { MemoryCache } = require('../utils/cache');
-const { wrapWithProvenance, DATA_QUALITY } = require('../utils/provenance');
-const { generateAiAnalysis, getAiProvider } = require('../utils/aiProviders');
-const { fetchCompanyFacts, fetchCompanyFilings, fetchCapitalAllocation, fetchEarningsQualityData, extractFinancialTimeSeries } = require('../utils/secProviders');
+const { wrapWithProvenance, DATA_QUALITY, FRESHNESS } = require('../utils/provenance');
+const { generateAiAnalysis, getAiProvider, getAiProviderInfo, buildEvidencePack } = require('../utils/aiProviders');
+const { fetchCompanyFacts, fetchCompanyFilings, fetchCapitalAllocation, fetchEarningsQualityData } = require('../utils/secProviders');
 
-const cache = new MemoryCache(1800); // 30 minutes cache
+const cache = new MemoryCache('report', 30 * 60 * 1000, 50); // 30 minutes cache
 
-// Basic in-memory rate limiter (5 per min per IP)
+// In-memory rate limiter (5 per min per IP)
 const rateLimits = new Map();
 const checkRateLimit = (ip) => {
     const now = Date.now();
@@ -27,7 +27,7 @@ const checkRateLimit = (ip) => {
 
 router.post('/generate', async (req, res) => {
     try {
-        const ip = req.ip || req.connection.remoteAddress;
+        const ip = req.ip || req.connection?.remoteAddress || '127.0.0.1';
         if (!checkRateLimit(ip)) {
             return res.status(429).json({ error: 'Too many requests, please try again later.' });
         }
@@ -40,115 +40,110 @@ router.post('/generate', async (req, res) => {
         const ticker = normalizeTicker(rawTicker);
         const cacheKey = `report_${ticker}`;
         
-        const cached = cache.get(cacheKey);
+        const cached = cache.getData(cacheKey);
         if (cached) {
-            return res.json(cached);
+            return res.json(wrapWithProvenance(cached, {
+                provider: 'Cache',
+                freshness: FRESHNESS.CACHED,
+                dataQuality: DATA_QUALITY.OFFICIAL,
+                endpoint: 'report_cache'
+            }));
         }
 
         const aiProvider = getAiProvider();
         if (!aiProvider) {
             return res.status(503).json({ error: 'AI provider is required for report generation but none are configured' });
         }
+        const aiInfo = getAiProviderInfo();
 
         const FINNHUB_KEY = process.env.FINNHUB_API_KEY;
+        const start = Date.now();
         
-        // Fetch data in parallel directly from external providers
+        // Fetch data in parallel directly from external providers with proper fetchJson destructuring
         const [
-            profileData,
-            metricsData,
-            quoteData,
-            recommendationData,
+            profileRes,
+            metricsRes,
+            quoteRes,
+            recommendationRes,
             secFacts,
             secFilings,
             capitalAllocation,
             earningsQuality
         ] = await Promise.all([
-            fetchJson(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => ({})),
-            fetchJson(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_KEY}`).catch(() => ({})),
-            fetchJson(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => ({})),
-            fetchJson(`https://finnhub.io/api/v1/stock/recommendation?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => []),
+            fetchJson(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => ({ data: {} })),
+            fetchJson(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_KEY}`).catch(() => ({ data: {} })),
+            fetchJson(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => ({ data: {} })),
+            fetchJson(`https://finnhub.io/api/v1/stock/recommendation?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => ({ data: [] })),
             fetchCompanyFacts(ticker).catch(() => null),
-            fetchCompanyFilings(ticker, 5).catch(() => []),
+            fetchCompanyFilings(ticker).catch(() => []),
             fetchCapitalAllocation(ticker).catch(() => null),
             fetchEarningsQualityData(ticker).catch(() => null)
         ]);
 
-        // Construct token-efficient evidence pack
-        const evidencePack = `
-COMPANY PROFILE:
-${JSON.stringify(profileData)}
+        const profileData = profileRes.data || {};
+        const metricsData = metricsRes.data || {};
+        const quoteData = quoteRes.data || {};
+        const recommendationData = Array.isArray(recommendationRes.data) ? recommendationRes.data : [];
 
-KEY METRICS:
-${JSON.stringify(metricsData?.metric || {})}
+        // Build token-efficient structured evidence pack
+        const evidencePack = buildEvidencePack(ticker, {
+            profile: profileData,
+            quote: quoteData,
+            metrics: metricsData,
+            recommendations: recommendationData,
+            secFacts,
+            filings: secFilings,
+            capitalAllocation,
+            earningsQuality
+        });
 
-CURRENT QUOTE:
-${JSON.stringify(quoteData)}
+        const prompt = `You are a Senior Institutional Equity Research Analyst at a top-tier investment bank.
+Generate an institutional-grade equity research report for ${ticker}.
 
-ANALYST RECOMMENDATIONS:
-${JSON.stringify(recommendationData?.[0] || {})}
+Use ONLY the verified facts from the EVIDENCE PACK below. Cite data sources using institutional [Source: ...] bracket notation.
+Never fabricate any numbers. If a specific figure is missing, state that it is unavailable.
 
-CAPITAL ALLOCATION:
-${JSON.stringify(capitalAllocation || {})}
+Report Structure:
+## Company Overview & Business Model
+## Macro & Industry Competitive Landscape
+## Financial Performance & Margin Profile
+## Valuation Assessment & Multiples Context
+## Capital Allocation & Balance Sheet Durability
+## Earnings Quality & Forensic Checks
+## Key Risks & Downside Scenarios
+## What The Available Data Does NOT Tell Us
+## Institutional Verdict & Consensus Summary
 
-EARNINGS QUALITY:
-${JSON.stringify(earningsQuality || {})}
-
-RECENT FILINGS:
-${JSON.stringify(secFilings?.slice(0, 3).map(f => ({ form: f.form, date: f.filingDate })) || [])}
-        `.trim().substring(0, 15000); // Limit length to avoid massive token costs
-
-        const prompt = `You are a Senior Equity Research Analyst at a top-tier investment bank.
-Generate a comprehensive equity research report for ${ticker}.
-
-Use ONLY the following verified data. Cite sources using [Source: provider] notation.
-Never fabricate any numbers.
-
-Structure:
-## Company Overview
-## Investment Context  
-## Financial Performance
-## Valuation Assessment
-## Peer Comparison Context
-## Risk Assessment
-## Macro Exposure
-## Recent SEC Filings
-## What The Data Does NOT Tell Us
-## Data Sources
-
-EVIDENCE PACK:
 ${evidencePack}`;
 
-        const reportContent = await generateAiAnalysis(prompt, { maxTokens: 4000 });
+        const reportContent = await generateAiAnalysis(prompt, { maxTokens: 3500, temperature: 0.5 });
         
         const responseData = {
             report: {
                 ticker: ticker,
-                title: `${ticker} — Equity Research Report`,
+                title: `${ticker} — Institutional Equity Research Report`,
                 generatedAt: new Date().toISOString(),
                 content: typeof reportContent === 'string' ? reportContent : (reportContent?.analysis || ''),
-                provider: reportContent?.provider || aiProvider?.provider || 'groq',
-                model: aiProvider.model,
-                dataSources: ["SEC EDGAR", "Finnhub", "FRED"]
+                provider: aiInfo.provider || 'AI',
+                model: aiInfo.model || 'unknown',
+                dataSources: ["SEC EDGAR (XBRL)", "Finnhub", "FRED"]
             }
         };
 
-        const finalResponse = wrapWithProvenance(
-            responseData,
-            'report-generator',
-            DATA_QUALITY.REALTIME,
-            [
-                { provider: 'Finnhub', type: 'market-data' },
-                { provider: 'SEC', type: 'fundamental' },
-                { provider: aiProvider.provider, type: 'ai-analysis' }
-            ]
-        );
+        const finalResponse = wrapWithProvenance(responseData, {
+            provider: aiInfo.provider || 'AI',
+            freshness: FRESHNESS.LIVE,
+            dataQuality: DATA_QUALITY.OFFICIAL,
+            latencyMs: Date.now() - start,
+            endpoint: 'report_generate'
+        });
 
         cache.set(cacheKey, finalResponse);
         res.json(finalResponse);
 
     } catch (error) {
         console.error('Report Generation Error:', error);
-        res.status(500).json({ error: 'Failed to generate report' });
+        res.status(500).json({ error: 'Failed to generate report', details: error.message });
     }
 });
 

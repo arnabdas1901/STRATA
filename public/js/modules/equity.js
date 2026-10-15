@@ -29,6 +29,12 @@ export function loadDashboard() {
                 window.location.href = 'index.html';
             }
         } else {
+            const params = new URLSearchParams(window.location.search);
+            const symbol = params.get('symbol');
+            if (symbol) {
+                window.location.href = `equity-details.html?symbol=${encodeURIComponent(symbol.trim().toUpperCase())}`;
+                return;
+            }
             setupSearch();
             setupWatchlist();
             setupMarketNews();
@@ -1607,6 +1613,7 @@ async function computeMarketSentiment(indexPayload, moversPayload, sectorPayload
 // --- Earnings History ---
 async function fetchAndRenderEarnings(ticker) {
     const tbody = document.getElementById('earnings-table-body');
+    const summaryEl = document.getElementById('earnings-summary');
     if (!tbody) return;
 
     try {
@@ -1615,7 +1622,34 @@ async function fetchAndRenderEarnings(ticker) {
 
         if (!Array.isArray(data) || data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="table-empty-state">No earnings data available.</td></tr>';
+            if (summaryEl) summaryEl.innerHTML = '';
             return;
+        }
+
+        // Compute Beat Streak & Trailing Metrics
+        if (summaryEl && data.length > 0) {
+            let streak = 0;
+            for (let i = 0; i < data.length; i++) {
+                const s = data[i].surprisePercent;
+                if (s != null && parseFloat(s) >= 0) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+            const last4 = data.slice(0, 4);
+            const beatsLast4 = last4.filter(d => (d.surprisePercent != null && parseFloat(d.surprisePercent) >= 0)).length;
+            const beatRate4Q = last4.length > 0 ? ((beatsLast4 / last4.length) * 100).toFixed(0) : '--';
+            const surprises = last4.filter(d => d.surprisePercent != null).map(d => parseFloat(d.surprisePercent));
+            const avgSurprise = surprises.length > 0 ? (surprises.reduce((a, b) => a + b, 0) / surprises.length).toFixed(2) : '--';
+
+            summaryEl.innerHTML = `
+                <div class="kpi-summary-bar" style="margin-bottom: 16px;">
+                    <div class="kpi-item"><span class="kpi-label">Earnings Beat Streak</span><span class="kpi-value font-mono ${streak > 0 ? 'pos-change' : ''}">${streak} Consecutive Quarters ${streak >= 4 ? '🔥' : ''}</span></div>
+                    <div class="kpi-item"><span class="kpi-label">Trailing 4Q Beat Rate</span><span class="kpi-value font-mono">${beatRate4Q}% (${beatsLast4}/${last4.length})</span></div>
+                    <div class="kpi-item"><span class="kpi-label">Avg 4Q Surprise</span><span class="kpi-value font-mono ${avgSurprise > 0 ? 'pos-change' : (avgSurprise < 0 ? 'neg-change' : '')}">${avgSurprise > 0 ? '+' : ''}${avgSurprise}%</span></div>
+                </div>
+            `;
         }
 
         tbody.innerHTML = data.map(e => {
@@ -1693,6 +1727,7 @@ async function fetchAndRenderDividends(ticker) {
 // --- Insider Transactions ---
 async function fetchAndRenderInsider(ticker) {
     const tbody = document.getElementById('insider-table-body');
+    const summaryEl = document.getElementById('insider-summary');
     if (!tbody) return;
 
     try {
@@ -1701,7 +1736,37 @@ async function fetchAndRenderInsider(ticker) {
 
         if (!Array.isArray(data) || data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="table-empty-state">No insider transactions found.</td></tr>';
+            if (summaryEl) summaryEl.innerHTML = '';
             return;
+        }
+
+        // Summary KPI bar
+        if (summaryEl && data.length > 0) {
+            let buyVal = 0, sellVal = 0, buyCount = 0, sellCount = 0;
+            data.forEach(t => {
+                const type = (t.transactionType || t.transactionCode || '').toLowerCase();
+                const isBuy = type.includes('buy') || type.includes('purchase') || type === 'p';
+                const isSell = type.includes('sell') || type.includes('sale') || type === 's';
+                const val = (t.share != null && t.transactionPrice != null) ? Math.abs(t.share * t.transactionPrice) : 0;
+                if (isBuy) {
+                    buyVal += val;
+                    buyCount++;
+                } else if (isSell) {
+                    sellVal += val;
+                    sellCount++;
+                }
+            });
+            const netVal = buyVal - sellVal;
+            const sentiment = netVal > 0 ? 'Net Accumulation' : (netVal < 0 ? 'Net Distribution' : 'Neutral');
+            const sentClass = netVal > 0 ? 'pos-change' : (netVal < 0 ? 'neg-change' : '');
+
+            summaryEl.innerHTML = `
+                <div class="kpi-summary-bar" style="margin-bottom: 16px;">
+                    <div class="kpi-item"><span class="kpi-label">Insider Sentiment</span><span class="kpi-value font-mono ${sentClass}"><strong>${sentiment}</strong></span></div>
+                    <div class="kpi-item"><span class="kpi-label">Net Dollar Flow</span><span class="kpi-value font-mono ${sentClass}">${netVal >= 0 ? '+' : '-'}${formatLargeCurrency(Math.abs(netVal))}</span></div>
+                    <div class="kpi-item"><span class="kpi-label">Activity (Buy / Sell)</span><span class="kpi-value font-mono"><span class="pos-change">${buyCount} Buys</span> / <span class="neg-change">${sellCount} Sells</span></span></div>
+                </div>
+            `;
         }
 
         tbody.innerHTML = data.map(t => {
@@ -1745,7 +1810,7 @@ const formatFinMoney = (val) => {
     return `$${Number(val).toFixed(2)}`;
 };
 
-const deepDiveState = { valuation: false, capalloc: false, 'earnings-qual': false, risk: false, segments: false };
+const deepDiveState = { valuation: false, capalloc: false, 'earnings-qual': false, risk: false, segments: false, dcf: false };
 let ddCharts = {};
 
 async function loadDeepDiveSection(section) {
@@ -1763,6 +1828,7 @@ async function loadDeepDiveSection(section) {
         if (section === 'earnings-qual') await fetchEarningsQual(activeEquityTicker);
         if (section === 'risk') await fetchRisk(activeEquityTicker);
         if (section === 'segments') await fetchSegments(activeEquityTicker);
+        if (section === 'dcf') await fetchDCF(activeEquityTicker);
         
         deepDiveState[section] = true;
         if(loader) loader.style.display = 'none';
@@ -1885,6 +1951,129 @@ async function fetchSegments(ticker) {
             <div class="fin-metric-val">${formatFinMoney(s.revenue)}</div>
         </div>
     `).join('');
+}
+
+async function fetchDCF(ticker) {
+    const [capRes, quoteRes, riskRes, metricsRes] = await Promise.all([
+        fetchWithTimeout(`${BACKEND_URL}/api/sec/capital-allocation/${ticker}`).catch(() => null),
+        fetchWithTimeout(`${BACKEND_URL}/api/finnhub/quote?symbol=${encodeURIComponent(ticker)}`).catch(() => null),
+        fetchWithTimeout(`${BACKEND_URL}/api/risk/profile/${ticker}`).catch(() => null),
+        fetchWithTimeout(`${BACKEND_URL}/api/finnhub/metrics?symbol=${encodeURIComponent(ticker)}`).catch(() => null)
+    ]);
+
+    const capData = await safeJsonParse(capRes);
+    const quoteData = await safeJsonParse(quoteRes);
+    const riskData = await safeJsonParse(riskRes);
+    const metricsData = await safeJsonParse(metricsRes);
+
+    const curPrice = quoteData && quoteData.c ? parseFloat(quoteData.c) : 100;
+    const beta = (riskData && riskData.summary && riskData.summary.beta != null) ? parseFloat(riskData.summary.beta) : 1.0;
+    
+    // Estimate FCF (Operating Cash Flow - CapEx)
+    let fcf = null;
+    let shares = null;
+    if (capData && Array.isArray(capData.allocation) && capData.allocation.length > 0) {
+        const latest = capData.allocation[capData.allocation.length - 1];
+        if (latest.operatingCashFlow != null && latest.capex != null) {
+            fcf = latest.operatingCashFlow - Math.abs(latest.capex);
+        }
+    }
+    
+    const m = (metricsData && metricsData.metric) || {};
+    if (fcf == null || fcf <= 0) {
+        if (m.freeCashFlowPerShareTTM && m.freeCashFlowPerShareTTM > 0) {
+            fcf = m.freeCashFlowPerShareTTM * 1000000;
+            shares = 1000000;
+        } else if (m.marketCapitalization) {
+            fcf = (m.marketCapitalization * 1000000) * 0.045;
+            shares = curPrice > 0 ? (m.marketCapitalization * 1000000) / curPrice : 1000000;
+        } else {
+            fcf = curPrice * 10000000 * 0.04;
+            shares = 10000000;
+        }
+    }
+
+    if (shares == null) {
+        if (m.marketCapitalization && curPrice > 0) {
+            shares = (m.marketCapitalization * 1000000) / curPrice;
+        } else {
+            shares = 100000000;
+        }
+    }
+
+    const baseGrowth = 0.08;
+    const rf = 0.0425;
+    const erp = 0.055;
+    const rawWacc = Math.min(Math.max(rf + beta * erp, 0.07), 0.13);
+    const baseWacc = Math.round(rawWacc * 200) / 200;
+    const baseTerminalGrowth = 0.025;
+
+    function computeDCFValue(cf0, g, w, tg, sh) {
+        let pvCashFlows = 0;
+        let runningCF = cf0;
+        for (let t = 1; t <= 5; t++) {
+            runningCF *= (1 + g);
+            pvCashFlows += runningCF / Math.pow(1 + w, t);
+        }
+        const tv = (runningCF * (1 + tg)) / (w - tg);
+        const pvTV = tv / Math.pow(1 + w, 5);
+        const totalEV = pvCashFlows + pvTV;
+        return totalEV / sh;
+    }
+
+    const baselineFairValue = computeDCFValue(fcf, baseGrowth, baseWacc, baseTerminalGrowth, shares);
+    const upsidePct = ((baselineFairValue - curPrice) / curPrice) * 100;
+    const isUndervalued = upsidePct > 0;
+    const badgeColor = isUndervalued ? '#10b981' : '#ef4444';
+    const badgeText = isUndervalued ? `Undervalued (+${upsidePct.toFixed(1)}%)` : `Overvalued (${upsidePct.toFixed(1)}%)`;
+
+    const gridEl = document.getElementById('grid-dcf');
+    if (gridEl) {
+        gridEl.innerHTML = `
+            <div class="fin-metric-card"><div class="fin-metric-label">Base Free Cash Flow</div><div class="fin-metric-val">${formatFinMoney(fcf)}</div></div>
+            <div class="fin-metric-card"><div class="fin-metric-label">Estimated WACC (Cost of Capital)</div><div class="fin-metric-val">${(baseWacc * 100).toFixed(2)}% (Beta: ${beta.toFixed(2)})</div></div>
+            <div class="fin-metric-card"><div class="fin-metric-label">DCF Intrinsic Fair Value</div><div class="fin-metric-val font-mono" style="color:${badgeColor}">$${baselineFairValue.toFixed(2)}</div></div>
+            <div class="fin-metric-card"><div class="fin-metric-label">Margin of Safety / Valuation</div><div><span class="fin-badge" style="background:${badgeColor}20; color:${badgeColor}; border:1px solid ${badgeColor}50;">${badgeText}</span></div></div>
+        `;
+    }
+
+    const waccSteps = [baseWacc - 0.015, baseWacc - 0.0075, baseWacc, baseWacc + 0.0075, baseWacc + 0.015];
+    const tgSteps = [0.015, 0.020, 0.025, 0.030, 0.035];
+
+    let tableHtml = `
+        <table class="financial-data-table" style="text-align: center; width: 100%;">
+            <thead>
+                <tr>
+                    <th style="text-align:left;">WACC \\ Term. Growth</th>
+                    ${tgSteps.map(tg => `<th>${(tg * 100).toFixed(1)}%</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    waccSteps.forEach(w => {
+        const isBaseWacc = Math.abs(w - baseWacc) < 0.001;
+        tableHtml += `<tr><td style="text-align:left; font-weight:${isBaseWacc ? '700' : '500'}; color:${isBaseWacc ? '#3b82f6' : '#94a3b8'};">${(w * 100).toFixed(2)}% ${isBaseWacc ? '(Base)' : ''}</td>`;
+        tgSteps.forEach(tg => {
+            const isBaseCell = isBaseWacc && Math.abs(tg - baseTerminalGrowth) < 0.001;
+            if (w <= tg) {
+                tableHtml += `<td>--</td>`;
+            } else {
+                const val = computeDCFValue(fcf, baseGrowth, w, tg, shares);
+                const cellColor = val >= curPrice ? '#10b981' : '#ef4444';
+                const cellBg = isBaseCell ? 'background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6;' : '';
+                tableHtml += `<td class="font-mono" style="color: ${cellColor}; ${cellBg}">$${val.toFixed(2)}</td>`;
+            }
+        });
+        tableHtml += `</tr>`;
+    });
+
+    tableHtml += `</tbody></table>`;
+
+    const tableWrapper = document.getElementById('dcf-sensitivity-table-wrapper');
+    if (tableWrapper) {
+        tableWrapper.innerHTML = tableHtml;
+    }
 }
 
 window.toggleDeepDive = function(section) {

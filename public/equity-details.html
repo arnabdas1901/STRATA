@@ -436,6 +436,26 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- DCF Intrinsic Valuation & Sensitivity Matrix -->
+                        <div class="pro-accordion" id="acc-dcf">
+                            <div class="accordion-header" onclick="toggleDeepDive('dcf')">
+                                <div class="accordion-title"><i class="fa-solid fa-calculator"></i> DCF Intrinsic Valuation & Sensitivity Matrix</div>
+                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+                            </div>
+                            <div class="accordion-content">
+                                <div class="accordion-loader" id="loader-dcf">Click to load DCF model...</div>
+                                <div id="content-dcf" style="display:none;">
+                                    <div class="financial-data-grid" id="grid-dcf"></div>
+                                    <div class="dcf-sensitivity-container" style="margin-top: 18px;">
+                                        <h4 style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+                                            <i class="fa-solid fa-table-cells"></i> Valuation Sensitivity Matrix (WACC vs Terminal Growth)
+                                        </h4>
+                                        <div class="financial-table-wrapper" id="dcf-sensitivity-table-wrapper"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Tabbed Financial Data -->
@@ -506,6 +526,7 @@
                             </div>
                             <!-- Earnings -->
                             <div id="tab-earnings" class="tab-panel">
+                                <div id="earnings-summary" class="dividends-summary-section"></div>
                                 <div class="financial-table-wrapper">
                                     <table class="financial-data-table">
                                         <thead>
@@ -533,6 +554,7 @@
                             </div>
                             <!-- Insider Activity -->
                             <div id="tab-insider" class="tab-panel">
+                                <div id="insider-summary" class="dividends-summary-section"></div>
                                 <div class="financial-table-wrapper">
                                     <table class="financial-data-table">
                                         <thead>
