@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { normalizeTicker, fetchJson } = require('../utils/api');
+const { normalizeTicker } = require('../utils/api');
 const { MemoryCache } = require('../utils/cache');
 const { wrapWithProvenance, DATA_QUALITY, FRESHNESS } = require('../utils/provenance');
 const { generateAiAnalysis, getAiProvider, getAiProviderInfo, buildEvidencePack } = require('../utils/aiProviders');
-const { fetchCompanyFacts, fetchCompanyFilings, fetchCapitalAllocation, fetchEarningsQualityData } = require('../utils/secProviders');
+const { getOrFetchTickerContext } = require('./ai');
 
 const cache = new MemoryCache('report', 30 * 60 * 1000, 50); // 30 minutes cache
 
@@ -40,14 +40,9 @@ router.post('/generate', async (req, res) => {
         const ticker = normalizeTicker(rawTicker);
         const cacheKey = `report_${ticker}`;
         
-        const cached = cache.getData(cacheKey);
+        const cached = cache.getValue(cacheKey);
         if (cached) {
-            return res.json(wrapWithProvenance(cached, {
-                provider: 'Cache',
-                freshness: FRESHNESS.CACHED,
-                dataQuality: DATA_QUALITY.OFFICIAL,
-                endpoint: 'report_cache'
-            }));
+            return res.json(cached);
         }
 
         const aiProvider = getAiProvider();
@@ -55,46 +50,26 @@ router.post('/generate', async (req, res) => {
             return res.status(503).json({ error: 'AI provider is required for report generation but none are configured' });
         }
         const aiInfo = getAiProviderInfo();
-
-        const FINNHUB_KEY = process.env.FINNHUB_API_KEY;
         const start = Date.now();
         
-        // Fetch data in parallel directly from external providers with proper fetchJson destructuring
-        const [
-            profileRes,
-            metricsRes,
-            quoteRes,
-            recommendationRes,
-            secFacts,
-            secFilings,
-            capitalAllocation,
-            earningsQuality
-        ] = await Promise.all([
-            fetchJson(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => ({ data: {} })),
-            fetchJson(`https://finnhub.io/api/v1/stock/metric?symbol=${ticker}&metric=all&token=${FINNHUB_KEY}`).catch(() => ({ data: {} })),
-            fetchJson(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => ({ data: {} })),
-            fetchJson(`https://finnhub.io/api/v1/stock/recommendation?symbol=${ticker}&token=${FINNHUB_KEY}`).catch(() => ({ data: [] })),
-            fetchCompanyFacts(ticker).catch(() => null),
-            fetchCompanyFilings(ticker).catch(() => []),
-            fetchCapitalAllocation(ticker).catch(() => null),
-            fetchEarningsQualityData(ticker).catch(() => null)
-        ]);
+        // Retrieve unified ticker context (shares cache with AI scan, 0 outbound calls if already analyzed)
+        const context = await getOrFetchTickerContext(ticker);
+        if (!context) {
+            return res.status(404).json({ error: `Could not retrieve market or fundamental context for ${ticker}` });
+        }
 
-        const profileData = profileRes.data || {};
-        const metricsData = metricsRes.data || {};
-        const quoteData = quoteRes.data || {};
-        const recommendationData = Array.isArray(recommendationRes.data) ? recommendationRes.data : [];
-
-        // Build token-efficient structured evidence pack
+        // Build token-efficient structured evidence pack with deterministic quant scorecard
         const evidencePack = buildEvidencePack(ticker, {
-            profile: profileData,
-            quote: quoteData,
-            metrics: metricsData,
-            recommendations: recommendationData,
-            secFacts,
-            filings: secFilings,
-            capitalAllocation,
-            earningsQuality
+            profile: context.profile,
+            quote: context.quote,
+            metrics: context.metricsPayload?.metric || {},
+            recommendations: context.analystConsensus ? [context.analystConsensus] : [],
+            secFacts: context.secFacts,
+            filings: context.filings,
+            capitalAllocation: context.capitalAllocation,
+            earningsQuality: context.earningsQuality,
+            quantScorecard: context.quantScorecard,
+            peers: context.peers
         });
 
         const prompt = `You are a Senior Institutional Equity Research Analyst at a top-tier investment bank.

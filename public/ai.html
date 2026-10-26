@@ -2,16 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0a0e1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/images/strata-logo.png">
-    <title>STRATA - AI Analyst Terminal</title>
+    <title>STRATA - Algorithmic Quant &amp; AI Analyst Terminal</title>
+    <meta name="description" content="Institutional BloombergGPT-grade equity research terminal with 10 analytical frames, deterministic quant scorecards, and peer compare.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
@@ -70,7 +71,7 @@
                     <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
-                            <a class="nav-item" href="screener.html">
+                <a class="nav-item" href="screener.html">
                     <i class="fa-solid fa-filter" aria-hidden="true"></i>
                     <span>Screener</span>
                 </a>
@@ -78,7 +79,7 @@
                     <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                     <span>Correlations</span>
                 </a>
-                </nav>
+            </nav>
             <div class="sidebar-footer">
                 <span class="status-indicator connected"></span> Engine Operational
             </div>
@@ -107,92 +108,264 @@
             </header>
 
             <section id="dashboard-ai" class="dashboard-viewport active">
-                <div class="dashboard-header-block">
-                    <h1>Algorithmic Quant & AI Analyst Terminal</h1>
-                    <p class="subtitle">Advanced quantitative logic processing structural models, safety parameters, and intrinsic equations</p>
+                <div class="dashboard-header-block ai-workstation-header">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap;">
+                            <h1>Algorithmic Quant &amp; AI Analyst Terminal</h1>
+                            <span class="desk-badge">BloombergGPT Engine · Citadel / Two Sigma Quant Architecture</span>
+                        </div>
+                        <p class="subtitle">Multi-model adversarial intelligence, deterministic 9-point Piotroski F-Score, Altman Z bankruptcy risk, Reverse-DCF, and 10 institutional research frames</p>
+                    </div>
                 </div>
 
+                <!-- 1. Upgraded Control Deck & Peer Compare Bar -->
                 <div class="ai-control-panel-card">
-                    <div class="ai-input-strip">
-                        <div class="input-container-inline">
-                            <label for="ai-ticker-input">Target Equity Ticker</label>
-                            <input type="text" id="ai-ticker-input" placeholder="e.g., NVDA" autocomplete="off">
+                    <div class="ai-control-main-row">
+                        <div class="input-container-inline flex-2">
+                            <label for="ai-ticker-input"><i class="fa-solid fa-crosshairs"></i> Target Equity Ticker</label>
+                            <input type="text" id="ai-ticker-input" placeholder="e.g. NVDA, AAPL, MSFT" autocomplete="off" required>
                         </div>
-                        <div class="input-container-inline">
-                            <label for="ai-model-select">Analytical Quant Frame</label>
+
+                        <div class="input-container-inline flex-2">
+                            <label for="ai-compare-ticker-input"><i class="fa-solid fa-code-compare"></i> Optional Peer Compare (Head-to-Head)</label>
+                            <div class="ai-input-with-btn">
+                                <input type="text" id="ai-compare-ticker-input" placeholder="vs. Peer (e.g. AMD, GOOGL)" autocomplete="off">
+                                <button type="button" id="execute-compare-btn" class="ai-secondary-action-btn" title="Execute Head-to-Head Showdown">
+                                    <i class="fa-solid fa-bolt"></i> Compare
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="input-container-inline flex-3">
+                            <label for="ai-model-select"><i class="fa-solid fa-microchip"></i> Analytical Quant Frame</label>
                             <select id="ai-model-select">
-                                <optgroup label="Core Analysis">
-                                    <option value="dupont">3-Stage DuPont Decomposition</option>
-                                    <option value="redflags">Automated Financial Red Flags Scan</option>
-                                    <option value="dcf">Discounted Cash Flow (DCF) Intrinsic Value</option>
-                                    <option value="benchmarking">Peer-Group Sector Benchmarking</option>
+                                <optgroup label="⚡ Flagship IC &amp; Forensic Frames">
+                                    <option value="ic_debate" selected>Adversarial Bull vs. Bear IC Debate (ic_debate)</option>
+                                    <option value="capital_forensics">SEC 10-K Capital &amp; Earnings Forensics (capital_forensics)</option>
                                 </optgroup>
-                                <optgroup label="Advanced Frames">
-                                    <option value="piotroski">Piotroski F-Score (Value Quality)</option>
-                                    <option value="altman">Altman Z-Score (Distress Risk)</option>
-                                    <option value="momentum">Technical Momentum & Price Action</option>
-                                    <option value="moat">Buffett/Munger Economic Moat</option>
+                                <optgroup label="📊 Core Valuation &amp; Quality">
+                                    <option value="dupont">3-Stage DuPont ROE Decomposition (dupont)</option>
+                                    <option value="dcf">Discounted Cash Flow &amp; Reverse-DCF (dcf)</option>
+                                    <option value="moat">Buffett/Munger Economic Moat (moat)</option>
+                                    <option value="benchmarking">Peer-Group Sector Benchmarking (benchmarking)</option>
+                                </optgroup>
+                                <optgroup label="🛡️ Quant Scoring &amp; Risk Defense">
+                                    <option value="piotroski">Piotroski 9-Point F-Score (piotroski)</option>
+                                    <option value="altman">Altman Z-Score Distress Model (altman)</option>
+                                    <option value="redflags">Automated Financial Red Flags Scan (redflags)</option>
+                                    <option value="momentum">Technical Momentum &amp; Institutional Flow (momentum)</option>
                                 </optgroup>
                             </select>
                         </div>
-                        <button id="execute-ai-btn" class="primary-btn execution-btn"><i class="fa-solid fa-microchip" aria-hidden="true"></i> Execute Deep Scan</button>
-                        <button id="run-all-frames-btn" class="secondary-btn run-all-btn" title="Run all 8 analytical frames sequentially"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Run All Frames</button>
+
+                        <div class="ai-btn-group">
+                            <button id="execute-ai-btn" class="primary-btn execution-btn">
+                                <i class="fa-solid fa-brain" aria-hidden="true"></i> Execute Deep Scan
+                            </button>
+                            <button id="run-all-frames-btn" class="secondary-btn run-all-btn" title="Run all 10 analytical frames sequentially using cached context">
+                                <i class="fa-solid fa-layer-group" aria-hidden="true"></i> Run All 10 Frames
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Quick Ticker Strip -->
+                <!-- Quick Tickers Strip -->
                 <div class="ai-quick-tickers" id="ai-quick-tickers">
-                    <span class="qt-label"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Quick:</span>
-                    <button class="qt-badge" data-ticker="AAPL">AAPL</button>
+                    <span class="qt-label"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Quick Tickers:</span>
                     <button class="qt-badge" data-ticker="NVDA">NVDA</button>
+                    <button class="qt-badge" data-ticker="AAPL">AAPL</button>
                     <button class="qt-badge" data-ticker="MSFT">MSFT</button>
                     <button class="qt-badge" data-ticker="GOOGL">GOOGL</button>
                     <button class="qt-badge" data-ticker="AMZN">AMZN</button>
-                    <button class="qt-badge" data-ticker="TSLA">TSLA</button>
                     <button class="qt-badge" data-ticker="META">META</button>
+                    <button class="qt-badge" data-ticker="TSLA">TSLA</button>
                     <button class="qt-badge" data-ticker="JPM">JPM</button>
+                    <button class="qt-badge" data-ticker="LLY">LLY</button>
+                    <button class="qt-badge" data-ticker="AMD">AMD</button>
                 </div>
 
-                <!-- Data Context Panel (hidden until scan runs) -->
+                <!-- 2. Recent Scans Vault Strip (0ms Local Reload) -->
+                <div id="ai-scan-vault" class="ai-scan-vault hidden-element">
+                    <div class="ai-vault-header">
+                        <span><i class="fa-solid fa-box-archive"></i> Recent Scans Vault</span>
+                        <button id="ai-clear-vault-btn" class="ai-mini-link-btn" title="Clear saved scans">
+                            <i class="fa-solid fa-trash-can"></i> Clear Vault
+                        </button>
+                    </div>
+                    <div id="ai-vault-pills" class="ai-vault-pills"></div>
+                </div>
+
+                <!-- 3. 3-Column Institutional Quant Intelligence Deck -->
                 <div id="ai-data-context-card" class="ai-data-context-card hidden-element">
                     <div class="ai-context-header" id="ai-context-header-toggle">
-                        <div class="ai-context-title"><i class="fa-solid fa-database" aria-hidden="true"></i> Market Data Context</div>
-                        <i class="fa-solid fa-chevron-down ai-context-toggle" id="ai-context-chevron"></i>
+                        <div class="ai-context-title">
+                            <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
+                            <span>Institutional Quantitative Intelligence Deck &amp; Verified Scorecards</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span id="ai-context-source-badge" class="ai-source-badge">VERIFIED 10-K &amp; FREE-TIER API FEEDS</span>
+                            <i class="fa-solid fa-chevron-down ai-context-toggle" id="ai-context-chevron"></i>
+                        </div>
                     </div>
+
                     <div class="ai-context-body" id="ai-context-body">
-                        <div class="ai-company-header" id="ai-company-header"></div>
-                        <div class="ai-price-row" id="ai-price-row"></div>
-                        <div class="ai-quant-scorecard-wrapper" id="ai-quant-scorecard-wrapper" style="display:none;"></div>
-                        <div class="ai-metrics-grid" id="ai-metrics-grid"></div>
+                        <div class="ai-quant-deck-grid">
+                            <!-- Column 1: 5-Pillar Quant Conviction Radar -->
+                            <div class="ai-quant-col ai-radar-col">
+                                <div class="ai-deck-card-header">
+                                    <span class="title"><i class="fa-solid fa-bullseye"></i> 5-Pillar Quant Radar</span>
+                                    <div class="conviction-badge-wrap">
+                                        <span id="ai-conviction-score-badge" class="ai-conviction-score">0/100</span>
+                                        <span id="ai-conviction-rating-pill" class="ai-conviction-pill">Neutral</span>
+                                    </div>
+                                </div>
+                                <div class="ai-radar-canvas-wrap">
+                                    <canvas id="ai-quant-radar-chart"></canvas>
+                                </div>
+                                <div class="ai-radar-legend font-mono" id="ai-radar-legend">
+                                    <span class="legend-dot primary"></span> <span id="radar-legend-target">—</span>
+                                    <span id="radar-legend-compare-wrap" style="display:none;">
+                                        &nbsp;·&nbsp; <span class="legend-dot secondary"></span> <span id="radar-legend-peer">—</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Column 2: Deterministic Quant Scorecards -->
+                            <div class="ai-quant-col ai-scorecards-col">
+                                <!-- Piotroski F-Score Card -->
+                                <div class="ai-subcard piotroski-card">
+                                    <div class="ai-subcard-header">
+                                        <span><i class="fa-solid fa-clipboard-check"></i> Piotroski 9-Point F-Score</span>
+                                        <span id="ai-piotroski-score-badge" class="score-badge">0 / 9</span>
+                                    </div>
+                                    <div class="piotroski-progress-bar">
+                                        <div id="ai-piotroski-progress-fill" class="progress-fill" style="width: 0%;"></div>
+                                    </div>
+                                    <div class="piotroski-chips-grid font-mono" id="ai-piotroski-chips-grid"></div>
+                                </div>
+
+                                <!-- Altman Z-Score & Reverse-DCF Row -->
+                                <div class="ai-subcard-split-row">
+                                    <div class="ai-subcard altman-card">
+                                        <div class="ai-subcard-header">
+                                            <span><i class="fa-solid fa-shield-halved"></i> Altman Z-Score</span>
+                                            <span id="ai-altman-badge" class="zone-badge">Safe Zone</span>
+                                        </div>
+                                        <div class="subcard-val font-mono tabular-nums" id="ai-altman-zscore">—</div>
+                                        <div class="subcard-footer font-mono" id="ai-altman-desc">Bankruptcy Distress Proxy</div>
+                                    </div>
+
+                                    <div class="ai-subcard dcf-card">
+                                        <div class="ai-subcard-header">
+                                            <span><i class="fa-solid fa-arrow-trend-up"></i> Reverse-DCF Growth</span>
+                                            <span id="ai-dcf-stance-badge" class="zone-badge">Fairly Priced</span>
+                                        </div>
+                                        <div class="subcard-val font-mono tabular-nums text-emerald" id="ai-dcf-implied-cagr">—%</div>
+                                        <div class="subcard-footer font-mono" id="ai-dcf-metrics-sub">WACC: —% · FCF Yield: —%</div>
+                                    </div>
+                                </div>
+
+                                <!-- Analyst Consensus Stacked Bar -->
+                                <div class="ai-subcard analyst-card">
+                                    <div class="ai-subcard-header">
+                                        <span><i class="fa-solid fa-users-viewfinder"></i> Wall Street Analyst Consensus</span>
+                                        <span id="ai-analyst-bullish-badge" class="font-mono text-emerald">0% Bullish</span>
+                                    </div>
+                                    <div class="analyst-stacked-bar" id="ai-analyst-stacked-bar">
+                                        <div class="bar-seg buy" style="width: 70%;"></div>
+                                        <div class="bar-seg hold" style="width: 20%;"></div>
+                                        <div class="bar-seg sell" style="width: 10%;"></div>
+                                    </div>
+                                    <div class="analyst-bar-legend font-mono" id="ai-analyst-counts">
+                                        Buy: 0 · Hold: 0 · Sell: 0
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Column 3: Multiples & 52-Week Technical Position -->
+                            <div class="ai-quant-col ai-multiples-col">
+                                <div class="ai-company-header" id="ai-company-header"></div>
+                                <div class="ai-price-row" id="ai-price-row"></div>
+
+                                <!-- 52-Week Range Percentile Bar -->
+                                <div class="ai-52w-slider-card">
+                                    <div class="ai-slider-header font-mono">
+                                        <span>52W Position: <strong id="ai-52w-pct-val">0%</strong></span>
+                                        <span>Vol Ratio (10D/3M): <strong id="ai-volume-surge-val">1.0x</strong></span>
+                                    </div>
+                                    <div class="ai-52w-track-large">
+                                        <span class="bound" id="ai-52w-low-lbl">$0</span>
+                                        <div class="bar-wrap">
+                                            <div id="ai-52w-fill-bar" class="fill" style="width: 50%;"></div>
+                                            <div id="ai-52w-indicator-dot" class="dot" style="left: 50%;"></div>
+                                        </div>
+                                        <span class="bound" id="ai-52w-high-lbl">$0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Key Multiples Grid -->
+                                <div class="ai-metrics-grid" id="ai-metrics-grid"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Terminal Card -->
+                <!-- 4. Terminal Card -->
                 <div class="ai-terminal-card">
                     <div class="terminal-header">
                         <div class="window-buttons"><span></span><span></span><span></span></div>
-                        <div class="terminal-title">quant-engine-v4.0.1 // core_analysis_stream</div>
+                        <div class="terminal-title" id="ai-terminal-title-text">
+                            quant-engine-v4.2 // bloomberggpt_stream
+                        </div>
+                        <div class="terminal-header-meta">
+                            <span id="ai-model-indicator" class="model-pill font-mono">
+                                <i class="fa-solid fa-microchip"></i> GROQ // LLAMA-3.3-70B
+                            </span>
+                            <span id="ai-cached-pill" class="cached-pill font-mono hidden-element">CACHED</span>
+                        </div>
                         <div class="terminal-actions">
-                            <button class="terminal-copy-btn" id="ai-copy-btn" title="Copy analysis to clipboard"><i class="fa-regular fa-copy" aria-hidden="true"></i> Copy</button>
+                            <button class="terminal-copy-btn" id="ai-copy-btn" title="Copy markdown analysis to clipboard">
+                                <i class="fa-regular fa-copy" aria-hidden="true"></i> Copy
+                            </button>
+                            <button class="terminal-copy-btn" id="ai-export-btn" title="Export as IC Research Memo (.md / PDF)">
+                                <i class="fa-solid fa-download" aria-hidden="true"></i> Export Memo
+                            </button>
+                            <button class="terminal-copy-btn" id="ai-clear-terminal-btn" title="Clear terminal screen">
+                                <i class="fa-solid fa-eraser" aria-hidden="true"></i> Clear
+                            </button>
                         </div>
                     </div>
-                    <!-- Tab bar for multi-frame mode (hidden until Run All Frames used) -->
+
+                    <!-- Multi-Frame Mode Navigation Tab Bar -->
                     <div id="ai-tab-bar" class="ai-tab-bar hidden-element"></div>
+
+                    <!-- Terminal Output Screen -->
                     <div id="ai-terminal-output" class="terminal-screen-body">
-                        <span class="terminal-prompt">&gt; Groq AI analyst online. Enter a ticker and select an analysis frame.</span>
+                        <span class="terminal-prompt">&gt; STRATA Algorithmic Quant Terminal Online. Enter a ticker to initiate a deep institutional scan.</span>
                     </div>
-                    <!-- Follow-up Question Bar (hidden until analysis complete) -->
+
+                    <!-- 5. Smart Contextual Follow-Up Prompt Chips & Input Bar -->
                     <div id="ai-followup-bar" class="ai-followup-bar hidden-element">
-                        <input type="text" id="ai-followup-input" placeholder="Ask a follow-up question about this analysis…" autocomplete="off">
-                        <button id="ai-followup-btn" class="primary-btn"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
+                        <div class="ai-followup-chips-wrap" id="ai-followup-chips-wrap">
+                            <span class="chips-title"><i class="fa-solid fa-lightbulb"></i> Institutional Follow-Up Inquiries:</span>
+                            <div class="chips-list" id="ai-followup-chips-list"></div>
+                        </div>
+                        <div class="ai-followup-input-row">
+                            <input type="text" id="ai-followup-input" placeholder="Ask an institutional follow-up question regarding capital allocation, margins, or Reverse-DCF…" autocomplete="off">
+                            <button id="ai-followup-btn" class="primary-btn" title="Submit Question">
+                                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                            </button>
+                        </div>
                     </div>
+
                     <div class="ai-terminal-footer" id="ai-terminal-footer">
                         <span id="ai-word-count"></span>
                         <span id="ai-scan-timestamp"></span>
                     </div>
-                    <div class="gemini-integration-notice">
+
+                    <div class="gemini-integration-notice" id="ai-integration-notice">
                         <i class="fa-solid fa-robot gemini-icon" aria-hidden="true"></i>
-                        <span>Powered by Groq free tier (Llama 3.3 70B). ~1,000 AI scans/day, 30/min — your 2–3/day usage is well within limits. Educational only—not investment advice.</span>
+                        <span id="ai-notice-text">Powered by Groq Free-Tier Llama 3.3 70B &amp; Official SEC EDGAR XBRL data. All quantitative calculations execute deterministically with 0% math hallucination. Educational research terminal only.</span>
                     </div>
                 </div>
             </section>

@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0a0e1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/images/strata-logo.png">
-    <title>STRATA - Portfolio Stress Testing & Risk Engine</title>
+    <title>STRATA - Institutional Portfolio Stress Tester & Aladdin Risk Engine</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
@@ -70,7 +70,7 @@
                     <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
-                            <a class="nav-item" href="screener.html">
+                <a class="nav-item" href="screener.html">
                     <i class="fa-solid fa-filter" aria-hidden="true"></i>
                     <span>Screener</span>
                 </a>
@@ -78,9 +78,9 @@
                     <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                     <span>Correlations</span>
                 </a>
-                </nav>
+            </nav>
             <div class="sidebar-footer">
-                <span class="status-indicator connected"></span> Engine Operational
+                <span class="status-indicator connected"></span> Aladdin Risk Engine Active
             </div>
         </aside>
 
@@ -107,270 +107,217 @@
             </header>
 
             <section id="dashboard-stress" class="dashboard-viewport active">
-                <div class="dashboard-header-block">
-                    <h1>Portfolio Stress Testing & Risk Engine</h1>
-                    <p class="subtitle">Monte Carlo simulation, historical scenario replay, and correlation-aware risk analytics with Cholesky decomposition</p>
+                <!-- Institutional Header Block -->
+                <div class="dashboard-header-block stress-header-block">
+                    <div class="stress-header-titles">
+                        <h1>Institutional Portfolio Stress Testing & Risk Engine</h1>
+                        <p class="subtitle">BlackRock Aladdin Quantitative Framework · Euler Risk Attribution, Fat-Tail Monte Carlo & Multi-Factor Macro Shocks</p>
+                    </div>
                 </div>
 
-                <div class="stress-input-grid">
-                    <div class="stress-inputs-card">
-                        <h3><i class="fa-solid fa-sliders" aria-hidden="true"></i> Portfolio Configuration</h3>
-                        <div class="input-field-group">
-                            <label for="stress-capital-input">Initial Capital ($)</label>
-                            <input type="number" id="stress-capital-input" value="100000" min="1000" step="1000" placeholder="e.g., 100000">
+                <!-- Top Control & Portfolio Archetype Ribbon -->
+                <div class="stress-top-ribbon" id="stress-top-ribbon">
+                    <div class="ribbon-capital-group">
+                        <label for="stress-capital-input"><i class="fa-solid fa-vault"></i> Portfolio Capital</label>
+                        <div class="capital-input-wrap">
+                            <span class="curr-prefix">$</span>
+                            <input type="number" id="stress-capital-input" value="1000000" min="1000" step="10000" class="font-mono">
                         </div>
-                        <div class="input-field-group">
-                            <label for="stress-age-input">Investor Age (Years)</label>
-                            <input type="number" id="stress-age-input" value="30" min="1" max="120" placeholder="e.g., 30">
-                        </div>
-                        <div class="input-field-group">
-                            <label for="stress-risk-input">Risk Profile</label>
-                            <select id="stress-risk-input">
-                                <option value="conservative">Conservative (Capital Preservation)</option>
-                                <option value="moderate" selected>Moderate (Balanced Growth)</option>
-                                <option value="aggressive">Aggressive (High Alpha)</option>
-                            </select>
-                        </div>
-                        <button id="stress-import-btn" class="secondary-btn fluid-btn" style="margin-top: 8px;">
-                            <i class="fa-solid fa-download" aria-hidden="true"></i> Import from Portfolio Builder
+                    </div>
+
+                    <div class="ribbon-actions-group">
+                        <button type="button" class="ribbon-btn" id="stress-import-btn" title="Sync asset allocation from your saved Mock Portfolio">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Import Mock Portfolio
                         </button>
-                        <button id="stress-to-portfolio-btn" class="secondary-btn fluid-btn" style="margin-top: 6px;">
-                            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to Portfolio Builder
+                        <button type="button" class="ribbon-btn highlight-btn" id="stress-risk-parity-btn" title="Calculate Equal-Risk-Contribution (ERC) weights to minimize tail risk">
+                            <i class="fa-solid fa-scale-balanced"></i> Optimize for Risk Parity
                         </button>
                     </div>
 
-                    <div class="stress-inputs-card">
-                        <h3><i class="fa-solid fa-flask-vial" aria-hidden="true"></i> Simulation Parameters</h3>
-                        <div class="input-field-group">
-                            <label for="stress-scenario-select">Stress Scenario</label>
-                            <select id="stress-scenario-select">
-                                <optgroup label="Historical Events">
-                                    <option value="gfc2008" selected>📉 2008 Global Financial Crisis</option>
-                                    <option value="covid2020">🦠 2020 COVID-19 Crash</option>
-                                    <option value="dotcom2000">💥 2000 Dot-Com Bubble Burst</option>
-                                    <option value="rateShock2022">🏦 2022 Rate Hike Shock</option>
-                                </optgroup>
-                                <optgroup label="Custom">
-                                    <option value="custom">⚙️ Custom Shock (Define Below)</option>
-                                </optgroup>
-                            </select>
+                    <div class="ribbon-archetypes-group">
+                        <span class="archetypes-label"><i class="fa-solid fa-cubes"></i> Benchmarks:</span>
+                        <div class="archetype-pills">
+                            <button type="button" class="archetype-pill active" data-archetype="sixty_forty">60/40 Institutional</button>
+                            <button type="button" class="archetype-pill" data-archetype="all_weather">All-Weather Parity</button>
+                            <button type="button" class="archetype-pill" data-archetype="endowment">Yale Endowment</button>
+                            <button type="button" class="archetype-pill" data-archetype="defensive">Capital Preservation</button>
+                            <button type="button" class="archetype-pill" data-archetype="aggressive">Aggressive Alpha</button>
                         </div>
-                        <div id="custom-shock-inputs" class="hidden-element">
-                            <!-- Generated dynamically by stress.js -->
-                        </div>
-                        <div class="input-field-group">
-                            <label for="stress-mc-years">Monte Carlo Horizon (Years)</label>
-                            <input type="number" id="stress-mc-years" value="5" min="1" max="30" step="1">
-                        </div>
-                        <div class="input-field-group">
-                            <label for="stress-mc-paths">Simulation Paths</label>
-                            <select id="stress-mc-paths">
-                                <option value="500">500 paths (Fast)</option>
-                                <option value="1000" selected>1,000 paths (Balanced)</option>
-                                <option value="3000">3,000 paths (Precise)</option>
-                            </select>
-                        </div>
-                        <div class="stress-btn-row" style="display: flex; gap: 12px; margin-top: 8px;">
-                            <button id="stress-run-btn" class="primary-btn" style="flex: 1; margin: 0;">
-                                <i class="fa-solid fa-bolt" aria-hidden="true"></i> Execute Stress Test
-                            </button>
-                            <button id="stress-compare-btn" class="secondary-btn" style="flex: 1; margin: 0;">
-                                <i class="fa-solid fa-table-columns" aria-hidden="true"></i> Compare Scenarios
-                            </button>
+                    </div>
+
+                    <div class="ribbon-regime-group">
+                        <span class="regime-label"><i class="fa-solid fa-wave-square"></i> Regime:</span>
+                        <div class="regime-segmented" id="stress-regime-toggle">
+                            <button type="button" class="regime-pill active" data-regime="normal">Normal Gaussian</button>
+                            <button type="button" class="regime-pill" data-regime="crisis">Crisis Contagion (Fat-Tail ν=4)</button>
                         </div>
                     </div>
                 </div>
 
-                <div id="stress-loader" class="loader-container hidden-element">
-                    <div class="spinner"></div>
-                    <p id="stress-loader-text">Running Monte Carlo simulation & stress scenarios...</p>
-                    <div class="stress-progress-bar-wrap">
-                        <div id="stress-progress-bar" class="stress-progress-bar"></div>
-                    </div>
-                    <ul class="stress-stepper">
-                        <li id="step-alloc" class="stepper-item">1. Allocation Mapping</li>
-                        <li id="step-stress" class="stepper-item">2. Scenario Shocks</li>
-                        <li id="step-mc" class="stepper-item">3. Monte Carlo Paths</li>
-                        <li id="step-risk" class="stepper-item">4. Risk Metrics</li>
-                    </ul>
-                </div>
-
-                <div id="stress-results-container" class="hidden-element">
-
-                    <!-- Portfolio Efficiency Score Hero Card -->
-                    <div class="stress-efficiency-hero">
-                        <div class="efficiency-hero-content">
-                            <div class="efficiency-score-left">
-                                <div class="efficiency-ring-container">
-                                    <svg class="progress-ring" width="120" height="120">
-                                        <circle class="progress-ring__background" stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" r="50" cx="60" cy="60"/>
-                                        <circle class="progress-ring__circle" id="efficiency-progress-circle" stroke="var(--neon-cyan-vibrant)" stroke-width="8" fill="transparent" r="50" cx="60" cy="60" stroke-dasharray="314.159" stroke-dashoffset="314.159"/>
-                                    </svg>
-                                    <div class="efficiency-score-value" id="efficiency-score-value">--</div>
-                                </div>
-                                <div class="efficiency-score-details">
-                                    <span class="efficiency-label">Efficiency Index</span>
-                                    <span class="efficiency-verdict" id="efficiency-score-verdict">--</span>
+                <!-- Main Workstation Layout (Left: Controls & Scenarios; Right: Risk Analytics & Attribution) -->
+                <div class="stress-workstation-grid">
+                    
+                    <!-- LEFT COLUMN: Capital Allocation & Scenario Desks -->
+                    <div class="stress-control-column">
+                        <!-- 1. Asset Allocation & Euler Weighting Desk -->
+                        <div class="stress-panel-card">
+                            <div class="panel-card-header">
+                                <h3><i class="fa-solid fa-sliders"></i> Capital Allocation Desk</h3>
+                                <div class="allocation-total-badge" id="stress-allocation-status">
+                                    <span class="badge-dot"></span>
+                                    <span class="badge-text" id="stress-allocation-total">Total: 100%</span>
                                 </div>
                             </div>
-                            <div class="efficiency-score-right">
-                                <div class="efficiency-metric-pill" data-metric="sharpe">
-                                    <span class="pill-dot"></span>
-                                    <span class="pill-name">Sharpe:</span>
-                                    <span class="pill-value" id="eff-sharpe">--</span>
-                                </div>
-                                <div class="efficiency-metric-pill" data-metric="sortino">
-                                    <span class="pill-dot"></span>
-                                    <span class="pill-name">Sortino:</span>
-                                    <span class="pill-value" id="eff-sortino">--</span>
-                                </div>
-                                <div class="efficiency-metric-pill" data-metric="var">
-                                    <span class="pill-dot"></span>
-                                    <span class="pill-name">VaR (95%):</span>
-                                    <span class="pill-value" id="eff-var">--</span>
-                                </div>
-                                <div class="efficiency-metric-pill" data-metric="loss">
-                                    <span class="pill-dot"></span>
-                                    <span class="pill-name">Prob Loss:</span>
-                                    <span class="pill-value" id="eff-loss">--</span>
-                                </div>
+                            <p class="panel-card-sub">Adjust asset class weights. Euler risk contributions update dynamically in real time.</p>
+
+                            <div class="stress-allocations-list" id="stress-allocations-list">
+                                <!-- Dynamic Asset Class Rows Generated by stress.js -->
+                            </div>
+
+                            <div class="allocation-actions-row">
+                                <button type="button" class="secondary-btn fluid-btn" id="stress-normalize-btn">
+                                    <i class="fa-solid fa-equals"></i> Normalize Weights to 100%
+                                </button>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Scenario Comparison Matrix (Toggled dynamically) -->
-                    <div id="stress-comparison-card" class="stress-section-card hidden-element">
-                        <h3><i class="fa-solid fa-table-columns" aria-hidden="true"></i> Scenario Comparison Matrix</h3>
-                        <p class="section-desc">Side-by-side performance of current allocation under all historical crisis scenarios.</p>
-                        <div class="forex-data-table-container" style="margin-bottom: 24px;">
-                            <table class="forex-data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Scenario</th>
-                                        <th>Drawdown (%)</th>
-                                        <th>Dollar Loss</th>
-                                        <th>Stressed Value</th>
-                                        <th>Recovery Time</th>
-                                        <th>Severity</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="stress-comparison-tbody">
-                                    <!-- Populated dynamically -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="chart-wrapper-box" style="height: 300px;">
-                            <canvas id="stressComparisonChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Active Allocation Profile</h3>
-                        <div id="stress-allocation-chips" class="stress-chips-row"></div>
-                    </div>
-
-                    <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historical Scenario Impact</h3>
-                        <p class="section-desc" id="stress-scenario-desc">Simulating portfolio performance under the selected crisis event.</p>
-                        <div class="stress-scenario-grid">
-                            <div class="chart-wrapper-box" style="height: 340px;">
-                                <canvas id="stressDrawdownChart"></canvas>
+                        <!-- 2. Scenario & Factor Shock Desk -->
+                        <div class="stress-panel-card">
+                            <div class="panel-card-header">
+                                <h3><i class="fa-solid fa-flask-vial"></i> Scenario & Stress Mode</h3>
                             </div>
-                            <div id="stress-scenario-metrics" class="stress-metrics-side">
+                            <div class="stress-mode-tabs" role="tablist">
+                                <button type="button" class="mode-tab active" id="tab-historical-btn" data-tab="historical">
+                                    <i class="fa-solid fa-clock-rotate-left"></i> Historical Crisis Regimes
+                                </button>
+                                <button type="button" class="mode-tab" id="tab-factor-btn" data-tab="factor">
+                                    <i class="fa-solid fa-microchip"></i> 5-Factor Macro Shocks
+                                </button>
+                            </div>
+
+                            <!-- Panel A: Historical Crisis Regimes -->
+                            <div class="stress-tab-panel active" id="panel-historical-scenarios">
+                                <div class="crisis-cards-grid" id="crisis-cards-grid">
+                                    <!-- 8 Historical Crisis Cards Generated by stress.js -->
+                                </div>
+                            </div>
+
+                            <!-- Panel B: Aladdin 5-Factor Macro Shocks -->
+                            <div class="stress-tab-panel" id="panel-factor-shocks" style="display: none;">
+                                <p class="panel-card-sub">Simulate custom macro shocks across systemic risk factors. Factor Betas propagate to asset returns.</p>
+                                <div class="factor-shocks-list" id="factor-shocks-list">
+                                    <!-- 5 Macro Factor Sliders Generated by stress.js -->
+                                </div>
+                                <button type="button" class="secondary-btn fluid-btn" id="stress-reset-factors-btn" style="margin-top: 14px;">
+                                    <i class="fa-solid fa-rotate-left"></i> Reset Factor Shocks to Neutral
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-dice" aria-hidden="true"></i> Monte Carlo Probability Distribution</h3>
-                        <p class="section-desc">Simulated portfolio trajectories with correlated asset returns using Cholesky decomposition.</p>
-                        <div class="chart-wrapper-box" style="height: 400px;">
-                            <canvas id="stressMonteCarloChart"></canvas>
+                    <!-- RIGHT COLUMN: Executive Tail-Risk KPIs, Visual Charts & Euler Attribution -->
+                    <div class="stress-analytics-column">
+                        
+                        <!-- ROW 1: 6-Card Executive Tail-Risk Ribbon -->
+                        <div class="stress-kpi-ribbon" id="stress-kpi-ribbon">
+                            <!-- 6 Executive KPI Cards Generated by stress.js -->
                         </div>
-                    </div>
 
-                    <!-- Tail Risk & Extreme Event Analysis -->
-                    <div class="stress-section-card" id="stress-tail-risk-card">
-                        <h3><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Tail Risk & Extreme Event Analysis</h3>
-                        <p class="section-desc">Detailed examination of the lower tail outcomes and worst case simulation paths.</p>
-                        <div class="stress-scenario-grid" style="margin-bottom: 24px;">
-                            <div class="chart-wrapper-box" style="height: 340px; flex: 1.3;">
-                                <canvas id="stressTailRiskChart"></canvas>
-                            </div>
-                            <div id="stress-tail-risk-metrics" class="stress-metrics-side" style="flex: 0.7;">
-                                <div class="metric-card">
-                                    <span class="metric-title">Left Tail Weight (<50% Capital)</span>
-                                    <span class="metric-value" id="tail-left-weight">--</span>
+                        <!-- Pre-Hedge vs Post-Hedge Risk Parity Comparison Banner (Dynamic) -->
+                        <div class="risk-parity-banner hidden-element" id="risk-parity-banner">
+                            <!-- Populated on Risk Parity Optimization -->
+                        </div>
+
+                        <!-- ROW 2: Dual Institutional Charts Grid -->
+                        <div class="stress-charts-grid">
+                            <!-- Left: 1,000-Path Monte Carlo Fan Chart -->
+                            <div class="stress-chart-card mc-chart-card">
+                                <div class="chart-card-header">
+                                    <div class="chart-title-wrap">
+                                        <h3><i class="fa-solid fa-chart-line"></i> 1,000-Path Monte Carlo Fan Trajectory</h3>
+                                        <span class="chart-tag" id="mc-regime-tag">Normal Gaussian · 252 Trading Days</span>
+                                    </div>
+                                    <div class="mc-legend-chips">
+                                        <span class="mc-legend-item p95">P95 (Upper Bull)</span>
+                                        <span class="mc-legend-item p50">P50 (Median)</span>
+                                        <span class="mc-legend-item p5">P5 (Tail Risk)</span>
+                                    </div>
                                 </div>
-                                <div class="metric-card">
-                                    <span class="metric-title">Distribution Skewness</span>
-                                    <span class="metric-value" id="tail-skewness">--</span>
-                                </div>
-                                <div class="metric-card">
-                                    <span class="metric-title">Distribution Kurtosis (Excess)</span>
-                                    <span class="metric-value" id="tail-kurtosis">--</span>
-                                </div>
-                                <div class="metric-card" style="border-color: rgba(239, 68, 68, 0.2);">
-                                    <span class="metric-title">Worst-Case Loss</span>
-                                    <span class="metric-value" id="tail-worst-loss" style="color: #ef4444;">--</span>
+                                <div class="chart-canvas-wrap" style="height: 320px;">
+                                    <canvas id="stressMonteCarloChart"></canvas>
                                 </div>
                             </div>
+
+                            <!-- Right: Capital Weight % vs Euler Risk Contribution % -->
+                            <div class="stress-chart-card euler-chart-card">
+                                <div class="chart-card-header">
+                                    <div class="chart-title-wrap">
+                                        <h3><i class="fa-solid fa-chart-pie"></i> Euler Risk Attribution</h3>
+                                        <span class="chart-tag">Capital Weight % vs Risk Share %</span>
+                                    </div>
+                                </div>
+                                <div class="chart-canvas-wrap" style="height: 320px;">
+                                    <canvas id="stressEulerRiskChart"></canvas>
+                                </div>
+                            </div>
                         </div>
-                        <h4 style="margin-bottom: 12px; color: #f8fafc;"><i class="fa-solid fa-skull-crossbones" aria-hidden="true"></i> Worst 5 Simulated Outcomes</h4>
-                        <div class="forex-data-table-container">
-                            <table class="forex-data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Rank</th>
-                                        <th>Final Value</th>
-                                        <th>Total Return (%)</th>
-                                        <th>Max Drawdown (%)</th>
-                                        <th>Worst Month (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="stress-worst-paths-tbody">
-                                    <!-- Populated dynamically -->
-                                </tbody>
-                            </table>
+
+                        <!-- ROW 3: Euler Risk Attribution & Stress Breakdown Matrix Table -->
+                        <div class="stress-panel-card" id="stress-attribution-table-card">
+                            <div class="panel-card-header">
+                                <h3><i class="fa-solid fa-table-cells"></i> Institutional Risk Attribution & Stress Breakdown Matrix</h3>
+                                <span class="panel-header-badge font-mono" id="choueifaty-ratio-badge">Choueifaty DR: 1.34x</span>
+                            </div>
+                            <p class="panel-card-sub">Euler risk decomposition ($\text{CCTR}_i = w_i \cdot \frac{(\Sigma \mathbf{w})_i}{\sigma_p}$) isolating marginal risk contribution vs. nominal capital weight.</p>
+                            
+                            <div class="stress-table-container">
+                                <table class="stress-matrix-table" id="stress-matrix-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Asset Class</th>
+                                            <th class="num-col">Capital Weight</th>
+                                            <th class="num-col">Allocated ($)</th>
+                                            <th class="num-col">Annual Vol (σ)</th>
+                                            <th class="num-col">Marginal VaR</th>
+                                            <th class="num-col">Risk Share (%)</th>
+                                            <th class="num-col">Scenario Shock</th>
+                                            <th class="num-col">Stressed P&L ($)</th>
+                                            <th class="num-col">Post-Stress Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stress-matrix-tbody">
+                                        <!-- Populated dynamically by stress.js -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
+                        <!-- ROW 4: BlackRock Aladdin Chief Risk Officer Executive Memo -->
+                        <div class="stress-panel-card cro-memo-card" id="stress-cro-card">
+                            <div class="cro-card-header">
+                                <div class="cro-title-group">
+                                    <div class="cro-badge"><i class="fa-solid fa-shield-halved"></i> Aladdin RQA</div>
+                                    <h3>Chief Risk Officer (CRO) Executive Memo</h3>
+                                    <span class="cro-status-indicator" id="cro-status-indicator"></span>
+                                </div>
+                                <div class="cro-actions">
+                                    <button type="button" class="cro-btn" id="stress-ai-run-btn">
+                                        <i class="fa-solid fa-brain"></i> Generate CRO Risk Memo
+                                    </button>
+                                    <button type="button" class="cro-btn secondary" id="stress-ai-copy-btn" title="Copy Risk Memo to clipboard">
+                                        <i class="fa-solid fa-copy"></i> Copy Memo
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="cro-memo-body" id="stress-ai-output">
+                                <div class="cro-placeholder">
+                                    <i class="fa-solid fa-terminal"></i>
+                                    <p>Select a stress regime or adjust factor shocks, then click <strong>"Generate CRO Risk Memo"</strong> to run BlackRock Aladdin's institutional tail-risk audit.</p>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
-
-                    <!-- Asset Correlation Matrix -->
-                    <div class="stress-section-card" id="stress-correlation-card">
-                        <h3><i class="fa-solid fa-grip" aria-hidden="true"></i> Asset Correlation Matrix</h3>
-                        <p class="section-desc">Correlation structure used in Cholesky decomposition for Monte Carlo path generation.</p>
-                        <div class="forex-data-table-container" style="margin-bottom: 12px;">
-                            <table class="forex-data-table" style="background: transparent;">
-                                <thead>
-                                    <tr id="correlation-header-row">
-                                        <th>Asset Class</th>
-                                        <!-- Header labels generated dynamically -->
-                                    </tr>
-                                </thead>
-                                <tbody id="correlation-matrix-tbody">
-                                    <!-- Generated dynamically -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <p class="section-desc" style="font-size: 0.8rem; margin: 0; font-style: italic;">Based on rolling 10-year correlations of monthly returns. Correlation structure used in Cholesky decomposition for Monte Carlo path generation.</p>
-                    </div>
-
-                    <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> Quantitative Risk Metrics</h3>
-                        <div id="stress-risk-metrics" class="metric-summary-grid">
-                        </div>
-                    </div>
-
-                    <div class="stress-section-card">
-                        <h3><i class="fa-solid fa-robot" aria-hidden="true"></i> AI Risk Assessment</h3>
-                        <div id="stress-ai-commentary" class="stress-ai-output">
-                            <span class="terminal-prompt">Risk assessment will appear after running a stress test.</span>
-                        </div>
-                    </div>
-
-
-                    <p class="projection-disclaimer"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> <strong>Disclaimer:</strong> Stress tests use historical drawdown data and Monte Carlo simulations based on trailing volatility estimates. Past performance does not guarantee future results. This is for educational purposes only—not investment advice.</p>
-
                 </div>
             </section>
         </main>

@@ -178,6 +178,98 @@ async function handleMatrix(req, res) {
         const diversificationScore = Math.max(0, Math.min(100, Math.round((1 - avgCorr) * 50 + 50)));
         const diversificationRating = diversificationScore >= 70 ? 'High Diversification' : (diversificationScore >= 45 ? 'Moderate Diversification' : 'Concentrated / High Co-Movement');
 
+        // 1. Systemic Risk / Kritzman PCA Absorption Ratio (Power Iteration on matrix)
+        let lambda1 = 1.0;
+        if (assets.length > 1) {
+            let v = new Array(assets.length).fill(1);
+            for (let iter = 0; iter < 25; iter++) {
+                const vNext = new Array(assets.length).fill(0);
+                for (let r = 0; r < assets.length; r++) {
+                    for (let c = 0; c < assets.length; c++) {
+                        vNext[r] += matrix[r][c] * v[c];
+                    }
+                }
+                const norm = Math.sqrt(vNext.reduce((sum, val) => sum + val * val, 0));
+                if (norm > 0) {
+                    v = vNext.map(val => val / norm);
+                }
+            }
+            // Rayleigh quotient: (v^T M v) / (v^T v)
+            let numer = 0;
+            let denom = 0;
+            for (let r = 0; r < assets.length; r++) {
+                let Mvr = 0;
+                for (let c = 0; c < assets.length; c++) {
+                    Mvr += matrix[r][c] * v[c];
+                }
+                numer += v[r] * Mvr;
+                denom += v[r] * v[r];
+            }
+            lambda1 = denom > 0 ? (numer / denom) : 1.0;
+            lambda1 = Math.max(1.0, Math.min(assets.length, lambda1));
+        }
+
+        const absorptionRatioPct = Number(((lambda1 / assets.length) * 100).toFixed(1));
+        let systemicRegime = 'Decoupled / Idiosyncratic Market';
+        if (absorptionRatioPct >= 65) {
+            systemicRegime = 'Tightly Coupled / Systemic Fragility';
+        } else if (absorptionRatioPct >= 45) {
+            systemicRegime = 'Moderate Macro Coupling';
+        }
+
+        const systemicRisk = {
+            lambda1: Number(lambda1.toFixed(2)),
+            absorptionRatioPct,
+            regime: systemicRegime
+        };
+
+        // 2. Rolling 20D vs. Baseline Correlation Regime Breaks
+        const regimeBreaks = [];
+        if (returns.length > 0 && returns[0].length >= 25) {
+            const recentReturns = returns.map(r => r.slice(-20));
+            for (let i = 0; i < assets.length; i++) {
+                for (let j = i + 1; j < assets.length; j++) {
+                    const corr20d = Number(computePearson(recentReturns[i], recentReturns[j]).toFixed(3));
+                    const corrFull = Number(matrix[i][j].toFixed(3));
+                    const delta = Number((corr20d - corrFull).toFixed(3));
+                    if (Math.abs(delta) >= 0.30) {
+                        regimeBreaks.push({
+                            pair: `${assets[i]}/${assets[j]}`,
+                            labels: `${labels[i]} vs ${labels[j]}`,
+                            fullCorr: corrFull,
+                            recent20dCorr: corr20d,
+                            delta,
+                            shiftType: delta > 0 ? 'Correlation Spike (Convergence)' : 'Correlation Breakdown (Decoupling)'
+                        });
+                    }
+                }
+            }
+            regimeBreaks.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+        }
+
+        // 3. 1-Day Lead-Lag Predictive Cross-Correlation
+        const candidateLeadLags = [];
+        for (let i = 0; i < assets.length; i++) {
+            for (let j = 0; j < assets.length; j++) {
+                if (i === j) continue;
+                if (returns[i].length >= 15 && returns[j].length >= 15) {
+                    const leadCorr = computePearson(returns[i].slice(0, -1), returns[j].slice(1));
+                    if (typeof leadCorr === 'number' && !isNaN(leadCorr) && Math.abs(leadCorr) >= 0.20) {
+                        candidateLeadLags.push({
+                            leader: assets[i],
+                            leaderLabel: labels[i] || assets[i],
+                            follower: assets[j],
+                            followerLabel: labels[j] || assets[j],
+                            lag1Correlation: Number(leadCorr.toFixed(3)),
+                            direction: leadCorr > 0 ? 'Positive Lead' : 'Inverse Lead'
+                        });
+                    }
+                }
+            }
+        }
+        candidateLeadLags.sort((a, b) => Math.abs(b.lag1Correlation) - Math.abs(a.lag1Correlation));
+        const leadLagSignals = candidateLeadLags.slice(0, 4);
+
         const result = {
             assets,
             labels,
@@ -188,7 +280,10 @@ async function handleMatrix(req, res) {
                 score: diversificationScore,
                 rating: diversificationRating,
                 avgCorrelation: Number(avgCorr.toFixed(3))
-            }
+            },
+            systemicRisk,
+            regimeBreaks,
+            leadLagSignals
         };
 
         const finalResult = wrapWithProvenance(result, {

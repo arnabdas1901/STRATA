@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 
 const {
-    lookupCikByTicker,
     fetchCompanyFacts,
     fetchCompanyFilings,
     extractFinancialTimeSeries,
@@ -18,12 +17,7 @@ const { MemoryCache } = require('../utils/cache');
 // Import AI provider for the diff summary
 const { generateAiAnalysis } = require('../utils/aiProviders');
 
-// Initialize caches using standard (name, ttlMs)
-const FACTS_CACHE = new MemoryCache('sec-facts', 24 * 60 * 60 * 1000); // 24h
-const FILINGS_CACHE = new MemoryCache('sec-filings', 6 * 60 * 60 * 1000); // 6h
-const SEGMENTS_CACHE = new MemoryCache('sec-segments', 24 * 60 * 60 * 1000); // 24h
-const CAPALLOC_CACHE = new MemoryCache('sec-capital-allocation', 12 * 60 * 60 * 1000); // 12h
-const QUALITY_CACHE = new MemoryCache('sec-earnings-quality', 12 * 60 * 60 * 1000); // 12h
+// Route-specific filing diff cache (other SEC caches are centralized in utils/secProviders.js)
 const DIFF_CACHE = new MemoryCache('sec-filing-diff', 12 * 60 * 60 * 1000); // 12h
 
 /**
@@ -37,16 +31,9 @@ router.get('/facts/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let facts = FACTS_CACHE.getData(ticker);
-        let freshness = FRESHNESS.CACHED;
-        
-        if (!facts) {
-            facts = await fetchCompanyFacts(ticker);
-            if (!facts || Object.keys(facts).length === 0) {
-                return res.status(404).json({ error: `Facts not found for ticker: ${ticker}` });
-            }
-            FACTS_CACHE.set(ticker, facts);
-            freshness = FRESHNESS.REALTIME;
+        const facts = await fetchCompanyFacts(ticker);
+        if (!facts || Object.keys(facts).length === 0) {
+            return res.status(404).json({ error: `Facts not found for ticker: ${ticker}` });
         }
 
         res.json(wrapWithProvenance(
@@ -55,7 +42,7 @@ router.get('/facts/:ticker', async (req, res) => {
                 provider: 'sec',
                 timestamp: new Date().toISOString(),
                 dataQuality: DATA_QUALITY.OFFICIAL,
-                freshness,
+                freshness: FRESHNESS.CACHED,
                 endpoint: '/sec/facts'
             }
         ));
@@ -76,16 +63,9 @@ router.get('/filings/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let filings = FILINGS_CACHE.getData(ticker);
-        let freshness = FRESHNESS.CACHED;
-        
-        if (!filings) {
-            filings = await fetchCompanyFilings(ticker);
-            if (!filings || filings.length === 0) {
-                return res.status(404).json({ error: `Filings not found for ticker: ${ticker}` });
-            }
-            FILINGS_CACHE.set(ticker, filings);
-            freshness = FRESHNESS.REALTIME;
+        const filings = await fetchCompanyFilings(ticker);
+        if (!filings || filings.length === 0) {
+            return res.status(404).json({ error: `Filings not found for ticker: ${ticker}` });
         }
 
         res.json(wrapWithProvenance(
@@ -94,7 +74,7 @@ router.get('/filings/:ticker', async (req, res) => {
                 provider: 'sec',
                 timestamp: new Date().toISOString(),
                 dataQuality: DATA_QUALITY.OFFICIAL,
-                freshness,
+                freshness: FRESHNESS.CACHED,
                 endpoint: '/sec/filings'
             }
         ));
@@ -115,16 +95,9 @@ router.get('/segments/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let segments = SEGMENTS_CACHE.getData(ticker);
-        let freshness = FRESHNESS.CACHED;
-        
+        const segments = await fetchRevenueBySegment(ticker);
         if (!segments) {
-            segments = await fetchRevenueBySegment(ticker);
-            if (!segments) {
-                return res.status(404).json({ error: `Segment data not found for ticker: ${ticker}` });
-            }
-            SEGMENTS_CACHE.set(ticker, segments);
-            freshness = FRESHNESS.REALTIME;
+            return res.status(404).json({ error: `Segment data not found for ticker: ${ticker}` });
         }
 
         // Support both { segments: [...] } and direct array callers
@@ -136,7 +109,7 @@ router.get('/segments/:ticker', async (req, res) => {
                 provider: 'sec',
                 timestamp: new Date().toISOString(),
                 dataQuality: DATA_QUALITY.OFFICIAL,
-                freshness,
+                freshness: FRESHNESS.CACHED,
                 endpoint: '/sec/segments'
             }
         ));
@@ -157,16 +130,9 @@ router.get('/capital-allocation/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let allocation = CAPALLOC_CACHE.getData(ticker);
-        let freshness = FRESHNESS.CACHED;
-        
+        const allocation = await fetchCapitalAllocation(ticker);
         if (!allocation) {
-            allocation = await fetchCapitalAllocation(ticker);
-            if (!allocation) {
-                return res.status(404).json({ error: `Capital allocation data not found for ticker: ${ticker}` });
-            }
-            CAPALLOC_CACHE.set(ticker, allocation);
-            freshness = FRESHNESS.REALTIME;
+            return res.status(404).json({ error: `Capital allocation data not found for ticker: ${ticker}` });
         }
 
         res.json(wrapWithProvenance(
@@ -175,7 +141,7 @@ router.get('/capital-allocation/:ticker', async (req, res) => {
                 provider: 'sec',
                 timestamp: new Date().toISOString(),
                 dataQuality: DATA_QUALITY.OFFICIAL,
-                freshness,
+                freshness: FRESHNESS.CACHED,
                 endpoint: '/sec/capital-allocation'
             }
         ));
@@ -196,16 +162,9 @@ router.get('/earnings-quality/:ticker', async (req, res) => {
             return res.status(400).json({ error: 'Invalid or missing ticker' });
         }
 
-        let quality = QUALITY_CACHE.getData(ticker);
-        let freshness = FRESHNESS.CACHED;
-        
+        const quality = await fetchEarningsQualityData(ticker);
         if (!quality) {
-            quality = await fetchEarningsQualityData(ticker);
-            if (!quality) {
-                return res.status(404).json({ error: `Earnings quality data not found for ticker: ${ticker}` });
-            }
-            QUALITY_CACHE.set(ticker, quality);
-            freshness = FRESHNESS.REALTIME;
+            return res.status(404).json({ error: `Earnings quality data not found for ticker: ${ticker}` });
         }
 
         res.json(wrapWithProvenance(
@@ -214,7 +173,7 @@ router.get('/earnings-quality/:ticker', async (req, res) => {
                 provider: 'sec',
                 timestamp: new Date().toISOString(),
                 dataQuality: DATA_QUALITY.OFFICIAL,
-                freshness,
+                freshness: FRESHNESS.CACHED,
                 endpoint: '/sec/earnings-quality'
             }
         ));
@@ -228,9 +187,33 @@ router.get('/earnings-quality/:ticker', async (req, res) => {
  * Helper function to extract a specific financial metric for a specific period
  */
 function getMetricValue(timeSeries, periodDate) {
-    if (!timeSeries || !Array.isArray(timeSeries)) return null;
-    const point = timeSeries.find(p => (p.end === periodDate) || (p.period === periodDate) || (p.val !== undefined && p.end && p.end.startsWith(periodDate)));
-    return point ? point.val : (point ? point.value : null);
+    if (!timeSeries || !Array.isArray(timeSeries) || !periodDate) return null;
+    
+    // 1. Direct match on end date or period
+    let point = timeSeries.find(p => p.end === periodDate || p.period === periodDate);
+    
+    // 2. Starts with match on date string (e.g. 2024-09 vs 2024-09-30)
+    if (!point) {
+        point = timeSeries.find(p => p.end && (p.end.startsWith(periodDate) || periodDate.startsWith(p.end)));
+    }
+    
+    // 3. Closest prior end date if within 45 days of reportDate/periodDate
+    if (!point) {
+        const targetTime = new Date(periodDate).getTime();
+        if (!isNaN(targetTime)) {
+            const candidates = timeSeries.filter(p => {
+                const pTime = new Date(p.end || p.filed).getTime();
+                return pTime <= targetTime && (targetTime - pTime) <= 45 * 24 * 3600 * 1000;
+            });
+            if (candidates.length > 0) {
+                candidates.sort((a, b) => new Date(b.end || b.filed).getTime() - new Date(a.end || a.filed).getTime());
+                point = candidates[0];
+            }
+        }
+    }
+    
+    if (!point) return null;
+    return point.value !== undefined ? point.value : (point.val !== undefined ? point.val : null);
 }
 
 /**
@@ -268,15 +251,12 @@ router.get('/filing-diff/:ticker', async (req, res) => {
         const type = req.query.type || '10-Q';
         const cacheKey = `${ticker}-${type}`;
         
-        let diffData = DIFF_CACHE.getData(cacheKey);
+        let diffData = DIFF_CACHE.getValue(cacheKey);
         let freshness = FRESHNESS.CACHED;
         
         if (!diffData) {
-            // 1. Fetch filings to identify the last two periods
-            let filings = FILINGS_CACHE.getData(ticker);
-            if (!filings) {
-                filings = await fetchCompanyFilings(ticker);
-            }
+            // 1. Fetch filings to identify the last two periods (cached in utils/secProviders.js)
+            const filings = await fetchCompanyFilings(ticker);
             
             if (!filings || !Array.isArray(filings)) {
                 return res.status(404).json({ error: `Could not retrieve filings for ${ticker}` });
@@ -291,11 +271,8 @@ router.get('/filing-diff/:ticker', async (req, res) => {
             const currentFilingInfo = targetFilings[0];
             const previousFilingInfo = targetFilings[1];
             
-            // 2. Fetch XBRL company facts
-            let facts = FACTS_CACHE.getData(ticker);
-            if (!facts) {
-                facts = await fetchCompanyFacts(ticker);
-            }
+            // 2. Fetch XBRL company facts (cached in utils/secProviders.js)
+            const facts = await fetchCompanyFacts(ticker);
             
             if (!facts || Object.keys(facts).length === 0) {
                 return res.status(404).json({ error: `Facts not found for ${ticker}` });
@@ -303,14 +280,48 @@ router.get('/filing-diff/:ticker', async (req, res) => {
 
             // Expanded GAAP concept lists to support varying taxonomy standards
             const conceptsMap = {
-                revenue: ['RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenues', 'SalesRevenueNet', 'RevenuesNetOfInterestExpense'],
-                netIncome: ['NetIncomeLoss', 'ProfitLoss'],
+                revenue: [
+                    'RevenueFromContractWithCustomerExcludingAssessedTax',
+                    'Revenues',
+                    'SalesRevenueNet',
+                    'SalesRevenueGoodsNet',
+                    'RevenuesNetOfInterestExpense',
+                    'InterestAndDividendIncomeOperating'
+                ],
+                netIncome: [
+                    'NetIncomeLoss',
+                    'ProfitLoss',
+                    'NetIncomeLossAvailableToCommonStockholdersBasic'
+                ],
+                operatingCashFlow: [
+                    'NetCashProvidedByOperatingActivities',
+                    'NetCashProvidedByUsedInOperatingActivities',
+                    'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'
+                ],
+                capex: [
+                    'PaymentsToAcquirePropertyPlantAndEquipment',
+                    'PaymentsToAcquireProductiveAssets',
+                    'CapitalExpendituresIncurredButNotYetPaid'
+                ],
                 assets: ['Assets'],
                 liabilities: ['Liabilities'],
-                cash: ['CashAndCashEquivalentsAtCarryingValue', 'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents'],
-                debt: ['LongTermDebt', 'LongTermDebtNoncurrent', 'DebtInstrumentCarryingAmount'],
-                operatingCashFlow: ['NetCashProvidedByOperatingActivities', 'NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'],
-                eps: ['EarningsPerShareDiluted', 'EarningsPerShareBasic']
+                equity: [
+                    'StockholdersEquity',
+                    'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest'
+                ],
+                cash: [
+                    'CashAndCashEquivalentsAtCarryingValue',
+                    'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents'
+                ],
+                debt: [
+                    'LongTermDebt',
+                    'LongTermDebtNoncurrent',
+                    'DebtInstrumentCarryingAmount'
+                ],
+                eps: [
+                    'EarningsPerShareDiluted',
+                    'EarningsPerShareBasic'
+                ]
             };
 
             const extractedMetrics = {};
@@ -327,8 +338,8 @@ router.get('/filing-diff/:ticker', async (req, res) => {
             }
 
             // 3. Compare key financial metrics
-            const currentPeriod = currentFilingInfo.reportDate || currentFilingInfo.period || currentFilingInfo.filedDate;
-            const previousPeriod = previousFilingInfo.reportDate || previousFilingInfo.period || previousFilingInfo.filedDate;
+            const currentPeriod = currentFilingInfo.reportDate || currentFilingInfo.period || currentFilingInfo.filedDate || currentFilingInfo.filingDate;
+            const previousPeriod = previousFilingInfo.reportDate || previousFilingInfo.period || previousFilingInfo.filedDate || previousFilingInfo.filingDate;
 
             const changes = {};
             for (const key of Object.keys(conceptsMap)) {

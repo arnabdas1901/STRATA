@@ -56,7 +56,7 @@ router.get('/profile/:ticker', async (req, res) => {
         const period = req.query.period || '1y';
         const cacheKey = `risk_profile_${ticker}_${period}`;
         
-        const cached = cache.getData(cacheKey);
+        const cached = cache.getValue(cacheKey);
         if (cached) {
             return res.json(cached);
         }
@@ -213,7 +213,7 @@ router.get('/drawdown/:ticker', async (req, res) => {
         const period = req.query.period || '1y';
         const cacheKey = `risk_drawdown_${ticker}_${period}`;
 
-        const cached = cache.getData(cacheKey);
+        const cached = cache.getValue(cacheKey);
         if (cached) {
             return res.json(cached);
         }

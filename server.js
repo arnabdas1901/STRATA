@@ -10,6 +10,7 @@ if (!process.execArgv.includes('--use-system-ca')) {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(cors({

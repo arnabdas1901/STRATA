@@ -13,6 +13,9 @@ const { MemoryCache } = require('./cache');
 // In-memory caches for SEC XBRL facts and company filings
 const factsCache = new MemoryCache('sec-facts', 24 * 60 * 60 * 1000, 50);
 const filingsCache = new MemoryCache('sec-filings', 6 * 60 * 60 * 1000, 100);
+const segmentsCache = new MemoryCache('sec-segments', 24 * 60 * 60 * 1000, 100);
+const capAllocCache = new MemoryCache('sec-capital-allocation', 12 * 60 * 60 * 1000, 100);
+const qualityCache = new MemoryCache('sec-earnings-quality', 12 * 60 * 60 * 1000, 100);
 const inFlightFacts = new Map();
 const inFlightFilings = new Map();
 
@@ -235,37 +238,70 @@ function extractFinancialTimeSeries(facts, concept, unit = 'USD') {
 }
 
 async function fetchRevenueBySegment(ticker) {
+    if (!ticker) return { segments: [] };
+    const tickerUpper = ticker.toUpperCase().trim();
+    const cached = segmentsCache.getData(tickerUpper);
+    if (cached) return cached;
+
     try {
-        const facts = await fetchCompanyFacts(ticker);
-        if (!facts || !facts.facts || !facts.facts['us-gaap']) return { segments: [] };
+        const facts = await fetchCompanyFacts(tickerUpper);
+        if (!facts || !facts.facts) return { segments: [] };
+        
+        let taxonomy = 'us-gaap';
+        if (!facts.facts['us-gaap'] && facts.facts['ifrs-full']) {
+            taxonomy = 'ifrs-full';
+        }
+        if (!facts.facts[taxonomy]) return { segments: [] };
         
         // Revenue can be under different concepts
         const conceptsToCheck = [
             'RevenueFromContractWithCustomerExcludingAssessedTax',
             'Revenues',
             'SalesRevenueNet',
-            'RevenuesNetOfInterestExpense'
+            'SalesRevenueGoodsNet',
+            'RevenuesNetOfInterestExpense',
+            'InterestAndDividendIncomeOperating'
         ];
         
         let concept = null;
         for (const c of conceptsToCheck) {
-            if (facts.facts['us-gaap'][c]) {
+            if (facts.facts[taxonomy][c]) {
                 concept = c;
                 break;
             }
         }
         
+        if (!concept && taxonomy === 'us-gaap' && facts.facts['ifrs-full']) {
+            for (const c of conceptsToCheck) {
+                if (facts.facts['ifrs-full'][c]) {
+                    taxonomy = 'ifrs-full';
+                    concept = c;
+                    break;
+                }
+            }
+        }
+
         if (!concept) return { segments: [] };
         
-        const conceptData = facts.facts['us-gaap'][concept];
+        const conceptData = facts.facts[taxonomy][concept];
+        if (!conceptData.units) return { segments: [] };
         const unit = Object.keys(conceptData.units)[0]; // usually USD
+        if (!unit || !conceptData.units[unit]) return { segments: [] };
         const records = conceptData.units[unit];
         
+        const validAxes = [
+            'us-gaap:StatementBusinessSegmentsAxis',
+            'us-gaap:ProductOrServiceAxis',
+            'srt:ProductOrServiceAxis',
+            'srt:StatementGeographicalAxis',
+            'us-gaap:StatementGeographicalAxis'
+        ];
+
         // Filter for annual (10-K) data with segment dimensions
         const segmentRecords = records.filter(r => 
-            r.form === '10-K' && 
+            (r.form === '10-K' || r.form === '20-F' || r.form === '40-F') && 
             r.segment && 
-            (r.segment.axis === 'us-gaap:StatementBusinessSegmentsAxis' || r.segment.axis === 'us-gaap:ProductOrServiceAxis')
+            validAxes.includes(r.segment.axis)
         );
         
         const segmentMap = {};
@@ -282,14 +318,15 @@ async function fetchRevenueBySegment(ticker) {
             }
             
             segmentMap[segmentName].push({
-                period: record.fy, // Fiscal Year
+                period: record.fy || (record.end ? parseInt(record.end.slice(0, 4), 10) : null),
                 value: record.val
             });
         }
         
         const segments = Object.keys(segmentMap).map(name => {
-            // Sort by period, remove duplicates taking latest filed
-            const sorted = segmentMap[name].sort((a, b) => a.period - b.period);
+            const sorted = segmentMap[name]
+                .filter(item => item.period)
+                .sort((a, b) => a.period - b.period);
             const unique = [];
             let lastPeriod = null;
             for (const item of sorted) {
@@ -297,16 +334,18 @@ async function fetchRevenueBySegment(ticker) {
                     unique.push(item);
                     lastPeriod = item.period;
                 } else {
-                    unique[unique.length - 1] = item; // overwrite with later record
+                    unique[unique.length - 1] = item;
                 }
             }
             return {
                 name,
                 values: unique
             };
-        });
+        }).filter(seg => seg.values.length > 0);
         
-        return { segments };
+        const payload = { segments };
+        segmentsCache.set(tickerUpper, payload);
+        return payload;
         
     } catch (error) {
         console.error(`Error fetching revenue by segment for ${ticker}:`, error.message);
@@ -315,32 +354,52 @@ async function fetchRevenueBySegment(ticker) {
 }
 
 function getLatestAnnualValues(facts, conceptList, fallbackVal = 0) {
-    if (!facts || !facts.facts || !facts.facts['us-gaap']) return [];
+    if (!facts || !facts.facts) return [];
+    
+    let taxonomy = 'us-gaap';
+    if (!facts.facts['us-gaap'] && facts.facts['ifrs-full']) {
+        taxonomy = 'ifrs-full';
+    }
+    if (!facts.facts[taxonomy]) return [];
     
     let concept = null;
     for (const c of conceptList) {
-        if (facts.facts['us-gaap'][c]) {
+        if (facts.facts[taxonomy][c]) {
             concept = c;
             break;
+        }
+    }
+
+    if (!concept && taxonomy === 'us-gaap' && facts.facts['ifrs-full']) {
+        for (const c of conceptList) {
+            if (facts.facts['ifrs-full'][c]) {
+                taxonomy = 'ifrs-full';
+                concept = c;
+                break;
+            }
         }
     }
     
     if (!concept) return [];
     
-    const conceptData = facts.facts['us-gaap'][concept];
+    const conceptData = facts.facts[taxonomy][concept];
+    if (!conceptData.units) return [];
     const unit = Object.keys(conceptData.units)[0];
+    if (!unit || !conceptData.units[unit]) return [];
     const records = conceptData.units[unit];
     
     // Filter to 10-K (Annual), no segments (consolidated)
-    const annualRecords = records.filter(r => r.form === '10-K' && !r.segment);
+    const annualRecords = records.filter(r => 
+        (r.form === '10-K' || r.form === '20-F' || r.form === '40-F') && !r.segment
+    );
     
     // Map by fiscal year
     const byFy = {};
     for (const r of annualRecords) {
-        if (r.fy) {
-            // If multiple records for same FY (e.g., restatements), keep the latest filed
-            if (!byFy[r.fy] || new Date(r.filed) > new Date(byFy[r.fy].filed)) {
-                byFy[r.fy] = r;
+        const fy = r.fy || (r.end ? parseInt(r.end.slice(0, 4), 10) : null);
+        if (fy) {
+            if (!byFy[fy] || new Date(r.filed || 0) > new Date(byFy[fy].filed || 0)) {
+                byFy[fy] = { ...r, fy, val: r.val !== undefined ? r.val : fallbackVal };
             }
         }
     }
@@ -349,20 +408,60 @@ function getLatestAnnualValues(facts, conceptList, fallbackVal = 0) {
 }
 
 async function fetchCapitalAllocation(ticker) {
+    if (!ticker) return [];
+    const tickerUpper = ticker.toUpperCase().trim();
+    const cached = capAllocCache.getData(tickerUpper);
+    if (cached) return cached;
+
     try {
-        const facts = await fetchCompanyFacts(ticker);
+        const facts = await fetchCompanyFacts(tickerUpper);
         if (!facts) return [];
         
-        const capex = getLatestAnnualValues(facts, ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets']);
-        const buybacks = getLatestAnnualValues(facts, ['PaymentsForRepurchaseOfCommonStock', 'PaymentsForRepurchaseOfEquity']);
-        const dividends = getLatestAnnualValues(facts, ['PaymentsOfDividends', 'PaymentsOfDividendsCommonStock', 'Dividends', 'DividendsPaid']);
-        const acquisitions = getLatestAnnualValues(facts, ['PaymentsToAcquireBusinessesNetOfCashAcquired', 'PaymentsToAcquireBusinessesGross']);
-        const debtRepayment = getLatestAnnualValues(facts, ['RepaymentsOfLongTermDebt', 'RepaymentsOfDebt']);
-        const debtIssuance = getLatestAnnualValues(facts, ['ProceedsFromIssuanceOfLongTermDebt', 'ProceedsFromIssuanceOfDebt']);
-        const ocf = getLatestAnnualValues(facts, ['NetCashProvidedByOperatingActivities', 'NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations']);
+        const capex = getLatestAnnualValues(facts, [
+            'PaymentsToAcquirePropertyPlantAndEquipment',
+            'PaymentsToAcquireProductiveAssets',
+            'CapitalExpendituresIncurredButNotYetPaid'
+        ]);
+        const buybacks = getLatestAnnualValues(facts, [
+            'PaymentsForRepurchaseOfCommonStock',
+            'PaymentsForRepurchaseOfEquity',
+            'PaymentsForRepurchaseOfCommonStockAndTreasuryStock'
+        ]);
+        const dividends = getLatestAnnualValues(facts, [
+            'PaymentsOfDividends',
+            'PaymentsOfDividendsCommonStock',
+            'Dividends',
+            'DividendsPaid',
+            'PaymentsOfDividendsMinorityInterest'
+        ]);
+        const acquisitions = getLatestAnnualValues(facts, [
+            'PaymentsToAcquireBusinessesNetOfCashAcquired',
+            'PaymentsToAcquireBusinessesGross',
+            'PaymentsToAcquireInterestInJointVenture'
+        ]);
+        const debtRepayment = getLatestAnnualValues(facts, [
+            'RepaymentsOfLongTermDebt',
+            'RepaymentsOfDebt',
+            'RepaymentsOfLinesOfCredit'
+        ]);
+        const debtIssuance = getLatestAnnualValues(facts, [
+            'ProceedsFromIssuanceOfLongTermDebt',
+            'ProceedsFromIssuanceOfDebt',
+            'ProceedsFromLinesOfCredit'
+        ]);
+        const ocf = getLatestAnnualValues(facts, [
+            'NetCashProvidedByUsedInOperatingActivities',
+            'NetCashProvidedByOperatingActivities',
+            'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'
+        ]);
         
-        // Determine common fiscal years (last 5 available in OCF)
-        const years = ocf.map(r => r.fy).slice(-5);
+        // Determine common fiscal years across available series
+        const allYearsSet = new Set([
+            ...ocf.map(r => r.fy),
+            ...capex.map(r => r.fy),
+            ...buybacks.map(r => r.fy)
+        ]);
+        const years = Array.from(allYearsSet).sort((a, b) => a - b).slice(-5);
         
         const result = [];
         for (const fy of years) {
@@ -388,6 +487,7 @@ async function fetchCapitalAllocation(ticker) {
             });
         }
         
+        capAllocCache.set(tickerUpper, result);
         return result;
         
     } catch (error) {
@@ -397,42 +497,158 @@ async function fetchCapitalAllocation(ticker) {
 }
 
 async function fetchEarningsQualityData(ticker) {
+    if (!ticker) return [];
+    const tickerUpper = ticker.toUpperCase().trim();
+    const cached = qualityCache.getData(tickerUpper);
+    if (cached) return cached;
+
     try {
-        const facts = await fetchCompanyFacts(ticker);
+        const facts = await fetchCompanyFacts(tickerUpper);
         if (!facts) return [];
         
-        const netIncome = getLatestAnnualValues(facts, ['NetIncomeLoss']);
-        const ocf = getLatestAnnualValues(facts, ['NetCashProvidedByOperatingActivities', 'NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations']);
-        const totalAssets = getLatestAnnualValues(facts, ['Assets']);
-        const ar = getLatestAnnualValues(facts, ['AccountsReceivableNetCurrent']);
-        const inventory = getLatestAnnualValues(facts, ['InventoryNet']);
-        const revenue = getLatestAnnualValues(facts, ['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet']);
-        const sbc = getLatestAnnualValues(facts, ['ShareBasedCompensation', 'AllocatedShareBasedCompensationExpense']);
-        const sharesOut = getLatestAnnualValues(facts, ['WeightedAverageNumberOfDilutedSharesOutstanding', 'CommonStockSharesOutstanding']);
+        const netIncome = getLatestAnnualValues(facts, [
+            'NetIncomeLoss',
+            'ProfitLoss',
+            'NetIncomeLossAvailableToCommonStockholdersBasic'
+        ]);
+        const ocf = getLatestAnnualValues(facts, [
+            'NetCashProvidedByUsedInOperatingActivities',
+            'NetCashProvidedByOperatingActivities',
+            'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'
+        ]);
+        const capex = getLatestAnnualValues(facts, [
+            'PaymentsToAcquirePropertyPlantAndEquipment',
+            'PaymentsToAcquireProductiveAssets',
+            'CapitalExpendituresIncurredButNotYetPaid'
+        ]);
+        const totalAssets = getLatestAnnualValues(facts, [
+            'Assets'
+        ]);
+        const stockholdersEquity = getLatestAnnualValues(facts, [
+            'StockholdersEquity',
+            'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest'
+        ]);
+        const ar = getLatestAnnualValues(facts, [
+            'AccountsReceivableNetCurrent',
+            'ReceivablesNetCurrent',
+            'AccountsNotesAndLoansReceivableNetCurrent'
+        ]);
+        const inventory = getLatestAnnualValues(facts, [
+            'InventoryNet',
+            'InventoryFinishedGoodsNetOfReserves'
+        ]);
+        const revenue = getLatestAnnualValues(facts, [
+            'RevenueFromContractWithCustomerExcludingAssessedTax',
+            'Revenues',
+            'SalesRevenueNet',
+            'SalesRevenueGoodsNet',
+            'RevenuesNetOfInterestExpense',
+            'InterestAndDividendIncomeOperating'
+        ]);
+        const sbc = getLatestAnnualValues(facts, [
+            'ShareBasedCompensation',
+            'AllocatedShareBasedCompensationExpense'
+        ]);
+        const sharesOut = getLatestAnnualValues(facts, [
+            'WeightedAverageNumberOfDilutedSharesOutstanding',
+            'CommonStockSharesOutstanding',
+            'EntityCommonStockSharesOutstanding'
+        ]);
+        const retainedEarnings = getLatestAnnualValues(facts, [
+            'RetainedEarningsAccumulatedDeficit'
+        ]);
+        const currentAssets = getLatestAnnualValues(facts, [
+            'AssetsCurrent'
+        ]);
+        const currentLiabilities = getLatestAnnualValues(facts, [
+            'LiabilitiesCurrent'
+        ]);
+        const totalLiabilities = getLatestAnnualValues(facts, [
+            'Liabilities'
+        ]);
+        const operatingIncome = getLatestAnnualValues(facts, [
+            'OperatingIncomeLoss'
+        ]);
+        const cashAndEquivalents = getLatestAnnualValues(facts, [
+            'CashAndCashEquivalentsAtCarryingValue',
+            'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents'
+        ]);
+        const longTermDebt = getLatestAnnualValues(facts, [
+            'LongTermDebtNoncurrent',
+            'LongTermDebt'
+        ]);
+        const grossProfit = getLatestAnnualValues(facts, [
+            'GrossProfit'
+        ]);
+        const costOfRevenue = getLatestAnnualValues(facts, [
+            'CostOfGoodsAndServicesSold',
+            'CostOfRevenue'
+        ]);
+        const ppe = getLatestAnnualValues(facts, [
+            'PropertyPlantAndEquipmentNet'
+        ]);
+        const depreciation = getLatestAnnualValues(facts, [
+            'DepreciationDepletionAndAmortization',
+            'Depreciation',
+            'DepreciationAndAmortization'
+        ]);
+        const sga = getLatestAnnualValues(facts, [
+            'SellingGeneralAndAdministrativeExpense'
+        ]);
         
-        const years = netIncome.map(r => r.fy).slice(-5);
+        // Determine available years from union of major series (last 5 years)
+        const allYears = Array.from(new Set([
+            ...netIncome.map(r => r.fy),
+            ...revenue.map(r => r.fy),
+            ...ocf.map(r => r.fy),
+            ...totalAssets.map(r => r.fy)
+        ])).filter(Boolean).sort((a, b) => a - b).slice(-5);
         
         const result = [];
-        for (const fy of years) {
+        for (const fy of allYears) {
             const getVal = (arr) => {
                 const item = arr.find(x => x.fy === fy);
                 return item ? item.val : 0;
             };
             
+            const ocfVal = getVal(ocf);
+            const capexVal = getVal(capex);
+            const revVal = getVal(revenue);
+            let gpVal = getVal(grossProfit);
+            if (!gpVal && revVal > 0) {
+                const cogsVal = getVal(costOfRevenue);
+                if (cogsVal > 0) gpVal = revVal - cogsVal;
+            }
+
             result.push({
                 year: fy,
                 fy: fy,
                 netIncome: getVal(netIncome),
-                operatingCashFlow: getVal(ocf),
+                operatingCashFlow: ocfVal,
+                capex: capexVal,
+                freeCashFlow: ocfVal - capexVal,
                 totalAssets: getVal(totalAssets),
+                stockholdersEquity: getVal(stockholdersEquity),
                 accountsReceivable: getVal(ar),
                 inventory: getVal(inventory),
-                revenue: getVal(revenue),
+                revenue: revVal,
                 stockBasedCompensation: getVal(sbc),
-                sharesOutstanding: getVal(sharesOut)
+                sharesOutstanding: getVal(sharesOut),
+                retainedEarnings: getVal(retainedEarnings),
+                currentAssets: getVal(currentAssets),
+                currentLiabilities: getVal(currentLiabilities),
+                totalLiabilities: getVal(totalLiabilities),
+                operatingIncome: getVal(operatingIncome),
+                cashAndEquivalents: getVal(cashAndEquivalents),
+                longTermDebt: getVal(longTermDebt),
+                grossProfit: gpVal || 0,
+                ppe: getVal(ppe) || 0,
+                depreciation: getVal(depreciation) || 0,
+                sga: getVal(sga) || 0
             });
         }
         
+        qualityCache.set(tickerUpper, result);
         return result;
     } catch (error) {
         console.error(`Error fetching earnings quality data for ${ticker}:`, error.message);
@@ -440,10 +656,16 @@ async function fetchEarningsQualityData(ticker) {
     }
 }
 
+
 module.exports = {
     SEC_BASE,
     EFTS_BASE,
     SEC_HEADERS,
+    factsCache,
+    filingsCache,
+    segmentsCache,
+    capAllocCache,
+    qualityCache,
     lookupCikByTicker,
     fetchCompanyFacts,
     fetchCompanyFilings,

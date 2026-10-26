@@ -2,8 +2,23 @@ const express = require('express');
 const router = express.Router();
 
 const { requireTicker } = require('../utils/api');
-const { fetchFmpMetrics, fetchFinnhubHistory, fetchYahooProfile, fetchYahooQuote, fetchYahooTimeSeries, fetchTwelveDataQuote } = require('../utils/equityProviders');
+const {
+    fetchFmpMetrics,
+    fetchFinnhubHistory,
+    fetchYahooProfile,
+    fetchYahooQuote,
+    fetchYahooTimeSeries,
+    fetchYahooChart,
+    fetchTwelveDataQuote,
+    resolveCachedQuote,
+    resolveCachedProfile,
+    resolveCachedMetrics,
+    resolveCachedRecommendations,
+    resolveCachedPeers
+} = require('../utils/equityProviders');
+const { fetchCompanyFacts } = require('../utils/secProviders');
 const { getAiProvider, generateAiAnalysis } = require('../utils/aiProviders');
+const { MemoryCache, SingletonCache } = require('../utils/cache');
 
 async function fetchWithTimeout(url, options = {}) {
     const timeoutMs = typeof options === 'number' ? options : (options.timeout || 10000);
@@ -23,23 +38,15 @@ async function fetchWithTimeout(url, options = {}) {
     }
 }
 
-// Cache stores to protect API limits
-const TIME_SERIES_CACHE = {};
-const STATEMENTS_CACHE = {};
-const PEERS_CACHE = {};
-
-const MAX_CACHE_ENTRIES = 100;
-function enforceCacheLimit(cache) {
-    const keys = Object.keys(cache);
-    if (keys.length > MAX_CACHE_ENTRIES) {
-        // Remove oldest 20% of entries
-        const toRemove = Math.floor(keys.length * 0.2);
-        keys.sort((a, b) => (cache[a].lastFetched || 0) - (cache[b].lastFetched || 0));
-        for (let i = 0; i < toRemove; i++) {
-            delete cache[keys[i]];
-        }
-    }
-}
+// Single-Source-of-Truth Registered Memory Caches
+const TIME_SERIES_CACHE = new MemoryCache('equity-time-series', 60 * 60 * 1000, 150);
+const STATEMENTS_CACHE = new MemoryCache('equity-statements', 24 * 60 * 60 * 1000, 100);
+const NEWS_CACHE = new SingletonCache('equity-news', 15 * 60 * 1000);
+const EARNINGS_CACHE = new MemoryCache('equity-earnings', 6 * 60 * 60 * 1000, 100);
+const DIVIDENDS_CACHE = new MemoryCache('equity-dividends', 6 * 60 * 60 * 1000, 100);
+const INSIDER_CACHE = new MemoryCache('equity-insider', 6 * 60 * 60 * 1000, 100);
+const MOVERS_CACHE = new SingletonCache('equity-movers', 15 * 60 * 1000);
+const SECTOR_CACHE = new SingletonCache('equity-sectors', 30 * 60 * 1000);
 
 // Historical Time-Series (Charts)
 router.get('/twelvedata/time_series', async (req, res) => {
@@ -48,9 +55,9 @@ router.get('/twelvedata/time_series', async (req, res) => {
     const timeframe = String(req.query.timeframe || '1Y').toUpperCase();
 
     const cacheKey = `${symbol.toUpperCase()}_${timeframe}`;
-    const now = Date.now();
-    if (TIME_SERIES_CACHE[cacheKey] && (now - TIME_SERIES_CACHE[cacheKey].lastFetched < 60 * 60 * 1000)) {
-        return res.json(TIME_SERIES_CACHE[cacheKey].data);
+    const cached = TIME_SERIES_CACHE.getData(cacheKey);
+    if (cached) {
+        return res.json(cached);
     }
 
     const timeframeConfig = {
@@ -96,8 +103,7 @@ router.get('/twelvedata/time_series', async (req, res) => {
         }
 
         if (chartData && Array.isArray(chartData.values)) {
-            TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: chartData };
-            enforceCacheLimit(TIME_SERIES_CACHE);
+            TIME_SERIES_CACHE.set(cacheKey, chartData);
             return res.json(chartData);
         }
 
@@ -106,73 +112,20 @@ router.get('/twelvedata/time_series', async (req, res) => {
         console.error("TwelveData Time Series Error:", error);
         const fallback = await fetchYahooTimeSeries(symbol, timeframe) || await tryPolygonFallback(symbol, timeframe) || await tryFinnhubFallback(symbol, timeframe);
         if (fallback) {
-            TIME_SERIES_CACHE[cacheKey] = { lastFetched: now, data: fallback };
-            enforceCacheLimit(TIME_SERIES_CACHE);
+            TIME_SERIES_CACHE.set(cacheKey, fallback);
             return res.json(fallback);
         }
         res.status(500).json({ error: "Failed to fetch historical data" });
     }
 });
 
-const PROFILE_CACHE = {};
-const METRICS_CACHE = {};
-const QUOTE_CACHE = {};
-
+// Key Financial Metrics & Company Profile Endpoints (Unified Cached Resolvers)
 router.get('/finnhub/profile', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
-
-    const cacheKey = symbol.toUpperCase();
-    const now = Date.now();
-    if (PROFILE_CACHE[cacheKey] && (now - PROFILE_CACHE[cacheKey].lastFetched < 24 * 60 * 60 * 1000)) {
-        return res.json(PROFILE_CACHE[cacheKey].data);
-    }
-
     try {
-        let profileData = null;
-
-        // Primary: Finnhub stock profile
-        if (process.env.FINNHUB_API_KEY) {
-            try {
-                const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`, 5000);
-                const data = await response.json();
-                if (data && !data.error && data.name) {
-                    profileData = data;
-                }
-            } catch (err) {
-                console.warn("Finnhub profile attempt failed:", err.message);
-            }
-        }
-
-        // Secondary Fallback: Yahoo Finance metadata (covers stocks, ETFs, indices, ADRs)
-        if (!profileData || !profileData.name) {
-            try {
-                const yahooProfile = await fetchYahooProfile(symbol);
-                if (yahooProfile && yahooProfile.name) {
-                    profileData = yahooProfile;
-                }
-            } catch (err) {
-                console.warn("Yahoo profile fallback failed:", err.message);
-            }
-        }
-
-        // Tertiary Fallback: Generic ticker structure so frontend never crashes
-        if (!profileData || !profileData.name) {
-            profileData = {
-                ticker: symbol.toUpperCase(),
-                name: `${symbol.toUpperCase()} Asset`,
-                country: 'US',
-                currency: 'USD',
-                exchange: 'US Markets',
-                finnhubIndustry: 'Equities',
-                logo: `https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/${symbol.toUpperCase()}.png`,
-                weburl: `https://finance.yahoo.com/quote/${symbol.toUpperCase()}`
-            };
-        }
-
-        PROFILE_CACHE[cacheKey] = { lastFetched: now, data: profileData };
-        enforceCacheLimit(PROFILE_CACHE);
-        return res.json(profileData);
+        const profile = await resolveCachedProfile(symbol);
+        return res.json(profile);
     } catch (error) {
         console.error("Company Profile Error:", error);
         return res.json({
@@ -188,148 +141,24 @@ router.get('/finnhub/profile', async (req, res) => {
     }
 });
 
-// Key Financial Metrics Endpoint
 router.get('/finnhub/metrics', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
-
-    const cacheKey = symbol.toUpperCase();
-    const now = Date.now();
-    if (METRICS_CACHE[cacheKey] && (now - METRICS_CACHE[cacheKey].lastFetched < 2 * 60 * 60 * 1000)) {
-        return res.json(METRICS_CACHE[cacheKey].data);
-    }
-
     try {
-        let data = null;
-        if (process.env.FINNHUB_API_KEY) {
-            try {
-                const response = await fetchWithTimeout(
-                    `https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${process.env.FINNHUB_API_KEY}`,
-                    5000
-                );
-                data = await response.json();
-            } catch (err) {
-                console.warn("Finnhub metrics attempt failed:", err.message);
-            }
-        }
-
-        if (!data) data = { metric: {} };
-        if (!data.metric) data.metric = {};
-
-        const de = data.metric['totalDebt/totalEquityAnnual'] ??
-                   data.metric['totalDebt/totalEquityQuarterly'] ??
-                   data.metric['longTermDebt/equityAnnual'] ??
-                   data.metric['longTermDebt/equityQuarterly'] ??
-                   data.metric.debtToEquityAnnual ??
-                   data.metric.totalDebtToEquity;
-        if (de != null) {
-            data.metric.debtToEquityAnnual = Number(de);
-            data.metric.totalDebtToEquity = Number(de);
-            data.metric.totalDebtTotalEquityAnnual = Number(de);
-        }
-
-        const needsFallback = !data?.metric ||
-            data.metric.returnOnEquityTTM == null ||
-            data.metric.debtToEquityAnnual == null ||
-            (data.metric.enterpriseValueTTM == null && data.metric.evToEbitda == null && data.metric.evEbitda == null);
-
-        if (needsFallback && (process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY)) {
-            try {
-                const fallback = await fetchFmpMetrics(symbol);
-                if (!fallback.error) {
-                    data.fmpMetrics = fallback;
-                    if (data.metric && data.metric.debtToEquityAnnual == null) {
-                        const fmpDe = fallback.debtEquityRatioTTM ?? fallback.debtEquityRatio ?? fallback.totalDebtToEquity;
-                        if (fmpDe != null) {
-                            data.metric.debtToEquityAnnual = Number(fmpDe);
-                            data.metric.totalDebtToEquity = Number(fmpDe);
-                            data.metric.totalDebtTotalEquityAnnual = Number(fmpDe);
-                        }
-                    }
-                }
-            } catch (fallbackError) {
-                console.warn('FMP metrics fallback failed:', fallbackError);
-            }
-        }
-
-        if (data && !data.error) {
-            METRICS_CACHE[cacheKey] = { lastFetched: now, data };
-            enforceCacheLimit(METRICS_CACHE);
-        }
-        res.json(data);
+        const metrics = await resolveCachedMetrics(symbol);
+        return res.json(metrics);
     } catch (error) {
         console.error("Finnhub Metrics Error:", error);
         res.json({ metric: {} });
     }
 });
 
-// Real-Time Quote Endpoint
 router.get('/finnhub/quote', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
-
-    const cacheKey = symbol.toUpperCase();
-    const now = Date.now();
-    if (QUOTE_CACHE[cacheKey] && (now - QUOTE_CACHE[cacheKey].lastFetched < 30 * 1000)) {
-        return res.json(QUOTE_CACHE[cacheKey].data);
-    }
-
     try {
-        let quoteData = null;
-
-        // Primary: Finnhub quote
-        if (process.env.FINNHUB_API_KEY) {
-            try {
-                const response = await fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`, 5000);
-                const data = await response.json();
-                if (data && typeof data.c === 'number' && data.c > 0) {
-                    quoteData = data;
-                }
-            } catch (err) {
-                console.warn("Finnhub quote attempt failed:", err.message);
-            }
-        }
-
-        // Secondary Fallback: Yahoo Finance real-time quote
-        if (!quoteData) {
-            try {
-                const yQuote = await fetchYahooQuote(symbol);
-                if (yQuote && yQuote.c > 0) {
-                    quoteData = yQuote;
-                }
-            } catch (err) {
-                console.warn("Yahoo quote fallback failed:", err.message);
-            }
-        }
-
-        // Tertiary Fallback: TwelveData quote
-        if (!quoteData) {
-            try {
-                const tdQuote = await fetchTwelveDataQuote(symbol);
-                if (tdQuote && tdQuote.price > 0) {
-                    quoteData = {
-                        c: tdQuote.price,
-                        d: tdQuote.change,
-                        dp: tdQuote.changePercent,
-                        h: tdQuote.price,
-                        l: tdQuote.price,
-                        o: tdQuote.price,
-                        pc: tdQuote.price - tdQuote.change,
-                        t: Math.floor(Date.now() / 1000)
-                    };
-                }
-            } catch (err) {
-                console.warn("TwelveData quote fallback failed:", err.message);
-            }
-        }
-
-        if (quoteData) {
-            QUOTE_CACHE[cacheKey] = { lastFetched: now, data: quoteData };
-            enforceCacheLimit(QUOTE_CACHE);
-            return res.json(quoteData);
-        }
-
-        res.status(500).json({ error: "Failed to fetch real-time quote" });
+        const quote = await resolveCachedQuote(symbol);
+        return res.json(quote);
     } catch (error) {
         console.error("Finnhub Quote Error:", error);
         res.status(500).json({ error: "Failed to fetch real-time quote" });
@@ -437,6 +266,136 @@ async function tryFinnhubFallback(symbol, timeframe) {
 
 
 
+async function getSecStatementsFallback(symbol, type) {
+    try {
+        const facts = await fetchCompanyFacts(symbol);
+        if (!facts || !facts.facts) return null;
+
+        const getAnnualVals = (conceptList) => {
+            let taxonomy = 'us-gaap';
+            if (!facts.facts['us-gaap'] && facts.facts['ifrs-full']) taxonomy = 'ifrs-full';
+            if (!facts.facts[taxonomy]) return [];
+            let concept = null;
+            for (const c of conceptList) {
+                if (facts.facts[taxonomy][c]) {
+                    concept = c;
+                    break;
+                }
+            }
+            if (!concept && taxonomy === 'us-gaap' && facts.facts['ifrs-full']) {
+                for (const c of conceptList) {
+                    if (facts.facts['ifrs-full'][c]) {
+                        taxonomy = 'ifrs-full';
+                        concept = c;
+                        break;
+                    }
+                }
+            }
+            if (!concept) return [];
+            const cData = facts.facts[taxonomy][concept];
+            if (!cData.units) return [];
+            const unit = Object.keys(cData.units)[0];
+            if (!unit || !cData.units[unit]) return [];
+            const records = (cData.units[unit] || []).filter(r => (r.form === '10-K' || r.form === '20-F' || r.form === '40-F') && !r.segment);
+            const byFy = {};
+            for (const r of records) {
+                const fy = r.fy || (r.end ? parseInt(r.end.slice(0, 4), 10) : null);
+                if (fy) {
+                    if (!byFy[fy] || new Date(r.filed || 0) > new Date(byFy[fy].filed || 0)) {
+                        byFy[fy] = { fy, val: r.val, end: r.end };
+                    }
+                }
+            }
+            return Object.values(byFy).sort((a, b) => b.fy - a.fy); // descending, newest first
+        };
+
+        if (type === 'balance_sheet') {
+            const assets = getAnnualVals(['Assets']);
+            const liab = getAnnualVals(['Liabilities']);
+            const eq = getAnnualVals(['StockholdersEquity', 'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest']);
+            const cash = getAnnualVals(['CashAndCashEquivalentsAtCarryingValue', 'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents']);
+            const curAssets = getAnnualVals(['AssetsCurrent']);
+            const stDebt = getAnnualVals(['ShortTermBorrowings', 'DebtCurrent']);
+            const ltDebt = getAnnualVals(['LongTermDebtNoncurrent', 'LongTermDebt']);
+
+            const years = Array.from(new Set([...assets.map(r => r.fy), ...eq.map(r => r.fy)])).filter(Boolean).sort((a, b) => b - a).slice(0, 4);
+            if (years.length === 0) return null;
+
+            const list = years.map(fy => {
+                const getV = arr => { const found = arr.find(x => x.fy === fy); return found ? found.val : null; };
+                return {
+                    fiscal_date: String(fy),
+                    year: fy,
+                    total_assets: getV(assets),
+                    total_liabilities: getV(liab),
+                    total_shareholders_equity: getV(eq),
+                    cash_and_equivalents: getV(cash),
+                    total_current_assets: getV(curAssets),
+                    short_term_debt: getV(stDebt),
+                    long_term_debt: getV(ltDebt)
+                };
+            });
+            return { balance_sheet: list };
+        } else if (type === 'cash_flow') {
+            const ocf = getAnnualVals(['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations']);
+            const capex = getAnnualVals(['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets', 'CapitalExpendituresIncurredButNotYetPaid']);
+            const icf = getAnnualVals(['NetCashProvidedByUsedInInvestingActivities', 'NetCashProvidedByUsedInInvestingActivitiesContinuingOperations']);
+            const fcf = getAnnualVals(['NetCashProvidedByUsedInFinancingActivities', 'NetCashProvidedByUsedInFinancingActivitiesContinuingOperations']);
+
+            const years = Array.from(new Set([...ocf.map(r => r.fy), ...capex.map(r => r.fy)])).filter(Boolean).sort((a, b) => b - a).slice(0, 4);
+            if (years.length === 0) return null;
+
+            const list = years.map(fy => {
+                const getV = arr => { const found = arr.find(x => x.fy === fy); return found ? found.val : 0; };
+                const ocfVal = getV(ocf);
+                const capexVal = getV(capex);
+                return {
+                    fiscal_date: String(fy),
+                    year: fy,
+                    operating_cash_flow: ocfVal,
+                    investing_cash_flow: getV(icf),
+                    financing_cash_flow: getV(fcf),
+                    net_change_in_cash: ocfVal + getV(icf) + getV(fcf),
+                    capital_expenditures: capexVal,
+                    free_cash_flow: ocfVal - capexVal
+                };
+            });
+            return { cash_flow: list };
+        } else if (type === 'income_statement') {
+            const rev = getAnnualVals(['RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenues', 'SalesRevenueNet', 'SalesRevenueGoodsNet', 'RevenuesNetOfInterestExpense', 'InterestAndDividendIncomeOperating']);
+            const cost = getAnnualVals(['CostOfGoodsAndServicesSold', 'CostOfRevenue']);
+            const gp = getAnnualVals(['GrossProfit']);
+            const opInc = getAnnualVals(['OperatingIncomeLoss']);
+            const ni = getAnnualVals(['NetIncomeLoss', 'ProfitLoss', 'NetIncomeLossAvailableToCommonStockholdersBasic']);
+            const eps = getAnnualVals(['EarningsPerShareDiluted', 'EarningsPerShareBasic']);
+
+            const years = Array.from(new Set([...rev.map(r => r.fy), ...ni.map(r => r.fy)])).filter(Boolean).sort((a, b) => b - a).slice(0, 4);
+            if (years.length === 0) return null;
+
+            const list = years.map(fy => {
+                const getV = arr => { const found = arr.find(x => x.fy === fy); return found ? found.val : null; };
+                const revVal = getV(rev);
+                const costVal = getV(cost);
+                const gpVal = getV(gp) || (revVal && costVal ? revVal - costVal : null);
+                return {
+                    fiscal_date: String(fy),
+                    year: fy,
+                    total_revenue: revVal,
+                    cost_of_revenue: costVal,
+                    gross_profit: gpVal,
+                    operating_income: getV(opInc),
+                    net_income: getV(ni),
+                    eps_diluted: getV(eps)
+                };
+            });
+            return { income_statement: list };
+        }
+    } catch (e) {
+        console.warn('SEC statements fallback failed:', e.message);
+    }
+    return null;
+}
+
 // Financial Statements (Balance Sheet / Cash Flow)
 router.get('/twelvedata/statements', async (req, res) => {
     const symbol = requireTicker(req, res);
@@ -448,17 +407,16 @@ router.get('/twelvedata/statements', async (req, res) => {
     }
 
     const cacheKey = `${symbol.toUpperCase()}_${type}`;
-    const now = Date.now();
-    if (STATEMENTS_CACHE[cacheKey] && (now - STATEMENTS_CACHE[cacheKey].lastFetched < 2 * 60 * 60 * 1000)) {
-        return res.json(STATEMENTS_CACHE[cacheKey].data);
+    const cached = STATEMENTS_CACHE.getData(cacheKey);
+    if (cached) {
+        return res.json(cached);
     }
 
     // Intercept res.json to cache successful responses
     const originalJson = res.json.bind(res);
     res.json = (payload) => {
         if (payload && !payload.error) {
-            STATEMENTS_CACHE[cacheKey] = { lastFetched: now, data: payload };
-            enforceCacheLimit(STATEMENTS_CACHE);
+            STATEMENTS_CACHE.set(cacheKey, payload);
         }
         return originalJson(payload);
     };
@@ -470,7 +428,7 @@ router.get('/twelvedata/statements', async (req, res) => {
         if (process.env.TWELVEDATA_API_KEY) {
             const response = await fetchWithTimeout(`https://api.twelvedata.com/${type}?symbol=${encodeURIComponent(symbol)}&apikey=${process.env.TWELVEDATA_API_KEY}`);
             data = await response.json();
-            if (data?.status === 'error' || !data || data?.code >= 400) {
+            if (data?.status === 'error' || !data || data?.code >= 400 || !Array.isArray(data[type]) || data[type].length < 2) {
                 twelvedataFailed = true;
             }
         } else {
@@ -478,6 +436,12 @@ router.get('/twelvedata/statements', async (req, res) => {
         }
 
         if (twelvedataFailed) {
+            // Priority 1 Fallback: SEC EDGAR Audited 10-K XBRL Statements (Free, official, 4 full years)
+            const secStmt = await getSecStatementsFallback(symbol, type);
+            if (secStmt) {
+                return res.json(secStmt);
+            }
+
             const fmpKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY;
             if (fmpKey) {
                 try {
@@ -488,31 +452,43 @@ router.get('/twelvedata/statements', async (req, res) => {
                     const fmpData = await fmpResponse.json();
 
                     if (Array.isArray(fmpData) && fmpData.length > 0 && !fmpData[0]?.['Error Message']) {
-                        const stmt = fmpData[0];
                         if (type === 'balance_sheet') {
-                            return res.json({
-                                balance_sheet: [{
-                                    total_assets: stmt.totalAssets,
-                                    total_liabilities: stmt.totalLiabilities,
-                                    total_shareholders_equity: stmt.totalStockholdersEquity || stmt.totalEquity,
-                                    cash_and_equivalents: stmt.cashAndCashEquivalents,
-                                    total_current_assets: stmt.totalCurrentAssets,
-                                    short_term_debt: stmt.shortTermDebt,
-                                    long_term_debt: stmt.longTermDebt
-                                }]
-                            });
+                            const list = fmpData.slice(0, 4).map(stmt => ({
+                                fiscal_date: stmt.date || String(stmt.calendarYear || ''),
+                                year: stmt.calendarYear ? parseInt(stmt.calendarYear, 10) : null,
+                                total_assets: stmt.totalAssets,
+                                total_liabilities: stmt.totalLiabilities,
+                                total_shareholders_equity: stmt.totalStockholdersEquity || stmt.totalEquity,
+                                cash_and_equivalents: stmt.cashAndCashEquivalents,
+                                total_current_assets: stmt.totalCurrentAssets,
+                                short_term_debt: stmt.shortTermDebt,
+                                long_term_debt: stmt.longTermDebt
+                            }));
+                            return res.json({ balance_sheet: list });
                         } else if (type === 'cash_flow') {
-                            return res.json({
-                                cash_flow: [{
-                                    operating_cash_flow: stmt.operatingCashFlow,
-                                    investing_cash_flow: stmt.netCashUsedForInvestingActivites || stmt.netCashUsedForInvestingActivities,
-                                    financing_cash_flow: stmt.netCashUsedProvidedByFinancingActivities,
-                                    net_change_in_cash: stmt.netChangeInCash,
-                                    capital_expenditures: stmt.capitalExpenditure || 0
-                                }]
-                            });
+                            const list = fmpData.slice(0, 4).map(stmt => ({
+                                fiscal_date: stmt.date || String(stmt.calendarYear || ''),
+                                year: stmt.calendarYear ? parseInt(stmt.calendarYear, 10) : null,
+                                operating_cash_flow: stmt.operatingCashFlow,
+                                investing_cash_flow: stmt.netCashUsedForInvestingActivites || stmt.netCashUsedForInvestingActivities,
+                                financing_cash_flow: stmt.netCashUsedProvidedByFinancingActivities,
+                                net_change_in_cash: stmt.netChangeInCash,
+                                capital_expenditures: stmt.capitalExpenditure || 0
+                            }));
+                            return res.json({ cash_flow: list });
                         } else if (type === 'income_statement') {
-                            return res.json({ income_statement: [{ total_revenue: stmt.revenue, cost_of_revenue: stmt.costOfRevenue, gross_profit: stmt.grossProfit, operating_income: stmt.operatingIncome, net_income: stmt.netIncome, ebitda: stmt.ebitda, eps_diluted: stmt.epsdiluted }] });
+                            const list = fmpData.slice(0, 4).map(stmt => ({
+                                fiscal_date: stmt.date || String(stmt.calendarYear || ''),
+                                year: stmt.calendarYear ? parseInt(stmt.calendarYear, 10) : null,
+                                total_revenue: stmt.revenue,
+                                cost_of_revenue: stmt.costOfRevenue,
+                                gross_profit: stmt.grossProfit,
+                                operating_income: stmt.operatingIncome,
+                                net_income: stmt.netIncome,
+                                ebitda: stmt.ebitda,
+                                eps_diluted: stmt.epsdiluted
+                            }));
+                            return res.json({ income_statement: list });
                         }
                     }
                 } catch (fmpErr) {
@@ -530,46 +506,51 @@ router.get('/twelvedata/statements', async (req, res) => {
                     const avData = await avResponse.json();
 
                     if (avData.annualReports && avData.annualReports.length > 0) {
-                        const stmt = avData.annualReports[0];
+                        const reports = avData.annualReports.slice(0, 4);
                         if (type === 'balance_sheet') {
-                            return res.json({
-                                balance_sheet: [{
-                                    total_assets: stmt.totalAssets && stmt.totalAssets !== 'None' ? Number(stmt.totalAssets) : null,
-                                    total_liabilities: stmt.totalLiabilities && stmt.totalLiabilities !== 'None' ? Number(stmt.totalLiabilities) : null,
-                                    total_shareholders_equity: stmt.totalShareholderEquity && stmt.totalShareholderEquity !== 'None' ? Number(stmt.totalShareholderEquity) : null,
-                                    cash_and_equivalents: stmt.cashAndCashEquivalentsAtCarryingValue && stmt.cashAndCashEquivalentsAtCarryingValue !== 'None' ? Number(stmt.cashAndCashEquivalentsAtCarryingValue) : null,
-                                    total_current_assets: stmt.totalCurrentAssets && stmt.totalCurrentAssets !== 'None' ? Number(stmt.totalCurrentAssets) : null,
-                                    short_term_debt: stmt.shortTermDebt && stmt.shortTermDebt !== 'None' ? Number(stmt.shortTermDebt) : null,
-                                    long_term_debt: stmt.longTermDebt && stmt.longTermDebt !== 'None' ? Number(stmt.longTermDebt) : null
-                                }]
-                            });
+                            const list = reports.map(stmt => ({
+                                fiscal_date: stmt.fiscalDateEnding || '',
+                                year: stmt.fiscalDateEnding ? parseInt(stmt.fiscalDateEnding.slice(0, 4), 10) : null,
+                                total_assets: stmt.totalAssets && stmt.totalAssets !== 'None' ? Number(stmt.totalAssets) : null,
+                                total_liabilities: stmt.totalLiabilities && stmt.totalLiabilities !== 'None' ? Number(stmt.totalLiabilities) : null,
+                                total_shareholders_equity: stmt.totalShareholderEquity && stmt.totalShareholderEquity !== 'None' ? Number(stmt.totalShareholderEquity) : null,
+                                cash_and_equivalents: stmt.cashAndCashEquivalentsAtCarryingValue && stmt.cashAndCashEquivalentsAtCarryingValue !== 'None' ? Number(stmt.cashAndCashEquivalentsAtCarryingValue) : null,
+                                total_current_assets: stmt.totalCurrentAssets && stmt.totalCurrentAssets !== 'None' ? Number(stmt.totalCurrentAssets) : null,
+                                short_term_debt: stmt.shortTermDebt && stmt.shortTermDebt !== 'None' ? Number(stmt.shortTermDebt) : null,
+                                long_term_debt: stmt.longTermDebt && stmt.longTermDebt !== 'None' ? Number(stmt.longTermDebt) : null
+                            }));
+                            return res.json({ balance_sheet: list });
                         } else if (type === 'cash_flow') {
-                            const operating = stmt.operatingCashflow && stmt.operatingCashflow !== 'None' ? Number(stmt.operatingCashflow) : 0;
-                            const investing = stmt.cashflowFromInvestment && stmt.cashflowFromInvestment !== 'None' ? Number(stmt.cashflowFromInvestment) : 0;
-                            const financing = stmt.cashflowFromFinancing && stmt.cashflowFromFinancing !== 'None' ? Number(stmt.cashflowFromFinancing) : 0;
-                            const netChange = stmt.changeInCashAndCashEquivalents && stmt.changeInCashAndCashEquivalents !== 'None' ? Number(stmt.changeInCashAndCashEquivalents) : (operating + investing + financing);
-                            const capex = stmt.capitalExpenditures && stmt.capitalExpenditures !== 'None' ? Number(stmt.capitalExpenditures) : 0;
-                            return res.json({
-                                cash_flow: [{
+                            const list = reports.map(stmt => {
+                                const operating = stmt.operatingCashflow && stmt.operatingCashflow !== 'None' ? Number(stmt.operatingCashflow) : 0;
+                                const investing = stmt.cashflowFromInvestment && stmt.cashflowFromInvestment !== 'None' ? Number(stmt.cashflowFromInvestment) : 0;
+                                const financing = stmt.cashflowFromFinancing && stmt.cashflowFromFinancing !== 'None' ? Number(stmt.cashflowFromFinancing) : 0;
+                                const netChange = stmt.changeInCashAndCashEquivalents && stmt.changeInCashAndCashEquivalents !== 'None' ? Number(stmt.changeInCashAndCashEquivalents) : (operating + investing + financing);
+                                const capex = stmt.capitalExpenditures && stmt.capitalExpenditures !== 'None' ? Number(stmt.capitalExpenditures) : 0;
+                                return {
+                                    fiscal_date: stmt.fiscalDateEnding || '',
+                                    year: stmt.fiscalDateEnding ? parseInt(stmt.fiscalDateEnding.slice(0, 4), 10) : null,
                                     operating_cash_flow: operating,
                                     investing_cash_flow: investing,
                                     financing_cash_flow: financing,
                                     net_change_in_cash: netChange,
                                     capital_expenditures: capex
-                                }]
+                                };
                             });
+                            return res.json({ cash_flow: list });
                         } else if (type === 'income_statement') {
-                            return res.json({
-                                income_statement: [{
-                                    total_revenue: stmt.totalRevenue && stmt.totalRevenue !== 'None' ? Number(stmt.totalRevenue) : null,
-                                    cost_of_revenue: stmt.costOfRevenue && stmt.costOfRevenue !== 'None' ? Number(stmt.costOfRevenue) : null,
-                                    gross_profit: stmt.grossProfit && stmt.grossProfit !== 'None' ? Number(stmt.grossProfit) : null,
-                                    operating_income: stmt.operatingIncome && stmt.operatingIncome !== 'None' ? Number(stmt.operatingIncome) : null,
-                                    net_income: stmt.netIncome && stmt.netIncome !== 'None' ? Number(stmt.netIncome) : null,
-                                    ebitda: stmt.ebitda && stmt.ebitda !== 'None' ? Number(stmt.ebitda) : null,
-                                    eps_diluted: stmt.dilutedEPS && stmt.dilutedEPS !== 'None' ? Number(stmt.dilutedEPS) : null
-                                }]
-                            });
+                            const list = reports.map(stmt => ({
+                                fiscal_date: stmt.fiscalDateEnding || '',
+                                year: stmt.fiscalDateEnding ? parseInt(stmt.fiscalDateEnding.slice(0, 4), 10) : null,
+                                total_revenue: stmt.totalRevenue && stmt.totalRevenue !== 'None' ? Number(stmt.totalRevenue) : null,
+                                cost_of_revenue: stmt.costOfRevenue && stmt.costOfRevenue !== 'None' ? Number(stmt.costOfRevenue) : null,
+                                gross_profit: stmt.grossProfit && stmt.grossProfit !== 'None' ? Number(stmt.grossProfit) : null,
+                                operating_income: stmt.operatingIncome && stmt.operatingIncome !== 'None' ? Number(stmt.operatingIncome) : null,
+                                net_income: stmt.netIncome && stmt.netIncome !== 'None' ? Number(stmt.netIncome) : null,
+                                ebitda: stmt.ebitda && stmt.ebitda !== 'None' ? Number(stmt.ebitda) : null,
+                                eps_diluted: stmt.dilutedEPS && stmt.dilutedEPS !== 'None' ? Number(stmt.dilutedEPS) : null
+                            }));
+                            return res.json({ income_statement: list });
                         }
                     }
                 } catch (avErr) {
@@ -577,20 +558,21 @@ router.get('/twelvedata/statements', async (req, res) => {
                 }
             }
         } else {
-            // Normalise TwelveData response format to standard flat format
+            // Normalise TwelveData response format to standard flat format (multi-year)
             if (data && !data.error) {
                 if (type === 'balance_sheet') {
                     if (Array.isArray(data.balance_sheet) && data.balance_sheet.length > 0) {
-                        const stmt = data.balance_sheet[0];
-                        const total_assets = stmt.assets?.total_assets ?? stmt.total_assets ?? stmt.totalAssets;
-                        const total_liabilities = stmt.liabilities?.total_liabilities ?? stmt.total_liabilities ?? stmt.totalLiabilities;
-                        const total_shareholders_equity = stmt.shareholders_equity?.total_shareholders_equity ?? stmt.total_shareholders_equity ?? stmt.totalEquity;
-                        const cash_and_equivalents = stmt.assets?.current_assets?.cash_and_cash_equivalents ?? stmt.assets?.current_assets?.cash_equivalents ?? stmt.assets?.current_assets?.cash ?? stmt.assets?.cash_and_equivalents ?? stmt.cash_and_equivalents ?? stmt.cashAndCashEquivalents;
-                        const total_current_assets = stmt.assets?.current_assets?.total_current_assets ?? stmt.assets?.total_current_assets ?? stmt.totalCurrentAssets;
-                        const short_term_debt = stmt.liabilities?.current_liabilities?.short_term_debt ?? stmt.liabilities?.short_term_debt ?? stmt.shortTermDebt;
-                        const long_term_debt = stmt.liabilities?.non_current_liabilities?.long_term_debt ?? stmt.liabilities?.long_term_debt ?? stmt.longTermDebt;
-                        return res.json({
-                            balance_sheet: [{
+                        const list = data.balance_sheet.slice(0, 4).map(stmt => {
+                            const total_assets = stmt.assets?.total_assets ?? stmt.total_assets ?? stmt.totalAssets;
+                            const total_liabilities = stmt.liabilities?.total_liabilities ?? stmt.total_liabilities ?? stmt.totalLiabilities;
+                            const total_shareholders_equity = stmt.shareholders_equity?.total_shareholders_equity ?? stmt.total_shareholders_equity ?? stmt.totalEquity;
+                            const cash_and_equivalents = stmt.assets?.current_assets?.cash_and_cash_equivalents ?? stmt.assets?.current_assets?.cash_equivalents ?? stmt.assets?.current_assets?.cash ?? stmt.assets?.cash_and_equivalents ?? stmt.cash_and_equivalents ?? stmt.cashAndCashEquivalents;
+                            const total_current_assets = stmt.assets?.current_assets?.total_current_assets ?? stmt.assets?.total_current_assets ?? stmt.totalCurrentAssets;
+                            const short_term_debt = stmt.liabilities?.current_liabilities?.short_term_debt ?? stmt.liabilities?.short_term_debt ?? stmt.shortTermDebt;
+                            const long_term_debt = stmt.liabilities?.non_current_liabilities?.long_term_debt ?? stmt.liabilities?.long_term_debt ?? stmt.longTermDebt;
+                            return {
+                                fiscal_date: stmt.fiscal_date || String(stmt.year || ''),
+                                year: stmt.year || (stmt.fiscal_date ? parseInt(stmt.fiscal_date.slice(0, 4), 10) : null),
                                 total_assets,
                                 total_liabilities,
                                 total_shareholders_equity,
@@ -598,39 +580,43 @@ router.get('/twelvedata/statements', async (req, res) => {
                                 total_current_assets,
                                 short_term_debt,
                                 long_term_debt
-                            }]
+                            };
                         });
+                        return res.json({ balance_sheet: list });
                     }
                 } else if (type === 'cash_flow') {
                     if (Array.isArray(data.cash_flow) && data.cash_flow.length > 0) {
-                        const stmt = data.cash_flow[0];
-                        const operating = stmt.operating_activities?.operating_cash_flow ?? stmt.operating_cash_flow ?? stmt.operatingCashFlow;
-                        const investing = stmt.investing_activities?.investing_cash_flow ?? stmt.investing_cash_flow ?? stmt.netCashUsedForInvestingActivites;
-                        const financing = stmt.financing_activities?.financing_cash_flow ?? stmt.financing_cash_flow ?? stmt.netCashUsedProvidedByFinancingActivities;
-                        const netChange = stmt.net_change_in_cash ?? stmt.netChangeInCash ?? (Number(operating || 0) + Number(investing || 0) + Number(financing || 0));
-                        const capital_expenditures = stmt.investing_activities?.capital_expenditures ?? stmt.capital_expenditures ?? stmt.capitalExpenditures ?? stmt.capitalExpenditure;
-                        return res.json({
-                            cash_flow: [{
+                        const list = data.cash_flow.slice(0, 4).map(stmt => {
+                            const operating = stmt.operating_activities?.operating_cash_flow ?? stmt.operating_cash_flow ?? stmt.operatingCashFlow;
+                            const investing = stmt.investing_activities?.investing_cash_flow ?? stmt.investing_cash_flow ?? stmt.netCashUsedForInvestingActivites;
+                            const financing = stmt.financing_activities?.financing_cash_flow ?? stmt.financing_cash_flow ?? stmt.netCashUsedProvidedByFinancingActivities;
+                            const netChange = stmt.net_change_in_cash ?? stmt.netChangeInCash ?? (Number(operating || 0) + Number(investing || 0) + Number(financing || 0));
+                            const capital_expenditures = stmt.investing_activities?.capital_expenditures ?? stmt.capital_expenditures ?? stmt.capitalExpenditures ?? stmt.capitalExpenditure;
+                            return {
+                                fiscal_date: stmt.fiscal_date || String(stmt.year || ''),
+                                year: stmt.year || (stmt.fiscal_date ? parseInt(stmt.fiscal_date.slice(0, 4), 10) : null),
                                 operating_cash_flow: operating,
                                 investing_cash_flow: investing,
                                 financing_cash_flow: financing,
                                 net_change_in_cash: netChange,
                                 capital_expenditures: capital_expenditures || 0
-                            }]
+                            };
                         });
+                        return res.json({ cash_flow: list });
                     }
                 } else if (type === 'income_statement') {
                     if (Array.isArray(data.income_statement) && data.income_statement.length > 0) {
-                        const stmt = data.income_statement[0];
-                        const total_revenue = stmt.sales ?? stmt.total_revenue ?? stmt.revenue;
-                        const cost_of_revenue = stmt.cost_of_goods_sold ?? stmt.cost_of_goods ?? stmt.cost_of_revenue;
-                        const gross_profit = stmt.gross_profit;
-                        const operating_income = stmt.operating_income;
-                        const net_income = stmt.net_income;
-                        const ebitda = stmt.ebitda;
-                        const eps_diluted = stmt.eps_diluted ?? stmt.diluted_eps;
-                        return res.json({
-                            income_statement: [{
+                        const list = data.income_statement.slice(0, 4).map(stmt => {
+                            const total_revenue = stmt.sales ?? stmt.total_revenue ?? stmt.revenue;
+                            const cost_of_revenue = stmt.cost_of_goods_sold ?? stmt.cost_of_goods ?? stmt.cost_of_revenue;
+                            const gross_profit = stmt.gross_profit;
+                            const operating_income = stmt.operating_income;
+                            const net_income = stmt.net_income;
+                            const ebitda = stmt.ebitda;
+                            const eps_diluted = stmt.eps_diluted ?? stmt.diluted_eps;
+                            return {
+                                fiscal_date: stmt.fiscal_date || String(stmt.year || ''),
+                                year: stmt.year || (stmt.fiscal_date ? parseInt(stmt.fiscal_date.slice(0, 4), 10) : null),
                                 total_revenue,
                                 cost_of_revenue,
                                 gross_profit,
@@ -638,8 +624,9 @@ router.get('/twelvedata/statements', async (req, res) => {
                                 net_income,
                                 ebitda,
                                 eps_diluted
-                            }]
+                            };
                         });
+                        return res.json({ income_statement: list });
                     }
                 }
             }
@@ -652,17 +639,11 @@ router.get('/twelvedata/statements', async (req, res) => {
     }
 });
 
-const NEWS_CACHE = {
-    lastFetched: 0,
-    ttlMs: 5 * 60 * 1000, // 5 minutes
-    data: null,
-};
-
 // General Market News
 router.get('/finnhub/news', async (req, res) => {
-    const now = Date.now();
-    if (NEWS_CACHE.data && now - NEWS_CACHE.lastFetched < NEWS_CACHE.ttlMs) {
-        return res.json(NEWS_CACHE.data);
+    const cached = NEWS_CACHE.getData();
+    if (cached) {
+        return res.json(cached);
     }
 
     try {
@@ -670,14 +651,14 @@ router.get('/finnhub/news', async (req, res) => {
         const data = await response.json();
         
         if (Array.isArray(data)) {
-            NEWS_CACHE.data = data;
-            NEWS_CACHE.lastFetched = now;
+            NEWS_CACHE.set(data);
         }
         res.json(data);
     } catch (error) {
         console.error("Finnhub News Error:", error);
-        if (NEWS_CACHE.data) {
-            return res.json(NEWS_CACHE.data);
+        const fallback = NEWS_CACHE.getData();
+        if (fallback) {
+            return res.json(fallback);
         }
         res.status(500).json({ error: "Failed to fetch market news" });
     }
@@ -689,8 +670,7 @@ router.get('/finnhub/recommendations', async (req, res) => {
     if (!symbol) return;
 
     try {
-        const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/recommendation?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
-        const data = await response.json();
+        const data = await resolveCachedRecommendations(symbol);
         res.json(data);
     } catch (error) {
         console.error("Finnhub Recommendations Error:", error);
@@ -708,16 +688,11 @@ router.post('/company-profile-ai', async (req, res) => {
     }
 
     try {
-        const finnhubToken = process.env.FINNHUB_API_KEY;
-        const [profileRes, quoteRes, metricsRes] = await Promise.all([
-            fetchWithTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`),
-            fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`),
-            fetchWithTimeout(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${finnhubToken}`),
+        const [profile, quote, metricsPayload] = await Promise.all([
+            resolveCachedProfile(symbol),
+            resolveCachedQuote(symbol),
+            resolveCachedMetrics(symbol)
         ]);
-
-        const profile = await profileRes.json();
-        const quote = await quoteRes.json();
-        const metricsPayload = await metricsRes.json();
         const metric = metricsPayload?.metric || {};
 
         const prompt = `You are a senior equity research analyst. Write a concise 2-3 paragraph executive summary for ${profile.name} (${symbol}). Cover:
@@ -726,10 +701,10 @@ router.post('/company-profile-ai', async (req, res) => {
 3. Current market context and investor considerations
 
 Use these data points:
-- Industry: ${profile.finnhubIndustry}
-- Market Cap: $${profile.marketCapitalization}M
-- Key Metrics: P/E ${metric.peTTM}, ROE ${metric.roeTTM}%, Net Margin ${metric.netProfitMarginTTM}%, Revenue Growth 5Y ${metric.revenueGrowth5Y}%
-- Current Price: $${quote.c}, Beta: ${metric.beta}
+- Industry: ${profile.finnhubIndustry || 'Equities'}
+- Market Cap: $${profile.marketCapitalization || 0}M
+- Key Metrics: P/E ${metric.peTTM || 'N/A'}, ROE ${metric.roeTTM || metric.returnOnEquityTTM || 'N/A'}%, Net Margin ${metric.netProfitMarginTTM || 'N/A'}%, Revenue Growth 5Y ${metric.revenueGrowth5Y || 'N/A'}%
+- Current Price: $${quote.c || 0}, Beta: ${metric.beta || 1.0}
 
 Be factual and analytical. Do not give investment advice. Format in clean HTML paragraphs.`;
 
@@ -746,40 +721,28 @@ router.get('/finnhub/peers-detailed', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
 
-    const cacheKey = symbol.toUpperCase();
-    const now = Date.now();
-    if (PEERS_CACHE[cacheKey] && (now - PEERS_CACHE[cacheKey].lastFetched < 15 * 60 * 1000)) {
-        return res.json(PEERS_CACHE[cacheKey].data);
-    }
-
     try {
-        const finnhubToken = process.env.FINNHUB_API_KEY;
-        const peersRes = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/peers?symbol=${encodeURIComponent(symbol)}&token=${finnhubToken}`);
-        const peerSymbols = await peersRes.json();
-
+        const peerSymbols = await resolveCachedPeers(symbol);
         if (!Array.isArray(peerSymbols) || peerSymbols.length === 0) {
             return res.json([]);
         }
 
-        const targetPeers = peerSymbols.filter(s => s !== symbol).slice(0, 3);
+        const targetPeers = peerSymbols.filter(s => s !== symbol.toUpperCase()).slice(0, 3);
 
         const peerData = await Promise.all(targetPeers.map(async (peer) => {
             try {
-                const [qRes, mRes, pRes] = await Promise.all([
-                    fetchWithTimeout(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(peer)}&token=${finnhubToken}`),
-                    fetchWithTimeout(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(peer)}&metric=all&token=${finnhubToken}`),
-                    fetchWithTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(peer)}&token=${finnhubToken}`)
+                const [q, m, p] = await Promise.all([
+                    resolveCachedQuote(peer),
+                    resolveCachedMetrics(peer),
+                    resolveCachedProfile(peer)
                 ]);
-                const q = await qRes.json();
-                const m = await mRes.json();
-                const p = await pRes.json();
                 
                 return {
                     symbol: peer,
-                    name: p.name || peer,
-                    price: q.c || 0,
-                    changePercent: q.dp || 0,
-                    marketCap: p.marketCapitalization || 0,
+                    name: p?.name || peer,
+                    price: q?.c || 0,
+                    changePercent: q?.dp || 0,
+                    marketCap: p?.marketCapitalization || 0,
                     pe: m?.metric?.peTTM || null
                 };
             } catch (e) {
@@ -789,8 +752,6 @@ router.get('/finnhub/peers-detailed', async (req, res) => {
         }));
 
         const result = peerData.filter(Boolean);
-        PEERS_CACHE[cacheKey] = { lastFetched: now, data: result };
-        enforceCacheLimit(PEERS_CACHE);
         res.json(result);
     } catch (error) {
         console.error("Detailed peers fetch error:", error);
@@ -798,136 +759,231 @@ router.get('/finnhub/peers-detailed', async (req, res) => {
     }
 });
 
-// Top Gainers & Top Losers Movers Endpoint (FMP API)
-let MOVERS_CACHE = { lastFetched: 0, data: null };
+// Top Gainers & Top Losers Movers Endpoint (FMP API with Live Bellwether Fallback)
+const BELLWETHERS = [
+    { symbol: 'NVDA', name: 'NVIDIA Corporation' },
+    { symbol: 'AAPL', name: 'Apple Inc.' },
+    { symbol: 'MSFT', name: 'Microsoft Corporation' },
+    { symbol: 'AMZN', name: 'Amazon.com Inc.' },
+    { symbol: 'META', name: 'Meta Platforms Inc.' },
+    { symbol: 'TSLA', name: 'Tesla Inc.' },
+    { symbol: 'AMD', name: 'Advanced Micro Devices' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+    { symbol: 'AVGO', name: 'Broadcom Inc.' },
+    { symbol: 'NFLX', name: 'Netflix Inc.' },
+    { symbol: 'JPM', name: 'JPMorgan Chase & Co.' },
+    { symbol: 'LLY', name: 'Eli Lilly and Co.' },
+    { symbol: 'UNH', name: 'UnitedHealth Group' },
+    { symbol: 'XOM', name: 'Exxon Mobil Corp.' },
+    { symbol: 'V', name: 'Visa Inc.' },
+    { symbol: 'BA', name: 'Boeing Co.' },
+    { symbol: 'INTC', name: 'Intel Corporation' },
+    { symbol: 'PYPL', name: 'PayPal Holdings' },
+    { symbol: 'DIS', name: 'Walt Disney Co.' },
+    { symbol: 'COIN', name: 'Coinbase Global Inc.' }
+];
 
 router.get('/fmp/movers', async (req, res) => {
-    const now = Date.now();
-    if (MOVERS_CACHE.data && (now - MOVERS_CACHE.lastFetched < 2 * 60 * 60 * 1000)) {
-        return res.json(MOVERS_CACHE.data);
+    const cached = MOVERS_CACHE.getData();
+    if (cached) {
+        return res.json(cached);
     }
 
     const fmpKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY;
 
+    if (fmpKey) {
+        try {
+            const [gainersRes, losersRes] = await Promise.all([
+                fetchWithTimeout(`https://financialmodelingprep.com/api/v3/stock_market/gainers?apikey=${fmpKey}`, 5000),
+                fetchWithTimeout(`https://financialmodelingprep.com/api/v3/stock_market/losers?apikey=${fmpKey}`, 5000)
+            ]);
+
+            const gainersRaw = await gainersRes.json();
+            const losersRaw = await losersRes.json();
+
+            const formatMovers = (list) => {
+                if (!Array.isArray(list)) return [];
+                return list.slice(0, 5).map(item => ({
+                    symbol: item.symbol || item.ticker || 'N/A',
+                    name: item.name || item.companyName || item.symbol || 'N/A',
+                    price: Number(item.price || 0),
+                    changesPercentage: Number(item.changesPercentage || item.changePercent || 0),
+                    volume: Number(item.volume || 0)
+                }));
+            };
+
+            const gainers = formatMovers(gainersRaw);
+            const losers = formatMovers(losersRaw);
+
+            if (gainers.length > 0 || losers.length > 0) {
+                const data = { gainers, losers };
+                MOVERS_CACHE.set(data, 'fmp-live');
+                return res.json(data);
+            }
+        } catch (error) {
+            console.warn("FMP Movers API call warning:", error.message);
+        }
+    }
+
+    // Live Bellwether Fallback
     try {
-        const [gainersRes, losersRes] = await Promise.all([
-            fetchWithTimeout(`https://financialmodelingprep.com/api/v3/stock_market/gainers?apikey=${fmpKey}`),
-            fetchWithTimeout(`https://financialmodelingprep.com/api/v3/stock_market/losers?apikey=${fmpKey}`)
-        ]);
+        const quotes = await Promise.all(BELLWETHERS.map(async (b) => {
+            try {
+                const q = await resolveCachedQuote(b.symbol);
+                if (q && typeof q.c === 'number' && q.c > 0) {
+                    return {
+                        symbol: b.symbol,
+                        name: b.name,
+                        price: Number(q.c.toFixed(2)),
+                        change: Number((q.d || 0).toFixed(2)),
+                        changesPercentage: Number((q.dp || 0).toFixed(2)),
+                        volume: 25000000
+                    };
+                }
+            } catch (e) {}
+            return null;
+        }));
 
-        const gainersRaw = await gainersRes.json();
-        const losersRaw = await losersRes.json();
-
-        const formatMovers = (list) => {
-            if (!Array.isArray(list)) return [];
-            return list.slice(0, 5).map(item => ({
-                symbol: item.symbol || item.ticker || 'N/A',
-                name: item.name || item.companyName || item.symbol || 'N/A',
-                price: Number(item.price || 0),
-                changesPercentage: Number(item.changesPercentage || item.changePercent || 0),
-                volume: Number(item.volume || 0)
-            }));
-        };
-
-        const gainers = formatMovers(gainersRaw);
-        const losers = formatMovers(losersRaw);
-
-        if (gainers.length > 0 || losers.length > 0) {
+        const valid = quotes.filter(Boolean);
+        if (valid.length >= 5) {
+            const gainers = [...valid].sort((a, b) => b.changesPercentage - a.changesPercentage).slice(0, 5);
+            const losers = [...valid].sort((a, b) => a.changesPercentage - b.changesPercentage).slice(0, 5);
             const data = { gainers, losers };
-            MOVERS_CACHE = { lastFetched: now, data };
+            MOVERS_CACHE.set(data, 'bellwether-live');
             return res.json(data);
         }
-
-        throw new Error("FMP returned empty array or rate limit response");
-    } catch (error) {
-        console.warn("FMP Movers API call warning:", error.message);
-        const fallback = {
-            _isFallback: true,
-            gainers: [
-                { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 128.50, changesPercentage: 5.42, volume: 48200000 },
-                { symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.10, changesPercentage: 4.18, volume: 32600000 },
-                { symbol: 'AAPL', name: 'Apple Inc.', price: 224.30, changesPercentage: 3.15, volume: 55100000 },
-                { symbol: 'AVGO', name: 'Broadcom Inc.', price: 172.80, changesPercentage: 2.90, volume: 18400000 },
-                { symbol: 'MSFT', name: 'Microsoft Corporation', price: 448.90, changesPercentage: 2.64, volume: 24800000 }
-            ],
-            losers: [
-                { symbol: 'INTC', name: 'Intel Corporation', price: 31.20, changesPercentage: -4.85, volume: 41000000 },
-                { symbol: 'TSLA', name: 'Tesla Inc.', price: 248.50, changesPercentage: -3.72, volume: 62300000 },
-                { symbol: 'PYPL', name: 'PayPal Holdings', price: 58.40, changesPercentage: -2.95, volume: 15700000 },
-                { symbol: 'BA', name: 'Boeing Co.', price: 178.60, changesPercentage: -2.41, volume: 11200000 },
-                { symbol: 'NKE', name: 'NIKE Inc.', price: 75.10, changesPercentage: -2.10, volume: 14500000 }
-            ]
-        };
-        return res.json(fallback);
+    } catch (err) {
+        console.warn("Live bellwether movers fallback warning:", err.message);
     }
+
+    const fallback = {
+        _isFallback: true,
+        gainers: [
+            { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 128.50, changesPercentage: 5.42, volume: 48200000 },
+            { symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.10, changesPercentage: 4.18, volume: 32600000 },
+            { symbol: 'AAPL', name: 'Apple Inc.', price: 224.30, changesPercentage: 3.15, volume: 55100000 },
+            { symbol: 'AVGO', name: 'Broadcom Inc.', price: 172.80, changesPercentage: 2.90, volume: 18400000 },
+            { symbol: 'MSFT', name: 'Microsoft Corporation', price: 448.90, changesPercentage: 2.64, volume: 24800000 }
+        ],
+        losers: [
+            { symbol: 'INTC', name: 'Intel Corporation', price: 31.20, changesPercentage: -4.85, volume: 41000000 },
+            { symbol: 'TSLA', name: 'Tesla Inc.', price: 248.50, changesPercentage: -3.72, volume: 62300000 },
+            { symbol: 'PYPL', name: 'PayPal Holdings', price: 58.40, changesPercentage: -2.95, volume: 15700000 },
+            { symbol: 'BA', name: 'Boeing Co.', price: 178.60, changesPercentage: -2.41, volume: 11200000 },
+            { symbol: 'NKE', name: 'NIKE Inc.', price: 75.10, changesPercentage: -2.10, volume: 14500000 }
+        ]
+    };
+    return res.json(fallback);
 });
 
-// U.S. Sector Performance Endpoint (FMP API)
-let SECTOR_CACHE = { lastFetched: 0, data: null };
+// U.S. Sector Performance Endpoint (FMP API with Live SPDR ETF Fallback)
+const SECTOR_ETFS = [
+    { etf: 'XLK', sector: 'Technology' },
+    { etf: 'XLE', sector: 'Energy' },
+    { etf: 'XLF', sector: 'Financial Services' },
+    { etf: 'XLC', sector: 'Communication Services' },
+    { etf: 'XLI', sector: 'Industrials' },
+    { etf: 'XLY', sector: 'Consumer Cyclical' },
+    { etf: 'XLB', sector: 'Basic Materials' },
+    { etf: 'XLV', sector: 'Healthcare' },
+    { etf: 'XLP', sector: 'Consumer Defensive' },
+    { etf: 'XLU', sector: 'Utilities' },
+    { etf: 'XLRE', sector: 'Real Estate' }
+];
 
 router.get('/fmp/sectors', async (req, res) => {
-    const now = Date.now();
-    if (SECTOR_CACHE.data && (now - SECTOR_CACHE.lastFetched < 2 * 60 * 60 * 1000)) {
-        return res.json(SECTOR_CACHE.data);
+    const cached = SECTOR_CACHE.getData();
+    if (cached) {
+        return res.json(cached);
     }
 
     const fmpKey = process.env.FMP_API_KEY || process.env.FINANCIAL_MODELING_PREP_API_KEY || process.env.FINANCIALMODELINGPREP_API_KEY;
 
-    try {
-        const response = await fetchWithTimeout(`https://financialmodelingprep.com/api/v3/sector-performance?apikey=${fmpKey}`);
-        const rawData = await response.json();
+    if (fmpKey) {
+        try {
+            const response = await fetchWithTimeout(`https://financialmodelingprep.com/api/v3/sector-performance?apikey=${fmpKey}`, 5000);
+            const rawData = await response.json();
 
-        if (Array.isArray(rawData) && rawData.length > 0) {
-            const sectors = rawData.map(item => ({
-                sector: item.sector || 'Unknown',
-                changesPercentage: parseFloat((parseFloat(item.changesPercentage || 0)).toFixed(2))
-            }));
-            const data = { sectors };
-            SECTOR_CACHE = { lastFetched: now, data };
+            if (Array.isArray(rawData) && rawData.length > 0) {
+                const sectors = rawData.map(item => ({
+                    sector: item.sector || 'Unknown',
+                    changesPercentage: parseFloat((parseFloat(item.changesPercentage || 0)).toFixed(2))
+                }));
+                const data = { sectors };
+                SECTOR_CACHE.set(data, 'fmp-live');
+                return res.json(data);
+            }
+        } catch (error) {
+            console.warn("FMP Sector API warning:", error.message);
+        }
+    }
+
+    // Live SPDR ETF Fallback
+    try {
+        const sectorResults = await Promise.all(SECTOR_ETFS.map(async ({ etf, sector }) => {
+            try {
+                const chart = await fetchYahooChart(etf, '5d', '1d');
+                if (chart && Array.isArray(chart.close) && chart.close.length >= 2) {
+                    const validCloses = chart.close.filter(c => typeof c === 'number' && !isNaN(c));
+                    if (validCloses.length >= 2) {
+                        const curr = validCloses[validCloses.length - 1];
+                        const prev = validCloses[validCloses.length - 2];
+                        const pct = parseFloat((((curr - prev) / prev) * 100).toFixed(2));
+                        return { sector, changesPercentage: pct };
+                    }
+                }
+                const q = await resolveCachedQuote(etf);
+                if (q && typeof q.dp === 'number') {
+                    return { sector, changesPercentage: parseFloat(Number(q.dp).toFixed(2)) };
+                }
+            } catch (e) {}
+            return null;
+        }));
+
+        const validSectors = sectorResults.filter(Boolean);
+        if (validSectors.length >= 5) {
+            const data = { sectors: validSectors };
+            SECTOR_CACHE.set(data, 'yahoo-spdr');
             return res.json(data);
         }
-
-        throw new Error("FMP returned empty or invalid sector data");
-    } catch (error) {
-        console.warn("FMP Sector API warning:", error.message);
-        const fallback = {
-            _isFallback: true,
-            sectors: [
-                { sector: 'Technology', changesPercentage: 1.84 },
-                { sector: 'Energy', changesPercentage: 1.45 },
-                { sector: 'Financial Services', changesPercentage: 0.92 },
-                { sector: 'Communication Services', changesPercentage: 0.65 },
-                { sector: 'Industrials', changesPercentage: 0.38 },
-                { sector: 'Consumer Cyclical', changesPercentage: 0.12 },
-                { sector: 'Basic Materials', changesPercentage: -0.15 },
-                { sector: 'Healthcare', changesPercentage: -0.42 },
-                { sector: 'Consumer Defensive', changesPercentage: -0.68 },
-                { sector: 'Utilities', changesPercentage: -0.95 },
-                { sector: 'Real Estate', changesPercentage: -1.24 }
-            ]
-        };
-        return res.json(fallback);
+    } catch (err) {
+        console.warn("Live SPDR sector fallback warning:", err.message);
     }
-});
 
-const EARNINGS_CACHE = {};
+    const fallback = {
+        _isFallback: true,
+        sectors: [
+            { sector: 'Technology', changesPercentage: 1.84 },
+            { sector: 'Energy', changesPercentage: 1.45 },
+            { sector: 'Financial Services', changesPercentage: 0.92 },
+            { sector: 'Communication Services', changesPercentage: 0.65 },
+            { sector: 'Industrials', changesPercentage: 0.38 },
+            { sector: 'Consumer Cyclical', changesPercentage: 0.12 },
+            { sector: 'Basic Materials', changesPercentage: -0.15 },
+            { sector: 'Healthcare', changesPercentage: -0.42 },
+            { sector: 'Consumer Defensive', changesPercentage: -0.68 },
+            { sector: 'Utilities', changesPercentage: -0.95 },
+            { sector: 'Real Estate', changesPercentage: -1.24 }
+        ]
+    };
+    return res.json(fallback);
+});
 
 router.get('/finnhub/earnings', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
 
     const cacheKey = symbol.toUpperCase();
-    const now = Date.now();
-    if (EARNINGS_CACHE[cacheKey] && (now - EARNINGS_CACHE[cacheKey].lastFetched < 6 * 60 * 60 * 1000)) {
-        return res.json(EARNINGS_CACHE[cacheKey].data);
+    const cached = EARNINGS_CACHE.getData(cacheKey);
+    if (cached) {
+        return res.json(cached);
     }
 
     try {
         const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/earnings?symbol=${encodeURIComponent(symbol)}&limit=8&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
         if (Array.isArray(data)) {
-            EARNINGS_CACHE[cacheKey] = { lastFetched: now, data };
-            enforceCacheLimit(EARNINGS_CACHE);
+            EARNINGS_CACHE.set(cacheKey, data);
         }
         res.json(data);
     } catch (error) {
@@ -936,16 +992,14 @@ router.get('/finnhub/earnings', async (req, res) => {
     }
 });
 
-const DIVIDENDS_CACHE = {};
-
 router.get('/finnhub/dividends', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
 
     const cacheKey = symbol.toUpperCase();
-    const now = Date.now();
-    if (DIVIDENDS_CACHE[cacheKey] && (now - DIVIDENDS_CACHE[cacheKey].lastFetched < 12 * 60 * 60 * 1000)) {
-        return res.json(DIVIDENDS_CACHE[cacheKey].data);
+    const cached = DIVIDENDS_CACHE.getData(cacheKey);
+    if (cached) {
+        return res.json(cached);
     }
 
     try {
@@ -957,8 +1011,7 @@ router.get('/finnhub/dividends', async (req, res) => {
         const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/dividend?symbol=${encodeURIComponent(symbol)}&from=${fromDateStr}&to=${toDate}&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
         if (Array.isArray(data)) {
-            DIVIDENDS_CACHE[cacheKey] = { lastFetched: now, data };
-            enforceCacheLimit(DIVIDENDS_CACHE);
+            DIVIDENDS_CACHE.set(cacheKey, data);
         }
         res.json(data);
     } catch (error) {
@@ -967,25 +1020,23 @@ router.get('/finnhub/dividends', async (req, res) => {
     }
 });
 
-const INSIDER_CACHE = {};
-
 router.get('/finnhub/insider', async (req, res) => {
     const symbol = requireTicker(req, res);
     if (!symbol) return;
 
     const cacheKey = symbol.toUpperCase();
-    const now = Date.now();
-    if (INSIDER_CACHE[cacheKey] && (now - INSIDER_CACHE[cacheKey].lastFetched < 6 * 60 * 60 * 1000)) {
-        return res.json(INSIDER_CACHE[cacheKey].data);
+    const cached = INSIDER_CACHE.getData(cacheKey);
+    if (cached) {
+        return res.json(cached);
     }
 
     try {
         const response = await fetchWithTimeout(`https://finnhub.io/api/v1/stock/insider-transactions?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`);
         const data = await response.json();
         if (data && Array.isArray(data.data)) {
-            INSIDER_CACHE[cacheKey] = { lastFetched: now, data: data.data.slice(0, 20) };
-            enforceCacheLimit(INSIDER_CACHE);
-            res.json(data.data.slice(0, 20));
+            const items = data.data.slice(0, 20);
+            INSIDER_CACHE.set(cacheKey, items);
+            res.json(items);
         } else {
             res.json([]);
         }
@@ -995,4 +1046,176 @@ router.get('/finnhub/insider', async (req, res) => {
     }
 });
 
+// ── Concurrency-limited promise pool helper ──────────────────────────────────
+async function pMap(items, fn, concurrency = 5) {
+    const results = [];
+    const executing = new Set();
+    for (const item of items) {
+        const p = Promise.resolve().then(() => fn(item));
+        results.push(p);
+        executing.add(p);
+        const clean = () => executing.delete(p);
+        p.then(clean).catch(clean);
+        if (executing.size >= concurrency) {
+            await Promise.race(executing);
+        }
+    }
+    return Promise.all(results);
+}
+
+// ── Batch Portfolio Snapshot Endpoint (/api/portfolio/snapshot) ───────────────
+router.post('/portfolio/snapshot', async (req, res) => {
+    try {
+        const rawSymbols = Array.isArray(req.body?.symbols) ? req.body.symbols : [];
+        const symbols = [...new Set(
+            rawSymbols
+                .map(s => String(s || '').trim().toUpperCase())
+                .filter(s => s && s.length <= 12)
+        )].slice(0, 30);
+
+        if (symbols.length === 0) {
+            return res.json({ snapshots: {}, portfolioAnalytics: null, fetchedAt: new Date().toISOString() });
+        }
+
+        const snapshots = {};
+
+        await pMap(symbols, async (sym) => {
+            try {
+                const [quote, profile, metricsData] = await Promise.all([
+                    resolveCachedQuote(sym),
+                    resolveCachedProfile(sym),
+                    resolveCachedMetrics(sym)
+                ]);
+
+                const metric = metricsData?.metric || {};
+                const currentPrice = typeof quote?.c === 'number' && quote.c > 0 ? quote.c : (quote?.pc || 0);
+
+                snapshots[sym] = {
+                    symbol: sym,
+                    name: profile?.name || `${sym} Asset`,
+                    sector: profile?.finnhubIndustry || 'Equities',
+                    exchange: profile?.exchange || 'US',
+                    logo: profile?.logo || `https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/${sym}.png`,
+                    price: currentPrice,
+                    change: quote?.d ?? 0,
+                    changePercent: quote?.dp ?? 0,
+                    high52w: metric['52WeekHigh'] || quote?.h || currentPrice,
+                    low52w: metric['52WeekLow'] || quote?.l || currentPrice,
+                    beta: typeof metric?.beta === 'number' ? metric.beta : 1.0,
+                    pe: typeof metric?.peTTM === 'number' ? metric.peTTM : null,
+                    dividendYield: typeof metric?.dividendYieldIndicatedAnnual === 'number' ? metric.dividendYieldIndicatedAnnual : 0,
+                    marketCap: profile?.marketCapitalization ?? null
+                };
+            } catch (err) {
+                console.warn(`Snapshot resolution error for ${sym}:`, err.message);
+                snapshots[sym] = {
+                    symbol: sym,
+                    name: `${sym} Asset`,
+                    sector: 'Equities',
+                    exchange: 'US',
+                    logo: `https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/${sym}.png`,
+                    price: 0,
+                    change: 0,
+                    changePercent: 0,
+                    high52w: 0,
+                    low52w: 0,
+                    beta: 1.0,
+                    pe: null,
+                    dividendYield: 0,
+                    marketCap: null
+                };
+            }
+        }, 5);
+
+        // ── Institutional Portfolio Analytics (Zero Extra API Cost) ─────────────
+        const validSymbols = Object.keys(snapshots);
+        const N = validSymbols.length;
+
+        let rawWeights = {};
+        if (req.body?.weights && typeof req.body.weights === 'object') {
+            rawWeights = req.body.weights;
+        } else if (req.body?.quantities && typeof req.body.quantities === 'object') {
+            validSymbols.forEach(sym => {
+                const qty = Number(req.body.quantities[sym] || req.body.quantities[sym.toLowerCase()] || 0);
+                const price = snapshots[sym]?.price || 0;
+                rawWeights[sym] = qty * price;
+            });
+        }
+
+        let totalWeight = 0;
+        validSymbols.forEach(sym => {
+            const w = Number(rawWeights[sym] || rawWeights[sym.toLowerCase()] || (N > 0 ? 1 / N : 0));
+            if (w > 0) totalWeight += w;
+        });
+
+        const normalizedWeights = {};
+        validSymbols.forEach(sym => {
+            const raw = Number(rawWeights[sym] || rawWeights[sym.toLowerCase()] || (N > 0 ? 1 / N : 0));
+            normalizedWeights[sym] = totalWeight > 0 ? (raw / totalWeight) : (N > 0 ? 1 / N : 0);
+        });
+
+        let weightedBeta = 0;
+        let weightedDividendYield = 0;
+        let positivePeWeight = 0;
+        let aggregateEarningsYield = 0;
+        let sumSquaredWeights = 0;
+        const sectorWeightsMap = {};
+
+        validSymbols.forEach(sym => {
+            const s = snapshots[sym];
+            const w = normalizedWeights[sym] || 0;
+            const beta = typeof s.beta === 'number' && !isNaN(s.beta) ? s.beta : 1.0;
+            const divYield = typeof s.dividendYield === 'number' && !isNaN(s.dividendYield) ? s.dividendYield : 0;
+            const pe = typeof s.pe === 'number' && !isNaN(s.pe) && s.pe > 0 ? s.pe : null;
+            const sector = s.sector || 'Equities';
+
+            weightedBeta += w * beta;
+            weightedDividendYield += w * divYield;
+            sumSquaredWeights += Math.pow(w, 2);
+
+            if (pe != null && pe > 0) {
+                positivePeWeight += w;
+                aggregateEarningsYield += w * (1 / pe);
+            }
+
+            const pctWeight = w * 100;
+            sectorWeightsMap[sector] = (sectorWeightsMap[sector] || 0) + pctWeight;
+        });
+
+        const sectorBreakdown = {};
+        Object.keys(sectorWeightsMap).forEach(sec => {
+            sectorBreakdown[sec] = Number(sectorWeightsMap[sec].toFixed(2));
+        });
+
+        let harmonicPortfolioPE = null;
+        if (positivePeWeight > 0 && aggregateEarningsYield > 0) {
+            const normalizedEY = aggregateEarningsYield / positivePeWeight;
+            harmonicPortfolioPE = Number((1 / normalizedEY).toFixed(2));
+        }
+
+        const hhiConcentration = Math.round(sumSquaredWeights * 10000);
+        const effectiveBets = sumSquaredWeights > 0 ? Number((1 / sumSquaredWeights).toFixed(1)) : N;
+
+        const portfolioAnalytics = {
+            weightedBeta: Number(weightedBeta.toFixed(2)),
+            weightedDividendYield: Number(weightedDividendYield.toFixed(2)),
+            harmonicPortfolioPE,
+            peMethodology: 'Harmonic Mean P/E (Reciprocal of aggregate earnings yield normalized by positive-earning assets, eliminating extreme high-P/E outlier skewness)',
+            hhiConcentration,
+            effectiveBets,
+            sectorBreakdown
+        };
+
+        res.json({
+            snapshots,
+            portfolioAnalytics,
+            fetchedAt: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Batch portfolio snapshot error:', error);
+        res.status(500).json({ error: 'Failed to resolve portfolio snapshot', snapshots: {} });
+    }
+});
+
 module.exports = router;
+

@@ -388,18 +388,39 @@ async function fetchCommodityItem(key, config) {
             });
         }
         
-        // Secondary fallback to TwelveData for gold/silver if configured
-        if (config.provider === 'TwelveData' && process.env.TWELVEDATA_API_KEY) {
-            const tdRes = await fetchTwelveDataQuote(config.symbol);
-            if (!tdRes.error) {
-                return buildCommodityPayload(key, config, {
-                    price: tdRes.price,
-                    change: tdRes.change,
-                    changePercent: tdRes.changePercent,
-                    provider: 'TwelveData',
-                    lastUpdated: new Date().toISOString()
-                });
-            }
+        // Alpha Vantage fallback for supported energy, metals, and agricultural commodities
+        const AV_COMMODITY_KEYS = ['WTI', 'BRENT', 'NATURAL_GAS', 'COPPER', 'ALUMINUM', 'WHEAT', 'CORN'];
+        if (AV_COMMODITY_KEYS.includes(key) && process.env.ALPHAVANTAGE_API_KEY) {
+            try {
+                const avRes = await fetchAlphaVantageCommodity(key, 'monthly');
+                if (avRes && typeof avRes.price === 'number') {
+                    return buildCommodityPayload(key, config, {
+                        price: avRes.price,
+                        change: avRes.change || 0,
+                        changePercent: avRes.changePercent || 0,
+                        chartData: avRes.chartData ? avRes.chartData.slice(-10) : null,
+                        provider: 'Alpha Vantage',
+                        lastUpdated: new Date().toISOString()
+                    });
+                }
+            } catch (avErr) {}
+        }
+
+        // Secondary fallback to TwelveData for gold/silver/metals
+        if ((key === 'XAU/USD' || key === 'SILVER' || config.symbol === 'XAU/USD' || config.provider === 'TwelveData') && process.env.TWELVEDATA_API_KEY) {
+            try {
+                const tdSymbol = key === 'XAU/USD' ? 'XAU/USD' : (key === 'SILVER' ? 'XAG/USD' : config.symbol);
+                const tdRes = await fetchTwelveDataQuote(tdSymbol);
+                if (tdRes && !tdRes.error && typeof tdRes.price === 'number') {
+                    return buildCommodityPayload(key, config, {
+                        price: tdRes.price,
+                        change: tdRes.change || 0,
+                        changePercent: tdRes.changePercent || 0,
+                        provider: 'TwelveData',
+                        lastUpdated: new Date().toISOString()
+                    });
+                }
+            } catch (tdErr) {}
         }
         
         return buildCommodityPayload(key, config, {

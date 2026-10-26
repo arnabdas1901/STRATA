@@ -109,6 +109,16 @@ class MemoryCache {
     getRaw(key) {
         return this.getData(key);
     }
+
+    /**
+     * Retrieves the raw unwrapped data directly from the cache.
+     * Guaranteed to return the exact stored payload without { data, meta } wrapping.
+     * @param {string} key - Cache key
+     * @returns {any|null}
+     */
+    getValue(key) {
+        return this.getData(key);
+    }
     
     /**
      * Sets an entry in the cache.
@@ -181,6 +191,8 @@ class MemoryCache {
         return {
             name: this.name,
             entries: this.store.size,
+            maxEntries: this.maxEntries,
+            ttlMs: this.ttlMs,
             hits: this.hits,
             misses: this.misses,
             evictions: this.evictions
@@ -267,6 +279,14 @@ class SingletonCache {
         this.hits++;
         return this.entry.data;
     }
+
+    getRaw() {
+        return this.getData();
+    }
+
+    getValue() {
+        return this.getData();
+    }
     
     /**
      * Sets the single cache entry.
@@ -326,6 +346,8 @@ class SingletonCache {
         return {
             name: this.name,
             entries: this.entry ? 1 : 0,
+            maxEntries: 1,
+            ttlMs: this.ttlMs,
             hits: this.hits,
             misses: this.misses,
             evictions: this.evictions

@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0a0e1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/images/strata-logo.png">
     <title>STRATA - Fixed Income & Yield Curve Terminal</title>
-    <meta name="description" content="Track US Treasury yield curves, bond spreads, and recession risk indicators in real-time.">
+    <meta name="description" content="Track US Treasury yield curves, bond spreads, duration, credit OAS, and recession risk indicators in real-time.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
@@ -71,7 +71,7 @@
                     <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
-                            <a class="nav-item" href="screener.html">
+                <a class="nav-item" href="screener.html">
                     <i class="fa-solid fa-filter" aria-hidden="true"></i>
                     <span>Screener</span>
                 </a>
@@ -79,7 +79,7 @@
                     <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                     <span>Correlations</span>
                 </a>
-                </nav>
+            </nav>
             <div class="sidebar-footer">
                 <span class="status-indicator connected"></span> Engine Operational
             </div>
@@ -108,189 +108,500 @@
             </header>
 
             <section id="dashboard-yields" class="dashboard-viewport active">
-                <div class="dashboard-header-block">
+                <!-- Header Block -->
+                <div class="dashboard-header-block yields-header-row">
                     <div>
-                        <h1>Fixed Income & Yield Curve Terminal</h1>
-                        <p class="subtitle">US Treasury rates, bond spreads &amp; recession risk indicators</p>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap;">
+                            <h1>Fixed Income &amp; Yield Curve Terminal</h1>
+                            <span class="desk-badge">PIMCO Rates Desk · Aladdin Workstation</span>
+                        </div>
+                        <p class="subtitle">US Treasury term structure, par duration &amp; convexity, corporate credit OAS, and monetary policy reaction function</p>
+                    </div>
+                    <div class="yields-header-actions">
+                        <span id="yields-last-updated" class="yields-timestamp font-mono"><i class="fa-regular fa-clock"></i> —</span>
+                        <button id="yields-refresh-btn" class="yields-refresh-btn" title="Refresh Rates Data">
+                            <i class="fa-solid fa-arrows-rotate"></i> Sync Live Feeds
+                        </button>
                     </div>
                 </div>
 
                 <!-- Loading State -->
                 <div id="yields-loader" class="ticker-hero-card" style="text-align:center; padding: 60px 20px;">
                     <span class="pulse-text" style="color: var(--neon-cyan-vibrant); font-size: 1.1rem;">
-                        <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> Fetching Treasury yield data…
+                        <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> Fetching US Treasury yield curve, credit spreads &amp; term structure from FRED…
                     </span>
                 </div>
 
-                <!-- Results Container (hidden until data loads) -->
+                <!-- Results Container -->
                 <div id="yields-results" class="hidden-element">
-    <div class="yields-command-center">
-        <!-- HUD Ticker Tape -->
-        <div class="hud-ticker-tape">
-            <div class="hud-item" id="yields-risk-banner">
-                <i id="yields-risk-icon" class="fa-solid fa-shield-check"></i>
-                <span class="hud-label">Risk:</span>
-                <span id="yields-risk-level" class="hud-value font-mono">Low</span>
-                <span id="yields-risk-description" style="display:none;"></span>
-            </div>
-            <div class="hud-item">
-                <span class="hud-label">10Y-2Y:</span>
-                <span id="yields-spread-10y2y" class="hud-value font-mono tabular-nums">—</span>
-            </div>
-            <div class="hud-item">
-                <span class="hud-label">10Y-3M:</span>
-                <span id="yields-spread-10y3m" class="hud-value font-mono tabular-nums">—</span>
-            </div>
-            <div class="hud-item">
-                <span class="hud-label">Butterfly:</span>
-                <span id="butterfly-value" class="hud-value font-mono tabular-nums">—</span>
-                <span id="belly-signal" class="hud-badge font-mono">—</span>
-            </div>
-            <div class="hud-item">
-                <span class="hud-label">Steepness:</span>
-                <span id="steepness-value" class="hud-value font-mono tabular-nums">—</span>
-            </div>
-            <div class="hud-item" id="hud-curve-regime">
-                <span class="hud-label">Regime:</span>
-                <span id="curve-regime-val" class="hud-value font-mono" style="color: #38bdf8;">—</span>
-            </div>
-            <div class="hud-item" id="hud-recession-prob">
-                <span class="hud-label">Recession Prob:</span>
-                <span id="recession-prob-val" class="hud-value font-mono tabular-nums" style="color: #10b981;">—</span>
-            </div>
-            <div class="hud-item">
-                <span class="hud-label">Fed Funds:</span>
-                <span id="yield-fed-rate" class="hud-value font-mono tabular-nums" style="color:#f59e0b">—</span>
-            </div>
-        </div>
 
-        <div class="yields-split-view">
-            <!-- LEFT COLUMN (CHARTS) -->
-            <div class="yields-col-main">
-                <!-- Yield Curve -->
-                <div class="chart-container-card borderless-card" style="height: 500px;">
-                    <div class="chart-header">
-                        <h3><i class="fa-solid fa-chart-area"></i> US Treasury Yield Curve</h3>
-                    </div>
-                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="yieldCurveChart"></canvas></div>
-                </div>
+                    <!-- 1. Top Executive Rates & Monetary Policy Ribbon (6 High-Density KPI Cards) -->
+                    <div class="yields-ribbon-grid">
+                        <!-- Card 1: 10Y Benchmark -->
+                        <div class="yields-ribbon-card" id="card-10y-benchmark">
+                            <div class="ribbon-card-header">
+                                <span class="ribbon-card-title"><i class="fa-solid fa-landmark"></i> 10Y Benchmark</span>
+                                <span id="kpi-10y-change-badge" class="ribbon-card-badge">— bps</span>
+                            </div>
+                            <div class="ribbon-card-main">
+                                <span id="kpi-10y-yield" class="ribbon-card-value font-mono tabular-nums">—%</span>
+                                <span id="kpi-10y-yoy" class="ribbon-card-sub font-mono">1Y Ago: —%</span>
+                            </div>
+                            <div class="ribbon-card-footer font-mono">
+                                <span id="kpi-10y-duration">Dur: — yrs</span> · <span id="kpi-10y-dv01">DV01: $—/100k</span>
+                            </div>
+                        </div>
 
-                <!-- Spread History -->
-                <div id="spread-history-container" class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header">
-                        <h3><i class="fa-solid fa-chart-line"></i> 10Y-2Y Spread History</h3>
-                    </div>
-                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="spreadHistoryChart"></canvas></div>
-                </div>
+                        <!-- Card 2: 2s10s Curve Slope -->
+                        <div class="yields-ribbon-card" id="card-2s10s-slope">
+                            <div class="ribbon-card-header">
+                                <span class="ribbon-card-title"><i class="fa-solid fa-chart-line"></i> 2s10s Curve Slope</span>
+                                <span id="kpi-2s10s-status-badge" class="ribbon-card-badge">—</span>
+                            </div>
+                            <div class="ribbon-card-main">
+                                <span id="kpi-2s10s-spread" class="ribbon-card-value font-mono tabular-nums">—</span>
+                                <span id="kpi-2s10s-bps" class="ribbon-card-sub font-mono">— bps</span>
+                            </div>
+                            <div class="ribbon-card-footer font-mono">
+                                <span id="kpi-2s10s-inverted-days"><i class="fa-solid fa-clock-rotate-left"></i> — Days Inverted (1Y)</span>
+                            </div>
+                        </div>
 
-                <!-- Credit Spreads -->
-                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
-                        <h3><i class="fa-solid fa-scale-balanced"></i> Credit Spreads</h3>
-                        <div style="display:flex; gap:12px;">
-                            <span style="font-size:0.8rem;"><span style="color:#10b981;">IG:</span> <span id="credit-ig-spread" class="font-mono tabular-nums">—</span></span>
-                            <span style="font-size:0.8rem;"><span style="color:#f59e0b;">HY:</span> <span id="credit-hy-spread" class="font-mono tabular-nums">—</span></span>
+                        <!-- Card 3: 3m10s Fed Spread & Probit Recession Risk -->
+                        <div class="yields-ribbon-card" id="card-3m10s-recession">
+                            <div class="ribbon-card-header">
+                                <span class="ribbon-card-title"><i class="fa-solid fa-triangle-exclamation"></i> 3m10s &amp; Probit Risk</span>
+                                <span id="kpi-recession-risk-badge" class="ribbon-card-badge">—</span>
+                            </div>
+                            <div class="ribbon-card-main">
+                                <span id="kpi-recession-prob" class="ribbon-card-value font-mono tabular-nums">—%</span>
+                                <span id="kpi-3m10s-bps" class="ribbon-card-sub font-mono">10Y-3M: — bps</span>
+                            </div>
+                            <div class="recession-mini-track">
+                                <div id="kpi-recession-bar" class="recession-mini-fill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Fed Funds & Implied Rate Path -->
+                        <div class="yields-ribbon-card" id="card-fed-funds">
+                            <div class="ribbon-card-header">
+                                <span class="ribbon-card-title"><i class="fa-solid fa-building-columns"></i> Effective Fed Funds</span>
+                                <span id="kpi-fed-stance-badge" class="ribbon-card-badge">—</span>
+                            </div>
+                            <div class="ribbon-card-main">
+                                <span id="kpi-fed-rate" class="ribbon-card-value font-mono tabular-nums">—%</span>
+                                <span id="kpi-2y-ff-spread" class="ribbon-card-sub font-mono">2Y vs FF: — bps</span>
+                            </div>
+                            <div class="ribbon-card-footer font-mono">
+                                <span id="kpi-implied-moves"><i class="fa-solid fa-scale-balanced"></i> — Moves Priced</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 5: Curve Regime & 2s5s10s Butterfly -->
+                        <div class="yields-ribbon-card" id="card-curve-regime">
+                            <div class="ribbon-card-header">
+                                <span class="ribbon-card-title"><i class="fa-solid fa-shuffle"></i> Curve Shift Regime</span>
+                                <span id="kpi-belly-signal-badge" class="ribbon-card-badge">—</span>
+                            </div>
+                            <div class="ribbon-card-main">
+                                <span id="kpi-regime-name" class="ribbon-card-value" style="font-size: 1.15rem;">—</span>
+                                <span id="kpi-butterfly-bps" class="ribbon-card-sub font-mono">Fly: — bps</span>
+                            </div>
+                            <div class="ribbon-card-footer">
+                                <span id="kpi-30y5y-slope" class="font-mono">30Y-5Y: — bps</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 6: 10Y Real TIPS & Breakeven Inflation -->
+                        <div class="yields-ribbon-card" id="card-real-tips">
+                            <div class="ribbon-card-header">
+                                <span class="ribbon-card-title"><i class="fa-solid fa-fire-flame-curved"></i> 10Y Real TIPS &amp; BE</span>
+                                <span id="kpi-real-stance-badge" class="ribbon-card-badge">—</span>
+                            </div>
+                            <div class="ribbon-card-main">
+                                <span id="kpi-real-yield" class="ribbon-card-value font-mono tabular-nums">—%</span>
+                                <span id="kpi-breakeven-rate" class="ribbon-card-sub font-mono">BE: —%</span>
+                            </div>
+                            <div class="ribbon-card-footer font-mono">
+                                <span id="kpi-real-ff-stance">Real FF: — bps</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="creditSpreadChart"></canvas></div>
-                </div>
-                
-                <!-- Mortgage Spreads -->
-                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
-                        <h3><i class="fa-solid fa-house-chimney"></i> Mortgage Spread</h3>
-                        <div style="display:flex; gap:12px;">
-                            <span style="font-size:0.8rem;"><span style="color:#a78bfa;">30Y:</span> <span id="mortgage-rate" class="font-mono tabular-nums">—</span></span>
-                            <span style="font-size:0.8rem;"><span style="color:#f59e0b;">Spread:</span> <span id="mortgage-spread-value" class="font-mono tabular-nums">—</span></span>
+
+                    <!-- 2. Main Desk Layout: Term Structure Curve & Benchmark Matrix Table -->
+                    <div class="yields-section-block">
+                        <div class="chart-container-card borderless-card yields-curve-desk-card">
+                            <div class="chart-header yields-desk-header">
+                                <div class="desk-title-block">
+                                    <h3><i class="fa-solid fa-chart-area"></i> US Treasury Term Structure &amp; Multi-Curve Overlay</h3>
+                                    <span class="desk-subtitle">Live On-the-Run Benchmarks vs. 1-Month Ago &amp; 1-Year Ago Historical Term Structures</span>
+                                </div>
+                                <div class="desk-controls-group">
+                                    <div class="segmented-pill-toggle">
+                                        <button id="toggle-curve-nominal" class="pill-btn active" data-mode="nominal"><i class="fa-solid fa-percent"></i> Par Yields</button>
+                                        <button id="toggle-curve-duration" class="pill-btn" data-mode="duration"><i class="fa-solid fa-hourglass-half"></i> Key-Rate Duration</button>
+                                    </div>
+                                    <button id="toggle-fed-funds-anchor" class="pill-btn-outline active" title="Toggle Fed Funds Anchor Line">
+                                        <i class="fa-solid fa-anchor"></i> Fed Funds O/N
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="yields-curve-content-layout">
+                                <!-- Curve Chart Box -->
+                                <div class="chart-wrapper-box yields-chart-wrapper">
+                                    <canvas id="yieldCurveChart"></canvas>
+                                </div>
+
+                                <!-- On-the-Run Benchmark Table -->
+                                <div class="treasury-matrix-box">
+                                    <div class="matrix-table-title-row">
+                                        <h4><i class="fa-solid fa-table-list"></i> On-The-Run Benchmark Matrix</h4>
+                                        <div class="matrix-legend">
+                                            <span class="legend-chip rising"><i class="fa-solid fa-caret-up"></i> Rising (+bps)</span>
+                                            <span class="legend-chip falling"><i class="fa-solid fa-caret-down"></i> Falling (-bps)</span>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="treasury-matrix-table tabular-nums">
+                                            <thead>
+                                                <tr>
+                                                    <th>Tenor</th>
+                                                    <th>Yield</th>
+                                                    <th>1D Δ</th>
+                                                    <th>1W Δ</th>
+                                                    <th>1M Δ</th>
+                                                    <th>YTD Δ</th>
+                                                    <th>1Y Ago</th>
+                                                    <th>Mod. Dur</th>
+                                                    <th>DV01/100k</th>
+                                                    <th>1Y Carry+Roll</th>
+                                                    <th>Source</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="treasury-matrix-tbody">
+                                                <tr><td colspan="11" class="text-center" style="padding: 24px;"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading benchmark matrix…</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="mortgageSpreadChart"></canvas></div>
-                </div>
 
-                <!-- Breakevens -->
-                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header" style="justify-content: space-between; align-items: center;">
-                        <h3><i class="fa-solid fa-fire-flame-curved"></i> 10Y Breakevens</h3>
-                        <div style="display:flex; gap:12px;">
-                            <span style="font-size:0.8rem;"><span style="color:#06b6d4;">Real:</span> <span id="real-yield-rate" class="font-mono tabular-nums">—</span></span>
-                            <span style="font-size:0.8rem;"><span style="color:#f97316;">BE:</span> <span id="breakeven-rate" class="font-mono tabular-nums">—</span></span>
+                    <!-- 3. Fixed Income Analytics Grid: 4 Core Modules -->
+                    <div class="yields-quad-grid">
+                        <!-- Quad 1: Historical Slopes Dual Overlay -->
+                        <div class="chart-container-card borderless-card quad-card">
+                            <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <h3><i class="fa-solid fa-chart-line"></i> Historical Yield Curve Slopes</h3>
+                                    <span class="card-subtitle-sub">1-Year Daily Inversion Tracking &amp; Regime History</span>
+                                </div>
+                                <div class="segmented-pill-toggle">
+                                    <button id="slope-toggle-dual" class="pill-btn active" data-series="dual">Dual Overlay</button>
+                                    <button id="slope-toggle-2s10s" class="pill-btn" data-series="2s10s">10Y-2Y</button>
+                                    <button id="slope-toggle-3m10s" class="pill-btn" data-series="3m10s">10Y-3M</button>
+                                </div>
+                            </div>
+                            <div class="slope-stats-strip font-mono tabular-nums">
+                                <div class="slope-stat-box"><span class="lbl">10Y-2Y 1Y Min</span><span id="slope-2s10s-min" class="val">—</span></div>
+                                <div class="slope-stat-box"><span class="lbl">10Y-2Y 1Y Max</span><span id="slope-2s10s-max" class="val">—</span></div>
+                                <div class="slope-stat-box"><span class="lbl">10Y-2Y 1Y Mean</span><span id="slope-2s10s-mean" class="val">—</span></div>
+                                <div class="slope-stat-box"><span class="lbl">Days Inverted</span><span id="slope-inverted-count" class="val danger">—</span></div>
+                            </div>
+                            <div class="chart-wrapper-box quad-chart-wrapper">
+                                <canvas id="spreadHistoryChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Quad 2: Corporate Credit OAS & Default Risk -->
+                        <div class="chart-container-card borderless-card quad-card">
+                            <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <h3><i class="fa-solid fa-scale-balanced"></i> Corporate Credit OAS &amp; Default Monitor</h3>
+                                    <span class="card-subtitle-sub">ICE BofA US Investment Grade &amp; High Yield Option-Adjusted Spreads</span>
+                                </div>
+                                <div id="credit-regime-badge" class="ribbon-card-badge">—</div>
+                            </div>
+                            <div class="credit-stats-bar">
+                                <div class="credit-stat-card">
+                                    <div class="stat-top"><span class="credit-chip ig">US IG (BBB/A)</span><span id="credit-ig-change" class="font-mono">—</span></div>
+                                    <div class="stat-val font-mono tabular-nums" id="credit-ig-spread">— bps</div>
+                                    <div class="stat-sub font-mono" id="credit-ig-allin">All-In Yield: —%</div>
+                                    <div class="percentile-wrap" title="1-Year Percentile"><div class="percentile-track"><div id="credit-ig-pctbar" class="percentile-fill ig" style="width: 0%;"></div></div><span id="credit-ig-pct" class="font-mono">P—</span></div>
+                                </div>
+                                <div class="credit-stat-card">
+                                    <div class="stat-top"><span class="credit-chip hy">US High Yield (BB/B/CCC)</span><span id="credit-hy-change" class="font-mono">—</span></div>
+                                    <div class="stat-val font-mono tabular-nums" id="credit-hy-spread">— bps</div>
+                                    <div class="stat-sub font-mono" id="credit-hy-allin">All-In Yield: —%</div>
+                                    <div class="percentile-wrap" title="1-Year Percentile"><div class="percentile-track"><div id="credit-hy-pctbar" class="percentile-fill hy" style="width: 0%;"></div></div><span id="credit-hy-pct" class="font-mono">P—</span></div>
+                                </div>
+                                <div class="credit-stat-card metrics-card">
+                                    <div class="stat-top"><span class="credit-chip" style="background: rgba(255,255,255,0.08); color: #cbd5e1;">Compression</span></div>
+                                    <div class="stat-val font-mono tabular-nums" id="credit-hy-ig-diff">— bps</div>
+                                    <div class="stat-sub font-mono" id="credit-hy-ig-ratio">HY/IG Ratio: —x</div>
+                                    <div class="implied-default-tag font-mono" id="credit-implied-default">Implied Default: —%</div>
+                                </div>
+                            </div>
+                            <div class="chart-wrapper-box quad-chart-wrapper">
+                                <canvas id="creditSpreadChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Quad 3: Real TIPS & Breakeven Decomposition -->
+                        <div class="chart-container-card borderless-card quad-card">
+                            <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <h3><i class="fa-solid fa-fire-flame-curved"></i> Real TIPS &amp; Breakeven Inflation Decomposition</h3>
+                                    <span class="card-subtitle-sub">Fisher Decomposition: Nominal 10Y = 10Y Real Yield + 10Y Breakeven Inflation</span>
+                                </div>
+                                <div id="real-rate-regime-badge" class="ribbon-card-badge">—</div>
+                            </div>
+                            <!-- Fisher Equation Visual Bar -->
+                            <div class="fisher-box">
+                                <div class="fisher-labels font-mono">
+                                    <span>Nominal 10Y: <strong id="fisher-nominal-val">—%</strong></span>
+                                    <span>=</span>
+                                    <span>10Y Real TIPS: <strong id="fisher-real-val" style="color: #06b6d4;">—%</strong></span>
+                                    <span>+</span>
+                                    <span>10Y Breakeven: <strong id="fisher-be-val" style="color: #f97316;">—%</strong></span>
+                                </div>
+                                <div class="fisher-bar-track">
+                                    <div id="fisher-bar-real" class="fisher-segment real" style="width: 50%;"></div>
+                                    <div id="fisher-bar-be" class="fisher-segment be" style="width: 50%;"></div>
+                                </div>
+                            </div>
+                            <div class="chart-wrapper-box quad-chart-wrapper">
+                                <canvas id="breakevenChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Quad 4: 30Y Fixed Mortgage vs. 10Y Treasury Prepayment / MBS Spread -->
+                        <div class="chart-container-card borderless-card quad-card">
+                            <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <h3><i class="fa-solid fa-house-chimney"></i> Mortgage Spread &amp; Prepayment Convexity</h3>
+                                    <span class="card-subtitle-sub">Freddie Mac 30Y Fixed vs. 10Y Treasury Benchmark (5-Year Weekly History)</span>
+                                </div>
+                                <div id="mbs-norm-badge" class="ribbon-card-badge">—</div>
+                            </div>
+                            <div class="mbs-stats-bar font-mono tabular-nums">
+                                <div class="mbs-stat-chip"><span class="lbl">30Y Primary Mortgage:</span> <strong id="mortgage-rate" style="color: #a78bfa;">—%</strong></div>
+                                <div class="mbs-stat-chip"><span class="lbl">10Y Benchmark:</span> <strong id="mortgage-10y-rate" style="color: #06b6d4;">—%</strong></div>
+                                <div class="mbs-stat-chip"><span class="lbl">MBS Spread:</span> <strong id="mortgage-spread-value" style="color: #f59e0b;">—% (— bps)</strong></div>
+                                <div class="mbs-stat-chip"><span class="lbl">Excess vs 175bp Norm:</span> <strong id="mortgage-excess-spread">— bps</strong></div>
+                            </div>
+                            <div class="chart-wrapper-box quad-chart-wrapper">
+                                <canvas id="mortgageSpreadChart"></canvas>
+                            </div>
                         </div>
                     </div>
-                    <div class="chart-wrapper-box" style="height: 420px;"><canvas id="breakevenChart"></canvas></div>
-                </div>
-            </div>
 
-            <!-- RIGHT COLUMN (METRICS & ANALYSIS) -->
-            <div class="yields-col-side">
-                
-                <!-- Rates Grid -->
-                <div class="metric-summary-grid compact-grid">
-                    <div class="metric-card"><span class="metric-title">3M</span><span id="yield-3m" class="metric-value font-mono tabular-nums">—</span></div>
-                    <div class="metric-card"><span class="metric-title">2Y</span><span id="yield-2y" class="metric-value font-mono tabular-nums">—</span></div>
-                    <div class="metric-card"><span class="metric-title">5Y</span><span id="yield-5y" class="metric-value font-mono tabular-nums">—</span></div>
-                    <div class="metric-card"><span class="metric-title">10Y</span><span id="yield-10y" class="metric-value font-mono tabular-nums">—</span></div>
-                    <div class="metric-card"><span class="metric-title">30Y</span><span id="yield-30y" class="metric-value font-mono tabular-nums">—</span></div>
-                    <div class="metric-card"><span class="metric-title">Updated</span><span id="yield-date" class="metric-value" style="font-size:0.8rem;">—</span></div>
-                </div>
+                    <!-- 4. PIMCO Key-Rate Duration & Curve Shock Simulator (100% Client-Side Quant Engine) -->
+                    <div class="yields-section-block">
+                        <div class="chart-container-card borderless-card pimco-sim-card">
+                            <div class="chart-header sim-header">
+                                <div>
+                                    <h3><i class="fa-solid fa-sliders"></i> PIMCO Key-Rate Duration &amp; Yield Curve Shock Simulator</h3>
+                                    <span class="desk-subtitle">Simulate parallel shifts, curve steepeners/flatteners, instantaneous portfolio PnL, duration/convexity effects, and breakeven yield rise</span>
+                                </div>
+                                <div class="sim-badge">100% Client-Side Aladdin Math · Zero API Calls</div>
+                            </div>
 
-                <!-- AI Analysis -->
-                <div class="company-profile-card borderless-card" style="margin-top: 16px;">
-                    <h3><i class="fa-solid fa-robot"></i> Fixed Income Strategy Analysis</h3>
-                    <p id="yields-analysis-display" style="color: var(--text-secondary-muted); line-height: 1.6; margin-top: 12px;"><span class="pulse-text">Generating yield curve insights…</span></p>
-                </div>
+                            <div class="sim-layout-grid">
+                                <!-- Left: Control Sliders & Presets -->
+                                <div class="sim-controls-panel">
+                                    <!-- Portfolio Capital -->
+                                    <div class="sim-group">
+                                        <div class="sim-label-row">
+                                            <label><i class="fa-solid fa-wallet"></i> Portfolio Notional</label>
+                                            <span id="sim-notional-val" class="font-mono tabular-nums">$1,000,000</span>
+                                        </div>
+                                        <div class="sim-input-row">
+                                            <input type="range" id="sim-notional-range" min="100000" max="25000000" step="100000" value="1000000" class="sim-slider">
+                                        </div>
+                                    </div>
 
-                <!-- Heatmap -->
-                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header">
-                        <h3><i class="fa-solid fa-table-cells"></i> Yield Change Heatmap</h3>
-                    </div>
-                    <div id="yield-heatmap-body" class="tabular-nums" style="overflow-x: auto; padding: 0;">
-                        <p class="pulse-text">Loading heatmap…</p>
-                    </div>
-                </div>
+                                    <!-- Benchmark Tenor Archetypes -->
+                                    <div class="sim-group">
+                                        <label class="sim-field-label"><i class="fa-solid fa-layer-group"></i> Target Benchmark Tenor / Portfolio Archetype</label>
+                                        <div class="sim-tenor-selector" id="sim-tenor-selector">
+                                            <button class="sim-tenor-btn" data-tenor="2Y">2Y Note</button>
+                                            <button class="sim-tenor-btn" data-tenor="5Y">5Y Note</button>
+                                            <button class="sim-tenor-btn active" data-tenor="10Y">10Y Benchmark</button>
+                                            <button class="sim-tenor-btn" data-tenor="30Y">30Y Bond</button>
+                                            <button class="sim-tenor-btn" data-tenor="barbell">Barbell (2Y/30Y)</button>
+                                            <button class="sim-tenor-btn" data-tenor="bullet">Bullet (5Y/10Y)</button>
+                                        </div>
+                                    </div>
 
-                <!-- Real-time Calculator -->
-                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header">
-                        <h3><i class="fa-solid fa-calculator"></i> Real-Time Duration Calc</h3>
-                    </div>
-                    <div id="duration-calc-body" style="padding: 12px 0;">
-                        <div class="duration-input-grid compact-calc">
-                            <div class="duration-input-group"><label style="font-size:0.75rem; color:#9ca3af;">Coupon (%)</label><input type="number" id="bond-coupon-rate" value="5.0" step="0.125"></div>
-                            <div class="duration-input-group"><label style="font-size:0.75rem; color:#9ca3af;">YTM (%)</label><input type="number" id="bond-ytm" value="4.5" step="0.125"></div>
-                            <div class="duration-input-group"><label style="font-size:0.75rem; color:#9ca3af;">Maturity (Yrs)</label><input type="number" id="bond-maturity-years" value="10" step="1"></div>
-                            <input type="hidden" id="bond-face-value" value="1000">
-                            <input type="hidden" id="bond-frequency" value="2">
+                                    <!-- Parallel Shift Slider -->
+                                    <div class="sim-group">
+                                        <div class="sim-label-row">
+                                            <label><i class="fa-solid fa-arrows-up-down"></i> Parallel Yield Shift (Δy)</label>
+                                            <span id="sim-shift-val" class="font-mono tabular-nums">0 bps</span>
+                                        </div>
+                                        <input type="range" id="sim-shift-range" min="-200" max="200" step="5" value="0" class="sim-slider">
+                                        <div class="slider-scale font-mono">
+                                            <span>-200 bps</span>
+                                            <span>-100</span>
+                                            <span>0</span>
+                                            <span>+100</span>
+                                            <span>+200 bps</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Curve Twist Slider -->
+                                    <div class="sim-group">
+                                        <div class="sim-label-row">
+                                            <label><i class="fa-solid fa-compass-drafting"></i> Curve Twist (Steepener / Flattener)</label>
+                                            <span id="sim-twist-val" class="font-mono tabular-nums">0 bps (Neutral)</span>
+                                        </div>
+                                        <input type="range" id="sim-twist-range" min="-100" max="100" step="5" value="0" class="sim-slider">
+                                        <div class="slider-scale font-mono">
+                                            <span>-100 (Flatten)</span>
+                                            <span>-50</span>
+                                            <span>0</span>
+                                            <span>+50</span>
+                                            <span>+100 (Steepen)</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quick Presets -->
+                                    <div class="sim-presets-strip">
+                                        <span class="preset-label">Macro Shocks:</span>
+                                        <button class="preset-chip" data-shift="100" data-twist="30">+100bp Bear Steepener</button>
+                                        <button class="preset-chip" data-shift="-100" data-twist="40">-100bp Bull Steepener</button>
+                                        <button class="preset-chip" data-shift="50" data-twist="-30">+50bp Bear Flattener</button>
+                                        <button class="preset-chip" data-shift="0" data-twist="0">Reset Shock</button>
+                                    </div>
+                                </div>
+
+                                <!-- Right: PnL & Risk Horizon Output Cards -->
+                                <div class="sim-outputs-panel">
+                                    <div class="sim-results-grid">
+                                        <!-- Instantaneous Price Change -->
+                                        <div class="sim-result-card" id="sim-card-price">
+                                            <span class="res-title">Instantaneous Price Impact (Duration + Convexity)</span>
+                                            <div class="res-main">
+                                                <span id="sim-price-pct" class="res-val font-mono tabular-nums">0.00%</span>
+                                                <span id="sim-price-dollar" class="res-sub font-mono tabular-nums">$0</span>
+                                            </div>
+                                            <span class="res-note">Taylor expansion: -D_mod·Δy + ½·Convexity·(Δy)²</span>
+                                        </div>
+
+                                        <!-- 1-Year Horizon Total Return -->
+                                        <div class="sim-result-card" id="sim-card-horizon">
+                                            <span class="res-title">1-Year Horizon Total Return (Carry + Price Shock)</span>
+                                            <div class="res-main">
+                                                <span id="sim-horizon-pct" class="res-val font-mono tabular-nums">—%</span>
+                                                <span id="sim-horizon-dollar" class="res-sub font-mono tabular-nums">$—</span>
+                                            </div>
+                                            <span class="res-note">1-Year Carry Coupon + Price Shock PnL</span>
+                                        </div>
+
+                                        <!-- Portfolio DV01 -->
+                                        <div class="sim-result-card">
+                                            <span class="res-title">Portfolio DV01 (Dollar Value of 1 bp)</span>
+                                            <div class="res-main">
+                                                <span id="sim-dv01-dollar" class="res-val font-mono tabular-nums">$—</span>
+                                                <span id="sim-mod-duration" class="res-sub font-mono">Mod Dur: — yrs</span>
+                                            </div>
+                                            <span class="res-note">Dollar PnL per 1 basis point shift across curve</span>
+                                        </div>
+
+                                        <!-- Breakeven Yield Rise -->
+                                        <div class="sim-result-card">
+                                            <span class="res-title">12-Month Breakeven Yield Rise</span>
+                                            <div class="res-main">
+                                                <span id="sim-breakeven-bps" class="res-val font-mono tabular-nums">— bps</span>
+                                                <span id="sim-convexity-val" class="res-sub font-mono">Convexity: —</span>
+                                            </div>
+                                            <span class="res-note">Yield rise required over 1 year to wipe out coupon carry</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Formula Provenance Footer -->
+                                    <div class="sim-formula-box font-mono">
+                                        <i class="fa-solid fa-square-root-variable"></i>
+                                        <span>ΔP/P ≈ -D_mod·Δy + ½·Convexity·(Δy)² | Total Return = Starting Yield Carry + ΔP/P | Breakeven = Yield / D_mod</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div id="duration-results" class="duration-results-grid hidden-element" style="margin-top:12px; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <div class="duration-result-item"><span class="duration-result-label">Price</span><span id="dur-bond-price" class="duration-result-value font-mono tabular-nums">—</span></div>
-                            <div class="duration-result-item"><span class="duration-result-label">Duration</span><span id="dur-macaulay" class="duration-result-value font-mono tabular-nums">—</span></div>
-                            <div class="duration-result-item"><span class="duration-result-label">+100 bps</span><span id="dur-shock-up100" class="duration-result-value font-mono tabular-nums">—</span></div>
-                            <div class="duration-result-item"><span class="duration-result-label">-100 bps</span><span id="dur-shock-dn100" class="duration-result-value font-mono tabular-nums">—</span></div>
+                    </div>
+
+                    <!-- 5. AI Senior Fixed Income Strategist Terminal & Macro Release Calendar -->
+                    <div class="yields-split-bottom-grid">
+                        <!-- AI Strategist Terminal -->
+                        <div class="company-profile-card borderless-card strategist-card">
+                            <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span class="ai-pulse-indicator"><i class="fa-solid fa-brain"></i></span>
+                                    <div>
+                                        <h3 style="margin:0;"><i class="fa-solid fa-microchip"></i> PIMCO Senior Fixed Income Strategist Terminal</h3>
+                                        <span class="card-subtitle-sub">Aladdin Executive Rates Memo · Monetary Policy Reaction Function</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button id="yields-ai-refresh-btn" class="pill-btn-outline" title="Generate New Fixed Income Memo">
+                                        <i class="fa-solid fa-rotate"></i> Re-Analyze
+                                    </button>
+                                    <button id="yields-ai-copy-btn" class="pill-btn-outline" title="Copy Memo to Clipboard">
+                                        <i class="fa-regular fa-copy"></i> Copy
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="strategist-memo-container">
+                                <p id="yields-analysis-display" class="strategist-memo-text">
+                                    <span class="pulse-text"><i class="fa-solid fa-satellite-dish"></i> Synthesizing term structure dynamics, butterfly curvature, and implied policy paths…</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Upcoming Macro & Treasury Release Calendar -->
+                        <div class="chart-container-card borderless-card calendar-card">
+                            <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <h3><i class="fa-solid fa-calendar-days"></i> Upcoming Macro &amp; Treasury Auction Calendar</h3>
+                                    <span class="card-subtitle-sub">Scheduled FOMC, CPI, NFP, PCE Prints &amp; Treasury Benchmark Supply</span>
+                                </div>
+                                <span class="ribbon-card-badge" style="background:rgba(6,182,212,0.1); color:#38bdf8;">Next 45 Days</span>
+                            </div>
+                            <div id="econ-calendar-body" class="calendar-scroll-box">
+                                <p class="pulse-text" style="color: var(--text-secondary-muted); text-align: center; padding: 30px 0;">Loading economic release schedule…</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Economic Calendar -->
-                <div class="chart-container-card borderless-card" style="margin-top: 16px;">
-                    <div class="chart-header">
-                        <h3><i class="fa-solid fa-calendar-days"></i> Upcoming Economic Events (US)</h3>
+                    <!-- Hidden container elements to preserve any legacy scripts/hooks -->
+                    <div style="display:none;">
+                        <span id="yield-3m">—</span>
+                        <span id="yield-2y">—</span>
+                        <span id="yield-5y">—</span>
+                        <span id="yield-10y">—</span>
+                        <span id="yield-30y">—</span>
+                        <span id="yield-date">—</span>
+                        <span id="yields-spread-10y2y">—</span>
+                        <span id="yields-spread-10y3m">—</span>
+                        <span id="yields-risk-level">Low</span>
+                        <span id="yield-fed-rate">—</span>
+                        <span id="butterfly-value">—</span>
+                        <span id="belly-signal">—</span>
+                        <span id="steepness-value">—</span>
+                        <span id="curve-regime-val">—</span>
+                        <span id="recession-prob-val">—</span>
+                        <div id="yield-heatmap-body"></div>
                     </div>
-                    <div id="econ-calendar-body" style="padding: 0; overflow-x: auto;">
-                        <p class="pulse-text" style="color: var(--text-secondary-muted); text-align: center; padding: 20px 0;">Loading economic calendar…</p>
-                    </div>
+
                 </div>
 
-            </div>
-        </div>
-    </div>
-</div>
-
-<p class="projection-disclaimer" style="margin-top: 24px; text-align: center;">
-                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i> <strong>Data Notice:</strong> Treasury yields are sourced from the <strong>Federal Reserve (FRED)</strong> and <strong>CBOE</strong> indices. Yields are updated once daily at market close. The 10Y-2Y spread has preceded every US recession since 1955.
-                    </p>
-                </div>
-            </section></main>
+                <p class="projection-disclaimer" style="margin-top: 24px; text-align: center;">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i> <strong>Institutional Provenance:</strong> US Treasury constant maturity yields, inflation-indexed real yields (TIPS), breakeven inflation rates, and corporate OAS are sourced directly from the <strong>Federal Reserve Bank of St. Louis (FRED)</strong> and <strong>ICE BofA Indices</strong>. Closed-form par duration, convexity, and DV01 analytics are computed in real time.
+                </p>
+            </section>
+        </main>
     </div>
 
     <div id="global-toast-notification" class="toast-system hidden-toast"></div>

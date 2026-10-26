@@ -2,16 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0a0e1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/images/strata-logo.png">
-    <title>STRATA - Strategic Asset Allocation</title>
+    <title>STRATA - Mock Portfolio Workstation</title>
+    <meta name="description" content="Institutional Multi-Asset Portfolio Management Workstation with real-time NAV, order tickets, benchmark alpha, rebalancing, and risk attribution.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
@@ -70,7 +71,7 @@
                     <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
-                            <a class="nav-item" href="screener.html">
+                <a class="nav-item" href="screener.html">
                     <i class="fa-solid fa-filter" aria-hidden="true"></i>
                     <span>Screener</span>
                 </a>
@@ -78,7 +79,7 @@
                     <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                     <span>Correlations</span>
                 </a>
-                </nav>
+            </nav>
             <div class="sidebar-footer">
                 <span class="status-indicator connected"></span> Engine Operational
             </div>
@@ -107,246 +108,526 @@
             </header>
 
             <section id="dashboard-portfolio" class="dashboard-viewport active">
-                <div class="dashboard-header-block">
-                    <h1><i class="fa-solid fa-diagram-project portfolio-header-icon" aria-hidden="true"></i> Risk-Engine Portfolio Architect</h1>
-                    <p class="subtitle">Institutional-grade capital allocation framework with quantitative risk analytics and horizon modeling</p>
+                <!-- Header Block -->
+                <div class="dashboard-header-block pms-header-row">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap;">
+                            <h1>Mock Portfolio Workstation</h1>
+                            <span class="desk-badge">BlackRock Aladdin PMS · Citadel Execution Desk</span>
+                        </div>
+                        <p class="subtitle">Multi-asset portfolio accounting, real-time NAV mark-to-market, active S&amp;P 500 benchmark alpha, and target rebalancer</p>
+                    </div>
+                    <div class="pms-header-actions">
+                        <span id="pms-last-updated" class="pms-timestamp font-mono"><i class="fa-regular fa-clock"></i> —</span>
+                        <button id="pms-refresh-btn" class="pms-action-btn" title="Refresh Live Market Quotes">
+                            <i class="fa-solid fa-arrows-rotate"></i> Refresh Quotes
+                        </button>
+                    </div>
                 </div>
 
-                <div class="portfolio-grid-layout">
-                    <div class="portfolio-inputs-card">
-                        <div class="card-section-header">
-                            <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-                            <h3>Investor Profile & Parameters</h3>
+                <!-- 1. Top Executive NAV, Alpha & Risk Ribbon (6 High-Density KPI Cards) -->
+                <div class="pms-ribbon-grid">
+                    <!-- Card 1: Total Portfolio NAV -->
+                    <div class="pms-ribbon-card" id="card-total-nav">
+                        <div class="pms-card-header">
+                            <span class="pms-card-title"><i class="fa-solid fa-wallet"></i> Total Portfolio NAV</span>
+                            <span id="pms-cash-ratio-badge" class="pms-card-badge">Cash: 0%</span>
                         </div>
-                        <div class="input-field-group">
-                            <label for="portfolio-capital-input">Initial Capital ($)</label>
-                            <input type="number" id="portfolio-capital-input" min="1000" value="100000" step="1000" placeholder="e.g., 100000">
+                        <div class="pms-card-main">
+                            <span id="kpi-total-nav" class="pms-card-value font-mono tabular-nums">$0</span>
+                            <span id="kpi-cost-basis" class="pms-card-sub font-mono">Basis: $0</span>
                         </div>
-                        <div class="input-field-group">
-                            <label for="portfolio-age-input">Investor Age (Years)</label>
-                            <input type="number" id="portfolio-age-input" min="1" max="120" value="30" placeholder="e.g., 30">
-                        </div>
-                        <div class="input-field-group">
-                            <label for="portfolio-risk-input">Risk Tolerance Profile</label>
-                            <select id="portfolio-risk-input">
-                                <option value="conservative">Conservative — Capital Preservation</option>
-                                <option value="moderate" selected>Moderate — Balanced Growth</option>
-                                <option value="aggressive">Aggressive — Maximum Alpha</option>
-                            </select>
-                        </div>
-                        <div class="input-field-group">
-                            <label for="portfolio-goal-input">Investment Goal</label>
-                            <select id="portfolio-goal-input">
-                                <option value="wealth" selected>Wealth Creation</option>
-                                <option value="retirement">Retirement Planning</option>
-                                <option value="house">House / Major Purchase</option>
-                                <option value="education">Education Corpus</option>
-                                <option value="emergency">Emergency Reserve</option>
-                            </select>
-                        </div>
-                        <div class="portfolio-input-pair">
-                            <div class="input-field-group">
-                                <label for="portfolio-horizon-input">Time Horizon (Years)</label>
-                                <input type="number" id="portfolio-horizon-input" min="1" max="40" value="10" step="1">
-                            </div>
-                            <div class="input-field-group">
-                                <label for="portfolio-target-input">Goal Target ($)</label>
-                                <input type="number" id="portfolio-target-input" min="0" value="250000" step="5000">
-                            </div>
-                        </div>
-                        <div class="portfolio-input-pair">
-                            <div class="input-field-group">
-                                <label for="portfolio-sip-input">Monthly Contribution ($)</label>
-                                <input type="number" id="portfolio-sip-input" min="0" value="1000" step="100">
-                            </div>
-                            <div class="input-field-group">
-                                <label for="portfolio-stepup-input">Annual Step-Up (%)</label>
-                                <input type="number" id="portfolio-stepup-input" min="0" max="25" value="5" step="1">
-                            </div>
-                        </div>
-                        <button id="generate-portfolio-btn" class="primary-btn fluid-btn portfolio-generate-btn">
-                            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Construct Portfolio
-                        </button>
-                        <div class="portfolio-methodology-note">
-                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                            <span>Uses age-based glide path (110 − age) with risk-adjusted overlays and institutional ETF mapping.</span>
+                        <div class="pms-card-footer font-mono">
+                            <span id="kpi-invested-val">Invested: $0</span> · <span id="kpi-cash-val">Cash: $0</span>
                         </div>
                     </div>
 
-                    <div class="portfolio-output-card">
-                        <div class="card-section-header">
-                            <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
-                            <h3>Strategic Asset Allocation</h3>
+                    <!-- Card 2: Total Return & P&L -->
+                    <div class="pms-ribbon-card" id="card-total-pnl">
+                        <div class="pms-card-header">
+                            <span class="pms-card-title"><i class="fa-solid fa-chart-line"></i> Total P&amp;L (Inception)</span>
+                            <span id="kpi-total-return-pct" class="pms-card-badge">0.00%</span>
                         </div>
-                        <div class="portfolio-content-box">
-                            <div class="portfolio-doughnut-wrapper">
-                                <div class="portfolio-pie-box">
-                                    <canvas id="portfolioPieChart"></canvas>
+                        <div class="pms-card-main">
+                            <span id="kpi-total-pnl" class="pms-card-value font-mono tabular-nums">$0</span>
+                            <span id="kpi-unrealized-sub" class="pms-card-sub font-mono">Unrealized: $0</span>
+                        </div>
+                        <div class="pms-card-footer font-mono">
+                            <span id="kpi-realized-split">Realized: $0</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Day P&L & Benchmark Alpha -->
+                    <div class="pms-ribbon-card" id="card-day-pnl">
+                        <div class="pms-card-header">
+                            <span class="pms-card-title"><i class="fa-solid fa-scale-balanced"></i> Day P&amp;L &amp; Active Alpha</span>
+                            <span id="kpi-alpha-pill" class="pms-card-badge alpha-badge">0 bps vs S&amp;P 500</span>
+                        </div>
+                        <div class="pms-card-main">
+                            <span id="kpi-day-pnl-dollar" class="pms-card-value font-mono tabular-nums">$0</span>
+                            <span id="kpi-day-pnl-pct" class="pms-card-sub font-mono">0.00%</span>
+                        </div>
+                        <div class="pms-card-footer font-mono">
+                            <span id="kpi-spx-benchmark">S&amp;P 500 Today: —%</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Portfolio Risk Profile -->
+                    <div class="pms-ribbon-card" id="card-portfolio-risk">
+                        <div class="pms-card-header">
+                            <span class="pms-card-title"><i class="fa-solid fa-shield-halved"></i> Risk &amp; Beta Profile</span>
+                            <span id="kpi-sharpe-badge" class="pms-card-badge">Sharpe: —</span>
+                        </div>
+                        <div class="pms-card-main">
+                            <span id="kpi-portfolio-beta" class="pms-card-value font-mono tabular-nums">1.00 β</span>
+                            <span id="kpi-volatility-sub" class="pms-card-sub font-mono">Vol: —%</span>
+                        </div>
+                        <div class="pms-card-footer font-mono">
+                            <span id="kpi-max-drawdown">1Y Max DD: —%</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 5: Concentration & Effective Bets -->
+                    <div class="pms-ribbon-card" id="card-concentration">
+                        <div class="pms-card-header">
+                            <span class="pms-card-title"><i class="fa-solid fa-layer-group"></i> Diversification (HHI)</span>
+                            <span id="kpi-diversification-badge" class="pms-card-badge">Balanced</span>
+                        </div>
+                        <div class="pms-card-main">
+                            <span id="kpi-effective-n" class="pms-card-value font-mono tabular-nums">0.0</span>
+                            <span class="pms-card-sub font-mono">Effective Bets</span>
+                        </div>
+                        <div class="pms-card-footer font-mono">
+                            <span id="kpi-top-weight">Top Position: 0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 6: Dividend Income & Valuation -->
+                    <div class="pms-ribbon-card" id="card-dividends">
+                        <div class="pms-card-header">
+                            <span class="pms-card-title"><i class="fa-solid fa-hand-holding-dollar"></i> Projected Income &amp; P/E</span>
+                            <span id="kpi-forward-yield-badge" class="pms-card-badge">Yield: 0.00%</span>
+                        </div>
+                        <div class="pms-card-main">
+                            <span id="kpi-annual-dividends" class="pms-card-value font-mono tabular-nums">$0/yr</span>
+                            <span id="kpi-harmonic-pe" class="pms-card-sub font-mono">P/E: —x</span>
+                        </div>
+                        <div class="pms-card-footer font-mono">
+                            <span id="kpi-yoc-val">Yield on Cost: 0.00%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Workspace Navigation Tabs & Action Toolbar -->
+                <div class="pms-toolbar-row">
+                    <!-- Segmented Tabs -->
+                    <div class="pms-segmented-tabs">
+                        <button class="pms-tab-btn active" data-tab="blotter">
+                            <i class="fa-solid fa-table-list"></i> Holdings &amp; Attribution Blotter
+                        </button>
+                        <button class="pms-tab-btn" data-tab="performance">
+                            <i class="fa-solid fa-chart-line"></i> Performance vs. S&amp;P 500
+                        </button>
+                        <button class="pms-tab-btn" data-tab="rebalancer">
+                            <i class="fa-solid fa-sliders"></i> Target Rebalancer
+                        </button>
+                        <button class="pms-tab-btn" data-tab="ledger">
+                            <i class="fa-solid fa-receipt"></i> Cash &amp; Trade Ledger
+                        </button>
+                    </div>
+
+                    <!-- Right Quick Actions -->
+                    <div class="pms-actions-group">
+                        <div class="pms-dropdown-wrap">
+                            <select id="pms-preset-select" class="pms-select-input" title="Load sample institutional books">
+                                <option value="" disabled selected>⚡ Load Institutional Template…</option>
+                                <option value="core">Institutional Core Compounders (MSFT, AAPL, NVDA…)</option>
+                                <option value="allweather">All-Weather Multi-Asset ETF Book (SPY, TLT, GLD…)</option>
+                                <option value="dividend">High-Yield Dividend &amp; Value (JPM, XOM, PG…)</option>
+                            </select>
+                        </div>
+                        <button id="pms-manage-cash-btn" class="pms-action-btn">
+                            <i class="fa-solid fa-dollar-sign"></i> Manage Cash
+                        </button>
+                        <button id="pms-to-stress-btn" class="pms-action-btn highlight">
+                            <i class="fa-solid fa-shield-halved"></i> Stress Test Book
+                        </button>
+                        <button id="pms-export-csv-btn" class="pms-action-btn" title="Export Holdings as CSV">
+                            <i class="fa-solid fa-download"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. TAB 1: Holdings Blotter, Order Ticket & Allocation Visuals -->
+                <div id="pms-tab-blotter" class="pms-tab-content active">
+                    <!-- Top Row: Quick Order Ticket & Visual Analytics -->
+                    <div class="pms-split-top-grid">
+                        <!-- Quick Trade Ticket Card -->
+                        <div class="chart-container-card borderless-card pms-ticket-card">
+                            <div class="chart-header">
+                                <h3><i class="fa-solid fa-bolt"></i> Institutional Trade Ticket</h3>
+                                <span class="desk-subtitle">Execute Market Orders · Weighted-Average Cost Basis</span>
+                            </div>
+                            <form id="pms-trade-ticket-form" class="pms-ticket-form">
+                                <div class="pms-form-row">
+                                    <div class="pms-form-group flex-2">
+                                        <label for="portfolio-ticker-input">Ticker Symbol</label>
+                                        <div class="pms-input-with-btn">
+                                            <input type="text" id="portfolio-ticker-input" placeholder="e.g. AAPL, MSFT, SPY" autocomplete="off" required>
+                                            <button type="button" id="pms-fetch-price-btn" class="pms-small-btn" title="Fetch live market price">
+                                                <i class="fa-solid fa-search"></i> Live Price
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="pms-form-group flex-1">
+                                        <label for="portfolio-side-select">Order Side</label>
+                                        <select id="portfolio-side-select">
+                                            <option value="BUY">BUY (+)</option>
+                                            <option value="SELL">SELL (-)</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div id="doughnut-center-text" class="doughnut-center-overlay"></div>
+
+                                <div class="pms-form-row">
+                                    <div class="pms-form-group flex-1">
+                                        <label for="portfolio-shares-input">Shares Quantity</label>
+                                        <input type="number" id="portfolio-shares-input" min="0.01" step="any" placeholder="Shares" required>
+                                    </div>
+                                    <div class="pms-form-group flex-1">
+                                        <label for="portfolio-price-input">Execution Price ($)</label>
+                                        <input type="number" id="portfolio-price-input" min="0.01" step="0.01" placeholder="Price" required>
+                                    </div>
+                                </div>
+
+                                <div class="pms-form-row align-center justify-between">
+                                    <label class="pms-checkbox-label">
+                                        <input type="checkbox" id="portfolio-deduct-cash-toggle" checked>
+                                        <span>Deduct from Cash Balance</span>
+                                    </label>
+                                    <div class="pms-ticket-est-total font-mono">
+                                        Est. Value: <strong id="pms-ticket-total-val">$0.00</strong>
+                                    </div>
+                                </div>
+
+                                <button type="submit" id="pms-execute-order-btn" class="pms-execute-btn">
+                                    <i class="fa-solid fa-check"></i> Execute Order &amp; Book Position
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Allocation & P&L Attribution Visuals -->
+                        <div class="chart-container-card borderless-card pms-visuals-card">
+                            <div class="chart-header" style="justify-content: space-between; align-items: center;">
+                                <h3><i class="fa-solid fa-chart-pie"></i> Asset Allocation &amp; P&amp;L Attribution</h3>
+                                <div class="pms-visual-pill-toggle">
+                                    <button id="pms-vis-toggle-sector" class="pill-btn active" data-vis="sector">Sectors</button>
+                                    <button id="pms-vis-toggle-waterfall" class="pill-btn" data-vis="waterfall">P&amp;L Attribution</button>
+                                </div>
                             </div>
-                            <div id="portfolio-legend-target" class="portfolio-metrics-breakdown">
-                                <p class="empty-notice">Adjust parameters to generate allocation.</p>
+                            <div class="pms-visuals-body">
+                                <div id="pms-sector-view" class="pms-vis-pane active">
+                                    <div class="pms-donut-wrapper">
+                                        <canvas id="portfolioSectorDonutChart"></canvas>
+                                    </div>
+                                    <div id="portfolio-sector-legend" class="pms-sector-legend font-mono"></div>
+                                </div>
+                                <div id="pms-waterfall-view" class="pms-vis-pane" style="display:none;">
+                                    <div class="pms-waterfall-wrapper">
+                                        <canvas id="portfolioAttributionChart"></canvas>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Portfolio Command Center -->
-                <div class="portfolio-command-grid portfolio-reveal-card">
-                    <div class="portfolio-health-card">
-                        <div class="card-section-header">
-                            <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
-                            <h3>Portfolio Health</h3>
-                        </div>
-                        <div class="portfolio-health-score">
-                            <span id="portfolio-health-score">--</span>
-                            <small>/ 100</small>
-                        </div>
-                        <div id="portfolio-health-label" class="portfolio-health-label">Generate portfolio</div>
-                        <div id="portfolio-health-drivers" class="portfolio-health-drivers">
-                            <span>Risk, diversification, cost, and goal progress will appear here.</span>
-                        </div>
-                    </div>
-
-                    <div class="portfolio-goal-card">
-                        <div class="card-section-header">
-                            <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
-                            <h3>Goal Projection</h3>
-                        </div>
-                        <div class="goal-projection-grid">
+                    <!-- Institutional Holdings Blotter Table -->
+                    <div class="chart-container-card borderless-card pms-blotter-card">
+                        <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div>
-                                <span class="goal-label">Projected Value</span>
-                                <strong id="portfolio-goal-projected">--</strong>
+                                <h3><i class="fa-solid fa-table-list"></i> Portfolio Holdings Blotter</h3>
+                                <span class="desk-subtitle">Live Mark-to-Market Valuation, Real-Time P&amp;L, Day Contribution, and Factor Betas</span>
                             </div>
+                            <div class="pms-table-search-wrap">
+                                <i class="fa-solid fa-filter"></i>
+                                <input type="text" id="pms-blotter-search" placeholder="Filter holdings by ticker or sector…">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive pms-blotter-table-wrap">
+                            <table class="pms-holdings-table tabular-nums" id="pms-holdings-table">
+                                <thead>
+                                    <tr>
+                                        <th data-sort="symbol">Instrument <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="shares" class="text-right">Shares <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="avgCost" class="text-right">Avg Cost ($) <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="price" class="text-right">Live Price ($) <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="dayChange" class="text-right">Day Chg (%/$) <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="dayContrib" class="text-right">Day Contrib <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="marketValue" class="text-right">Market Value ($) <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="navWeight" class="text-right">Weight (%) <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="unrealizedPnL" class="text-right">Unrealized P&amp;L ($/%) <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="beta" class="text-right">Beta <i class="fa-solid fa-sort"></i></th>
+                                        <th data-sort="yield" class="text-right">Div Yield / YOC <i class="fa-solid fa-sort"></i></th>
+                                        <th class="text-center">52-Week Range</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pms-holdings-tbody">
+                                    <tr><td colspan="13" class="table-empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> Initializing portfolio book…</td></tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="pms-total-row">
+                                        <td><strong>PORTFOLIO TOTAL / WEIGHTED AVG</strong></td>
+                                        <td id="pms-tot-shares" class="text-right font-mono">—</td>
+                                        <td id="pms-tot-basis" class="text-right font-mono">—</td>
+                                        <td class="text-right font-mono">—</td>
+                                        <td id="pms-tot-day-chg" class="text-right font-mono">—</td>
+                                        <td id="pms-tot-contrib" class="text-right font-mono">—</td>
+                                        <td id="pms-tot-mv" class="text-right font-mono font-bold">—</td>
+                                        <td id="pms-tot-weight" class="text-right font-mono font-bold">100.0%</td>
+                                        <td id="pms-tot-pnl" class="text-right font-mono font-bold">—</td>
+                                        <td id="pms-tot-beta" class="text-right font-mono">—</td>
+                                        <td id="pms-tot-yield" class="text-right font-mono">—</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. TAB 2: Performance vs. S&P 500 & Risk Analytics -->
+                <div id="pms-tab-performance" class="pms-tab-content">
+                    <div class="chart-container-card borderless-card pms-performance-card">
+                        <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                             <div>
-                                <span class="goal-label">Goal Gap</span>
-                                <strong id="portfolio-goal-gap">--</strong>
+                                <h3><i class="fa-solid fa-chart-line"></i> 1-Year Cumulative Performance vs. S&amp;P 500 (`SPY`)</h3>
+                                <span class="desk-subtitle">Normalized $100 Cumulative Total Return Comparison · 252-Trading-Day Daily Backtest</span>
                             </div>
+                            <div class="pms-timeframe-toggle">
+                                <button class="pill-btn" data-tf="1M">1M</button>
+                                <button class="pill-btn" data-tf="3M">3M</button>
+                                <button class="pill-btn" data-tf="6M">6M</button>
+                                <button class="pill-btn active" data-tf="1Y">1Y</button>
+                            </div>
+                        </div>
+
+                        <!-- 7 Institutional Risk Metric Cards -->
+                        <div class="pms-risk-factors-strip font-mono tabular-nums">
+                            <div class="pms-factor-card">
+                                <span class="lbl">Jensen's Alpha</span>
+                                <span id="perf-jensen-alpha" class="val positive">—%</span>
+                            </div>
+                            <div class="pms-factor-card">
+                                <span class="lbl">Portfolio Beta</span>
+                                <span id="perf-portfolio-beta" class="val">—</span>
+                            </div>
+                            <div class="pms-factor-card">
+                                <span class="lbl">Tracking Error</span>
+                                <span id="perf-tracking-error" class="val">—%</span>
+                            </div>
+                            <div class="pms-factor-card">
+                                <span class="lbl">Information Ratio</span>
+                                <span id="perf-info-ratio" class="val">—</span>
+                            </div>
+                            <div class="pms-factor-card">
+                                <span class="lbl">Annualized Volatility</span>
+                                <span id="perf-annual-vol" class="val">—%</span>
+                            </div>
+                            <div class="pms-factor-card">
+                                <span class="lbl">Sharpe Ratio (Rf=4.5%)</span>
+                                <span id="perf-sharpe-ratio" class="val">—</span>
+                            </div>
+                            <div class="pms-factor-card">
+                                <span class="lbl">1Y Max Drawdown</span>
+                                <span id="perf-max-drawdown" class="val danger">—%</span>
+                            </div>
+                        </div>
+
+                        <div class="chart-wrapper-box pms-perf-chart-wrapper">
+                            <canvas id="portfolioPerformanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. TAB 3: Target Rebalancer & Order Generator -->
+                <div id="pms-tab-rebalancer" class="pms-tab-content">
+                    <div class="chart-container-card borderless-card pms-rebalance-card">
+                        <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                             <div>
-                                <span class="goal-label">Success Signal</span>
-                                <strong id="portfolio-goal-signal">--</strong>
+                                <h3><i class="fa-solid fa-sliders"></i> Target Allocation Rebalancer &amp; Order Generator</h3>
+                                <span class="desk-subtitle">Set Target Portfolio Weights, Monitor Allocation Drift, and Generate Execution Orders</span>
+                            </div>
+                            <div class="pms-rebalance-presets">
+                                <button id="rebal-opt-equal" class="pms-small-action-btn"><i class="fa-solid fa-equals"></i> Equal-Weight</button>
+                                <button id="rebal-opt-inverse-beta" class="pms-small-action-btn"><i class="fa-solid fa-shield-virus"></i> Inverse-Beta</button>
+                                <button id="rebal-opt-dividend" class="pms-small-action-btn"><i class="fa-solid fa-coins"></i> Dividend Tilt</button>
+                                <button id="rebal-reset-btn" class="pms-small-action-btn"><i class="fa-solid fa-rotate-left"></i> Reset Targets</button>
                             </div>
                         </div>
-                        <p id="portfolio-goal-summary" class="section-desc">Set a goal target and monthly contribution to model goal progress.</p>
-                    </div>
-                </div>
 
-                <!-- KPI Summary Bar -->
-                <div class="portfolio-kpi-container portfolio-reveal-card">
-                    <div class="kpi-bar-header">
-                        <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
-                        <span>Portfolio Analytics Summary</span>
-                    </div>
-                    <div id="portfolio-kpi-bar" class="portfolio-kpi-bar">
-                        <div class="portfolio-kpi-tile">
-                            <div class="kpi-accent" style="background: var(--neon-green-positive)"></div>
-                            <div class="kpi-body">
-                                <span class="kpi-value" style="color: var(--text-secondary-muted)">—</span>
-                                <span class="kpi-label">Expected Return</span>
+                        <div class="pms-rebalance-grid">
+                            <!-- Left: Target Sliders -->
+                            <div class="pms-rebalance-sliders-pane">
+                                <div class="pms-sliders-header font-mono">
+                                    <span>Asset / Position</span>
+                                    <span>Current %</span>
+                                    <span>Target %</span>
+                                    <span>Drift</span>
+                                </div>
+                                <div id="pms-rebalance-sliders-list" class="pms-sliders-list font-mono">
+                                    <p class="empty-notice">Add holdings to enable the rebalancer.</p>
+                                </div>
+                                <div class="pms-rebalance-target-sum font-mono">
+                                    <span>Total Target Allocation: <strong id="pms-target-sum-val">100.0%</strong></span>
+                                    <button id="pms-normalize-targets-btn" class="pms-small-btn">Normalize to 100%</button>
+                                </div>
+                            </div>
+
+                            <!-- Right: Generated Trade Orders Blotter -->
+                            <div class="pms-rebalance-orders-pane">
+                                <div class="orders-pane-header">
+                                    <h4><i class="fa-solid fa-clipboard-check"></i> Generated Rebalancing Orders</h4>
+                                    <button id="pms-execute-rebalance-btn" class="pms-execute-btn" disabled>
+                                        <i class="fa-solid fa-bolt"></i> Execute Rebalance in Mock Portfolio
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="pms-rebalance-orders-table tabular-nums font-mono">
+                                        <thead>
+                                            <tr>
+                                                <th>Instrument</th>
+                                                <th class="text-right">Current Shares</th>
+                                                <th class="text-right">Target Shares</th>
+                                                <th class="text-center">Order Action</th>
+                                                <th class="text-right">Trade Value ($)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="pms-rebalance-orders-tbody">
+                                            <tr><td colspan="5" class="table-empty-state">No rebalancing orders required. Target matches current allocation.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ETF Holdings Table -->
-                <div class="portfolio-holdings-card portfolio-reveal-card">
-                    <div class="holdings-header">
-                        <div class="card-section-header">
-                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-                            <h3>Live Holdings & Rebalancing</h3>
+                <!-- 6. TAB 4: Cash & Trade Execution Ledger -->
+                <div id="pms-tab-ledger" class="pms-tab-content">
+                    <div class="chart-container-card borderless-card pms-ledger-card">
+                        <div class="chart-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h3><i class="fa-solid fa-receipt"></i> Transaction &amp; Cash Execution Ledger</h3>
+                                <span class="desk-subtitle">Complete Audit Log of Buys, Sells, Trims, Cash Contributions, and Realized Gains</span>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="pms-clear-portfolio-btn" class="pms-danger-btn">
+                                    <i class="fa-solid fa-trash-can"></i> Clear Portfolio Book
+                                </button>
+                            </div>
                         </div>
-                        <span class="holdings-subtitle">Edit weights, add holdings, and track drift against the generated target</span>
-                    </div>
-                    <div class="portfolio-add-holding-panel">
-                        <select id="portfolio-add-asset-select" aria-label="Select asset to add">
-                            <option value="usSmallCap">US Small Cap (IWM)</option>
-                            <option value="nasdaq100">US Technology (QQQ)</option>
-                            <option value="shortTreasury">Money Market (BIL)</option>
-                            <option value="muniBonds">Municipal Bonds (MUB)</option>
-                            <option value="cash">Cash / Treasury Bills</option>
-                            <option value="btc">Bitcoin Satellite</option>
-                        </select>
-                        <input type="number" id="portfolio-add-weight-input" min="1" max="25" value="5" step="1" aria-label="New holding weight">
-                        <button id="portfolio-add-holding-btn" class="secondary-btn">
-                            <i class="fa-solid fa-plus" aria-hidden="true"></i> Add Holding
-                        </button>
-                    </div>
-                    <div id="portfolio-drift-summary" class="portfolio-drift-summary">
-                        <span>Drift monitor activates after portfolio generation.</span>
-                    </div>
-                    <div class="portfolio-holdings-table-wrap">
-                        <table class="portfolio-holdings-table" id="portfolio-etf-table">
-                            <thead>
-                                <tr>
-                                    <th>Holding</th>
-                                    <th>Ticker</th>
-                                    <th class="num-col">Weight</th>
-                                    <th class="num-col">Target</th>
-                                    <th class="num-col">Drift</th>
-                                    <th class="num-col">Allocation</th>
-                                    <th class="num-col">Exp. Return</th>
-                                    <th class="num-col">Volatility</th>
-                                    <th class="num-col">Cost</th>
-                                    <th class="num-col">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="portfolio-etf-tbody">
-                                <tr><td colspan="10" class="table-empty-state">Generate a portfolio to view holdings.</td></tr>
-                            </tbody>
-                            <tfoot>
-                                <tr class="etf-totals-row">
-                                    <td colspan="2"><strong>Portfolio Total</strong></td>
-                                    <td class="num-col"><strong id="etf-total-weight">—</strong></td>
-                                    <td class="num-col"><strong id="etf-total-target">--</strong></td>
-                                    <td class="num-col"><strong id="etf-total-drift">--</strong></td>
-                                    <td class="num-col"><strong id="etf-total-allocation">--</strong></td>
-                                    <td colspan="4"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+
+                        <div class="table-responsive pms-ledger-table-wrap">
+                            <table class="pms-ledger-table tabular-nums font-mono" id="pms-ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Type</th>
+                                        <th>Symbol</th>
+                                        <th class="text-right">Quantity</th>
+                                        <th class="text-right">Execution Price</th>
+                                        <th class="text-right">Total Notional ($)</th>
+                                        <th class="text-right">Realized P&amp;L ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pms-ledger-tbody">
+                                    <tr><td colspan="7" class="table-empty-state">No transaction history recorded yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Projection Chart -->
-                <div class="portfolio-advanced-grid">
-                    <div class="portfolio-projection-card portfolio-reveal-card">
-                        <div class="card-section-header">
-                            <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-                            <h3>10-Year Wealth Projection</h3>
+                <!-- Modals -->
+                <!-- 1. Trim / Sell Modal -->
+                <div id="pms-trim-modal" class="pms-modal-backdrop hidden-element">
+                    <div class="pms-modal-card">
+                        <div class="pms-modal-header">
+                            <h3><i class="fa-solid fa-hand-holding-dollar"></i> Sell / Trim Position</h3>
+                            <button id="pms-close-trim-modal-btn" class="pms-modal-close-btn">&times;</button>
                         </div>
-                        <p class="section-desc" id="portfolio-projection-desc">Estimating future growth based on weighted historical CAGR with scenario bands.</p>
-                        <div class="chart-wrapper-box" style="height: 340px;">
-                            <canvas id="portfolioProjectionChart"></canvas>
+                        <div class="pms-modal-body">
+                            <div class="pms-trim-info font-mono">
+                                <div><span class="lbl">Asset:</span> <strong id="trim-modal-symbol">—</strong></div>
+                                <div><span class="lbl">Shares Owned:</span> <strong id="trim-modal-shares-owned">0</strong></div>
+                                <div><span class="lbl">Cost Basis:</span> <strong id="trim-modal-avg-cost">$0.00</strong></div>
+                                <div><span class="lbl">Live Market Price:</span> <strong id="trim-modal-live-price">$0.00</strong></div>
+                            </div>
+
+                            <div class="pms-form-group" style="margin-top: 14px;">
+                                <label for="trim-modal-qty-input">Shares to Sell / Trim</label>
+                                <input type="number" id="trim-modal-qty-input" min="0.01" step="any" placeholder="Enter quantity" required>
+                                <div class="pms-quick-chips">
+                                    <button type="button" class="pms-chip-btn" data-pct="25">25%</button>
+                                    <button type="button" class="pms-chip-btn" data-pct="50">50%</button>
+                                    <button type="button" class="pms-chip-btn" data-pct="75">75%</button>
+                                    <button type="button" class="pms-chip-btn" data-pct="100">100% (Sell All)</button>
+                                </div>
+                            </div>
+
+                            <div class="pms-form-group" style="margin-top: 10px;">
+                                <label for="trim-modal-price-input">Execution Price ($)</label>
+                                <input type="number" id="trim-modal-price-input" min="0.01" step="0.01" placeholder="Price" required>
+                            </div>
+
+                            <div class="pms-trim-preview font-mono">
+                                <div>Estimated Proceeds: <strong id="trim-modal-est-proceeds">$0.00</strong></div>
+                                <div>Realized P&amp;L: <strong id="trim-modal-est-pnl">$0.00 (0.00%)</strong></div>
+                            </div>
+
+                            <button type="button" id="pms-confirm-trim-btn" class="pms-danger-action-btn fluid-btn">
+                                <i class="fa-solid fa-check"></i> Confirm Execution &amp; Realize P&amp;L
+                            </button>
                         </div>
-                        <p class="projection-disclaimer"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> <strong>Disclaimer:</strong> Projections use trailing 10-year historical Compound Annual Growth Rates (CAGR). The optimistic and pessimistic bands represent ±2 percentage points around the base case. Historical performance is not a guarantee of future returns.</p>
                     </div>
                 </div>
 
-                <!-- Risk-Return Scatter -->
-                <div class="portfolio-scatter-card portfolio-reveal-card">
-                    <div class="card-section-header">
-                        <i class="fa-solid fa-crosshairs" aria-hidden="true"></i>
-                        <h3>Risk-Return Profile</h3>
-                    </div>
-                    <p class="section-desc">Each bubble represents an asset class. Position shows risk/return tradeoff; size indicates portfolio weight.</p>
-                    <div class="chart-wrapper-box" style="height: 360px;">
-                        <canvas id="portfolioScatterChart"></canvas>
+                <!-- 2. Cash Management Modal -->
+                <div id="pms-cash-modal" class="pms-modal-backdrop hidden-element">
+                    <div class="pms-modal-card">
+                        <div class="pms-modal-header">
+                            <h3><i class="fa-solid fa-coins"></i> Cash Book Management</h3>
+                            <button id="pms-close-cash-modal-btn" class="pms-modal-close-btn">&times;</button>
+                        </div>
+                        <div class="pms-modal-body">
+                            <div class="pms-trim-info font-mono">
+                                <div><span class="lbl">Current Cash Balance:</span> <strong id="cash-modal-current-bal" style="color: #38bdf8;">$0.00</strong></div>
+                            </div>
+
+                            <div class="pms-form-group" style="margin-top: 14px;">
+                                <label for="cash-modal-action-select">Transaction Type</label>
+                                <select id="cash-modal-action-select">
+                                    <option value="DEPOSIT">Deposit Capital (Add Cash)</option>
+                                    <option value="WITHDRAW">Withdraw Capital (Deduct Cash)</option>
+                                </select>
+                            </div>
+
+                            <div class="pms-form-group" style="margin-top: 10px;">
+                                <label for="cash-modal-amount-input">Amount ($ USD)</label>
+                                <input type="number" id="cash-modal-amount-input" min="1" step="100" placeholder="e.g. 10000" required>
+                            </div>
+
+                            <button type="button" id="pms-confirm-cash-btn" class="pms-execute-btn fluid-btn" style="margin-top: 16px;">
+                                <i class="fa-solid fa-check"></i> Post to Cash Book
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Stress Test CTA -->
-                <div class="portfolio-stress-link-card portfolio-reveal-card">
-                    <div class="stress-link-content">
-                        <div>
-                            <h3><i class="fa-solid fa-bolt" aria-hidden="true"></i> Ready to Stress Test?</h3>
-                            <p class="section-desc">Run Monte Carlo simulations and historical crash scenarios against your current portfolio allocation.</p>
-                        </div>
-                        <button id="portfolio-to-stress-btn" class="primary-btn">
-                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> Stress Test This Portfolio
-                        </button>
-                    </div>
-                </div>
+                <p class="projection-disclaimer" style="margin-top: 24px; text-align: center;">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i> <strong>Institutional Accounting Notice:</strong> All positions are held in an in-memory &amp; local-storage multi-asset ledger. Weighted-average cost basis is calculated strictly using institutional tax-lot mechanics. Daily active alpha is benchmarked in real time against the S&amp;P 500 index.
+                </p>
             </section>
         </main>
     </div>
@@ -355,8 +636,8 @@
 
     <script type="module" src="js/main.js"></script>
     <script type="module">
-        import { setupPortfolioBuilder } from './js/modules/portfolio.js';
-        setupPortfolioBuilder();
+        import { initPortfolioWorkstation } from './js/modules/portfolio.js';
+        initPortfolioWorkstation();
     </script>
 </body>
 </html>

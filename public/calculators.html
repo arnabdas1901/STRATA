@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0a0e1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/images/strata-logo.png">
-    <title>STRATA - Financial Calculators</title>
+    <title>STRATA - Quantitative Calculators & Actuarial Models</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
@@ -71,7 +71,7 @@
                     <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                     <span>Stress Tester</span>
                 </a>
-                            <a class="nav-item" href="screener.html">
+                <a class="nav-item" href="screener.html">
                     <i class="fa-solid fa-filter" aria-hidden="true"></i>
                     <span>Screener</span>
                 </a>
@@ -79,9 +79,9 @@
                     <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
                     <span>Correlations</span>
                 </a>
-                </nav>
+            </nav>
             <div class="sidebar-footer">
-                <span class="status-indicator connected"></span> Engine Operational
+                <span class="status-indicator connected"></span> Quant Engine Active
             </div>
         </aside>
 
@@ -108,52 +108,186 @@
             </header>
 
             <section id="dashboard-calculators" class="dashboard-viewport active">
-                <div class="dashboard-header-block">
-                    <h1>Actuarial Engineering & Wealth Calculators</h1>
-                    <p class="subtitle">High-precision mathematical projection models for wealth compounding and structures</p>
+                <!-- 1.1 Institutional Header & Global Modeling Toolbar -->
+                <div class="dashboard-header-block calc-header-block">
+                    <div class="calc-header-titles">
+                        <h1>Actuarial Engineering & Institutional Quant Models</h1>
+                        <p class="subtitle">100% Client-Side Quantitative Workstation · Stochastic Simulations, Life-Cycle Actuarial Engine & Capital Markets Structuring</p>
+                    </div>
+                    <div class="calc-global-toolbar">
+                        <div class="calc-currency-toggle" id="calc-currency-toggle" role="group" aria-label="Currency and Scale Selector">
+                            <button type="button" class="currency-pill active" data-currency="USD">
+                                <span class="currency-symbol">$</span> USD <span class="currency-scale">(K/M/B)</span>
+                            </button>
+                            <button type="button" class="currency-pill" data-currency="INR">
+                                <span class="currency-symbol">₹</span> INR <span class="currency-scale">(L/Cr)</span>
+                            </button>
+                        </div>
+                        <div class="calc-basis-badge" id="calc-basis-badge">
+                            <span class="basis-indicator nominal"></span>
+                            <span class="basis-text" id="calc-basis-text">Nominal Basis</span>
+                        </div>
+                        <button type="button" class="calc-reset-btn" id="calc-reset-btn" title="Reset current model to institutional baseline assumptions">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Reset Defaults
+                        </button>
+                    </div>
                 </div>
 
-                <div class="calculator-layout-grid">
-                    <div class="calculator-control-card">
-                        <div class="calc-type-selector">
-                            <button class="calc-toggle active" data-calc="sip">SIP Projections</button>
-                            <button class="calc-toggle" data-calc="emi">Amortized EMI</button>
-                            <button class="calc-toggle" data-calc="swp">Systematic Withdrawal (SWP)</button>
-                            <button class="calc-toggle" data-calc="fire">FIRE Planner</button>
-                            <button class="calc-toggle" data-calc="dcf">DCF Valuation</button>
+                <!-- 1.2 Two-Desk Institutional Model Selector Ribbon (8 Models) -->
+                <div class="calc-desk-ribbon">
+                    <div class="calc-desk-group">
+                        <div class="calc-desk-label">
+                            <i class="fa-solid fa-landmark-dome"></i>
+                            <span>DESK 1 · PRIVATE WEALTH & ACTUARIAL</span>
                         </div>
-
-                        <div id="calc-inputs-wrapper" class="calc-inputs-form">
+                        <div class="calc-desk-buttons">
+                            <button class="calc-toggle active" data-calc="sip">
+                                <i class="fa-solid fa-chart-line-up"></i>
+                                <div class="calc-btn-content">
+                                    <span class="calc-btn-title">Step-Up SIP</span>
+                                    <span class="calc-btn-sub">Wealth Compounding & Drag</span>
+                                </div>
+                            </button>
+                            <button class="calc-toggle" data-calc="swp">
+                                <i class="fa-solid fa-wallet"></i>
+                                <div class="calc-btn-content">
+                                    <span class="calc-btn-title">Endowment SWP</span>
+                                    <span class="calc-btn-sub">Decumulation & Stress Shock</span>
+                                </div>
+                            </button>
+                            <button class="calc-toggle" data-calc="fire">
+                                <i class="fa-solid fa-fire-flame-curved"></i>
+                                <div class="calc-btn-content">
+                                    <span class="calc-btn-title">Actuarial FIRE</span>
+                                    <span class="calc-btn-sub">Trinity SWR & Monte Carlo</span>
+                                </div>
+                            </button>
+                            <button class="calc-toggle" data-calc="emi">
+                                <i class="fa-solid fa-scale-balanced"></i>
+                                <div class="calc-btn-content">
+                                    <span class="calc-btn-title">Debt Prepayment</span>
+                                    <span class="calc-btn-sub">Amortization & Alpha</span>
+                                </div>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="calculator-visualization-card">
-                        <h3>Capital Breakdown Matrix</h3>
-                        <div class="pie-chart-wrapper">
-                            <canvas id="calculatorPieChart"></canvas>
+                    <div class="calc-desk-group">
+                        <div class="calc-desk-label">
+                            <i class="fa-solid fa-building-columns"></i>
+                            <span>DESK 2 · INSTITUTIONAL CAPITAL MARKETS</span>
                         </div>
+                        <div class="calc-desk-buttons">
+                            <button class="calc-toggle" data-calc="dcf">
+                                <i class="fa-solid fa-magnifying-glass-dollar"></i>
+                                <div class="calc-btn-content">
+                                    <span class="calc-btn-title">WACC & 2-Stage DCF</span>
+                                    <span class="calc-btn-sub">CAPM & Gordon Growth</span>
+                                </div>
+                            </button>
+                            <button class="calc-toggle" data-calc="bond">
+                                <i class="fa-solid fa-scroll"></i>
+                                <div class="calc-btn-content">
+                                    <span class="calc-btn-title">Fixed Income & DV01</span>
+                                    <span class="calc-btn-sub">Duration, Convexity & Curve</span>
+                                </div>
+                            </button>
+                            <button class="calc-toggle" data-calc="lbo">
+                                <i class="fa-solid fa-chart-pie"></i>
+                                <div class="calc-btn-content">
+                                    <span class="calc-btn-title">Private Equity LBO</span>
+                                    <span class="calc-btn-sub">IRR, MOIC & Value Bridge</span>
+                                </div>
+                            </button>
+                            <button class="calc-toggle" data-calc="options">
+                                <i class="fa-solid fa-cubes-stacked"></i>
+                                <div class="calc-btn-content">
+                                    <span class="calc-btn-title">Black-Scholes & Kelly</span>
+                                    <span class="calc-btn-sub">Greeks & Optimal Sizing</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-                        <div class="bar-chart-section">
-                            <h3><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Year-by-Year Projection</h3>
-                            <div class="bar-chart-wrapper">
-                                <canvas id="calculatorBarChart"></canvas>
+                <!-- Main Institutional Workstation Grid -->
+                <div class="calculator-layout-grid">
+                    <!-- Left: Control & Parametric Input Desk -->
+                    <div class="calculator-control-card">
+                        <!-- Quick Scenario Preset Chips -->
+                        <div id="calc-presets-container" class="calc-presets-bar"></div>
+
+                        <!-- Parametric Inputs Form -->
+                        <div id="calc-inputs-wrapper" class="calc-inputs-form"></div>
+
+                        <!-- Mathematical Specification Accordion -->
+                        <div id="calc-methodology-accordion" class="calc-methodology-card"></div>
+                    </div>
+
+                    <!-- Right: Institutional Results, Visualizations, Sensitivity & Schedule -->
+                    <div class="calculator-visualization-card">
+                        <!-- ROW 1: Executive KPI Summary Ribbon (Top Visual Priority) -->
+                        <div id="calc-numerical-summary" class="calc-summary-metrics"></div>
+
+                        <!-- ROW 2: Dual-Chart Side-by-Side Grid (2fr 1fr) -->
+                        <div class="calc-charts-grid">
+                            <div class="calc-chart-box trajectory-chart-box">
+                                <div class="calc-chart-header">
+                                    <h3 id="calc-bar-chart-title"><i class="fa-solid fa-chart-line"></i> Dynamic Wealth Trajectory</h3>
+                                    <span class="chart-subtitle-pill" id="calc-chart-badge">Dynamic Multi-Series</span>
+                                </div>
+                                <div class="bar-chart-wrapper">
+                                    <canvas id="calculatorBarChart"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="calc-chart-box breakdown-chart-box">
+                                <div class="calc-chart-header">
+                                    <h3 id="calc-pie-chart-title"><i class="fa-solid fa-chart-pie"></i> Capital Attribution</h3>
+                                    <span class="chart-subtitle-pill">Portfolio Mix</span>
+                                </div>
+                                <div class="pie-chart-wrapper">
+                                    <canvas id="calculatorPieChart"></canvas>
+                                </div>
                             </div>
                         </div>
 
-                        <div id="calc-numerical-summary" class="calc-summary-metrics">
+                        <!-- ROW 3: 2D Institutional Sensitivity Heatmap Matrix -->
+                        <div class="calc-sensitivity-section" id="calc-sensitivity-section">
+                            <div class="calc-sensitivity-header">
+                                <div class="sensitivity-title-group">
+                                    <h3><i class="fa-solid fa-table-cells"></i> 2D Institutional Sensitivity Matrix</h3>
+                                    <p class="sensitivity-sub" id="calc-sensitivity-sub">Parametric cross-sectional evaluation · Base case highlighted in center</p>
+                                </div>
+                                <div class="sensitivity-legend">
+                                    <span class="legend-chip legend-stress">Downside</span>
+                                    <span class="legend-chip legend-base">Base Case</span>
+                                    <span class="legend-chip legend-upside">Upside</span>
+                                </div>
+                            </div>
+                            <div id="calc-sensitivity-matrix" class="calc-sensitivity-table-wrapper"></div>
                         </div>
 
+                        <!-- ROW 4: Actuarial / Cash Flow Schedule & Export Bar -->
                         <div class="calc-table-section">
                             <div class="calc-table-header">
-                                <h3><i class="fa-solid fa-table"></i> Projection Data</h3>
-                                <button class="export-pdf-btn" onclick="window.exportCalcToPDF()"><i class="fa-solid fa-file-pdf"></i> Download Report</button>
+                                <div class="table-title-group">
+                                    <h3><i class="fa-solid fa-list-ol"></i> <span id="calc-table-title">Full Actuarial Cash Flow Schedule</span></h3>
+                                    <span class="table-subtitle-tag" id="calc-table-subtitle">Period-by-period institutional accounting</span>
+                                </div>
+                                <div class="calc-export-actions">
+                                    <button type="button" class="export-btn export-csv-btn" id="export-calc-csv-btn">
+                                        <i class="fa-solid fa-file-csv"></i> Export CSV
+                                    </button>
+                                    <button type="button" class="export-btn export-pdf-btn" id="export-calc-pdf-btn">
+                                        <i class="fa-solid fa-file-pdf"></i> Download Executive PDF
+                                    </button>
+                                </div>
                             </div>
                             <div class="calc-table-container">
                                 <table class="calc-data-table" id="calc-data-table">
-                                    <thead id="calc-table-head">
-                                    </thead>
-                                    <tbody id="calc-table-body">
-                                    </tbody>
+                                    <thead id="calc-table-head"></thead>
+                                    <tbody id="calc-table-body"></tbody>
                                 </table>
                             </div>
                         </div>

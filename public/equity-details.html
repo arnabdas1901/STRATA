@@ -127,448 +127,784 @@
                     <p>Parsing SEC EDGAR data feeds & streaming ticks...</p>
                 </div>
 
-                <div id="equity-results-container" class="hidden-element">
-                    <!-- Modern Clean Financial Hero Header (Exceeding Groww) -->
-                    <div class="ticker-hero-card equity-reveal-card" id="ticker-hero-card">
-                        <div class="hero-top-row">
-                            <div class="hero-identity-row">
-                                <div class="ticker-logo-box" id="company-logo-box">
-                                    <img id="company-logo-img" src="" alt="" style="display:none;">
-                                    <i class="fa-solid fa-building" id="company-logo-fallback"></i>
-                                </div>
-                                <div class="hero-title-group">
-                                    <div class="ticker-meta-breadcrumbs">
-                                        <span id="company-ticker-badge" class="ticker-pill">AAPL</span>
-                                        <span class="ticker-bullet">•</span>
-                                        <span id="company-exchange-badge" class="exchange-pill">NASDAQ</span>
-                                        <span id="company-industry-badge" class="industry-chip"><i class="fa-solid fa-industry" aria-hidden="true"></i> <span id="industry-badge-text">Technology</span></span>
-                                    </div>
-                                    <h2 id="company-name-display" class="company-clean-title">Apple Inc.</h2>
-                                </div>
-                            </div>
-                            <div class="hero-quick-actions">
-                                <button id="equity-ai-btn" class="ai-deepdive-btn" title="Run AI Deep Dive Analysis">
-                                    <span class="ai-glow-sparkle"></span>
-                                    <i class="fa-solid fa-brain" aria-hidden="true"></i>
-                                    <span>Analyze with AI</span>
-                                </button>
+                <!-- Equity Analysis Loader -->
+<div id="equity-loader" class="loader-container hidden-element">
+    <div class="spinner"></div>
+    <p id="equity-loader-text">Executing institutional quantitative models & parsing SEC EDGAR XBRL...</p>
+</div>
+
+<!-- Institutional Equity Workstation Results -->
+<div id="equity-results-container" class="hidden-element">
+
+    <!-- 1. Sticky Security Deal Header -->
+    <header class="company-deal-header" id="company-deal-header">
+        <div class="deal-header-left">
+            <div class="deal-logo-box" id="company-logo-box">
+                <img id="company-logo-img" src="" alt="" style="display:none;">
+                <i class="fa-solid fa-building" id="company-logo-fallback"></i>
+            </div>
+            <div class="deal-title-group">
+                <div class="deal-meta-breadcrumbs">
+                    <span id="company-ticker-badge" class="ticker-deal-pill">AAPL</span>
+                    <span class="deal-meta-sep">•</span>
+                    <span id="company-exchange-badge" class="deal-meta-pill">NASDAQ</span>
+                    <span class="deal-meta-sep">•</span>
+                    <span id="company-industry-badge" class="deal-meta-pill"><i class="fa-solid fa-industry"></i> <span id="industry-badge-text">Consumer Electronics</span></span>
+                </div>
+                <h2 id="company-name-display" class="deal-company-title">Apple Inc.</h2>
+            </div>
+        </div>
+
+        <div class="deal-header-center">
+            <div class="deal-price-block">
+                <div id="live-price-display" class="deal-live-price">$0.00</div>
+                <div id="live-change-display" class="deal-live-change">
+                    <i id="change-arrow-icon" class="fa-solid fa-caret-up"></i>
+                    <span id="change-text">0.00 (0.00%)</span>
+                    <span class="change-tag">Today</span>
+                </div>
+            </div>
+
+            <!-- 52-Week Range Bar in Deal Header -->
+            <div class="deal-52w-wrap">
+                <div class="deal-52w-labels">
+                    <span class="label-muted">52W:</span>
+                    <span id="header-52w-low" class="num-mono">$0.00</span>
+                    <div class="deal-52w-track">
+                        <div id="header-52w-marker" class="deal-52w-marker" style="left: 50%;"></div>
+                    </div>
+                    <span id="header-52w-high" class="num-mono">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Analyst Consensus Pill -->
+            <div class="deal-consensus-wrap">
+                <span id="header-consensus-badge" class="deal-consensus-pill consensus-hold">
+                    <i class="fa-solid fa-chart-line"></i> <span id="header-consensus-text">HOLD</span>
+                </span>
+                <span id="header-target-price" class="deal-target-price">Target: $0.00</span>
+            </div>
+        </div>
+
+        <div class="deal-header-actions">
+            <button id="btn-generate-ib-report" class="deal-btn deal-btn-report" title="Generate Comprehensive Institutional Equity Research Report">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Generate IB Report</span>
+            </button>
+            <a id="btn-open-ai-chat" href="ai.html" class="deal-btn deal-btn-ai" title="Launch Conversational Financial Analyst with this security context">
+                <i class="fa-solid fa-brain"></i> <span>AI Terminal</span>
+            </a>
+            <button id="btn-export-pdf" class="deal-btn deal-btn-export" title="Export Institutional Equity Briefing (PDF)">
+                <i class="fa-solid fa-file-pdf"></i> <span>Export PDF</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 2. Sticky Horizontal Institutional Tab Ribbon (6 Tabs) -->
+    <nav class="institutional-tab-ribbon" id="equity-tab-ribbon" role="tablist" aria-label="Equity Research Tabs">
+        <button class="ribbon-tab-btn active" data-tab="tab-overview" role="tab" aria-selected="true" id="btn-tab-overview">
+            <i class="fa-solid fa-chart-line"></i> <span>Overview & Price</span> <kbd class="kbd-pill">Alt+1</kbd>
+        </button>
+        <button class="ribbon-tab-btn" data-tab="tab-financials" role="tab" aria-selected="false" id="btn-tab-financials">
+            <i class="fa-solid fa-file-invoice-dollar"></i> <span>3-Statement Financials</span> <kbd class="kbd-pill">Alt+2</kbd>
+        </button>
+        <button class="ribbon-tab-btn" data-tab="tab-valuation" role="tab" aria-selected="false" id="btn-tab-valuation">
+            <i class="fa-solid fa-scale-balanced"></i> <span>Valuation & Comps</span> <kbd class="kbd-pill">Alt+3</kbd>
+        </button>
+        <button class="ribbon-tab-btn" data-tab="tab-quality" role="tab" aria-selected="false" id="btn-tab-quality">
+            <i class="fa-solid fa-award"></i> <span>DuPont & Quality</span> <kbd class="kbd-pill">Alt+4</kbd>
+        </button>
+        <button class="ribbon-tab-btn" data-tab="tab-risk" role="tab" aria-selected="false" id="btn-tab-risk">
+            <i class="fa-solid fa-shield-halved"></i> <span>Quant Risk & Beta</span> <kbd class="kbd-pill">Alt+5</kbd>
+        </button>
+        <button class="ribbon-tab-btn" data-tab="tab-sec" role="tab" aria-selected="false" id="btn-tab-sec">
+            <i class="fa-solid fa-file-contract"></i> <span>SEC Filings & Diff</span> <kbd class="kbd-pill">Alt+6</kbd>
+        </button>
+    </nav>
+
+    <!-- 3. Workstation Viewports for the 6 Tabs -->
+    <div class="workstation-viewport-container">
+
+        <!-- TAB 1: OVERVIEW & PRICE ACTION -->
+        <div id="panel-overview" class="workstation-panel active" role="tabpanel" aria-labelledby="btn-tab-overview">
+            <!-- Price Chart Card -->
+            <div class="chart-container-card equity-reveal-card" id="equity-chart-card">
+                <div class="chart-toolbar-floating">
+                    <div class="chart-mode-toggle" id="chart-mode-toggle">
+                        <button class="chart-mode-btn active" data-mode="line" title="Line Chart"><i class="fa-solid fa-chart-line"></i></button>
+                        <button class="chart-mode-btn" data-mode="bar" title="Bar Chart"><i class="fa-solid fa-chart-bar"></i></button>
+                        <button class="chart-mode-btn" data-mode="candlestick" title="Candlestick Chart"><i class="fa-solid fa-chart-column"></i></button>
+                    </div>
+                    <div class="chart-utility-group">
+                        <div class="indicator-dropdown">
+                            <button class="indicator-btn" id="equity-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
+                            <div class="indicator-menu" id="equity-indicator-menu">
+                                <label><input type="checkbox" value="sma"> SMA (20)</label>
+                                <label><input type="checkbox" value="ema"> EMA (20)</label>
+                                <label><input type="checkbox" value="bb"> Bollinger Bands</label>
+                                <label><input type="checkbox" value="rsi"> RSI (14)</label>
+                                <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
                             </div>
                         </div>
+                        <button class="chart-fullscreen-btn" title="Fullscreen" data-chart-card="equity-chart-card" aria-label="Toggle fullscreen">
+                            <i class="fa-solid fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
 
-                        <div class="hero-pricing-row">
-                            <div id="live-price-display" class="price-value-hero">$0.00</div>
-                            <div id="live-change-display" class="price-change-hero">
-                                <i id="change-arrow-icon" class="fa-solid fa-caret-up"></i>
-                                <span id="change-text">0.00 (0.00%)</span>
-                                <span class="change-timeframe-tag">Today</span>
-                            </div>
+                <div class="chart-wrapper-box">
+                    <div id="equityHistoricalChart"></div>
+                </div>
+
+                <div class="chart-timeframe-selectors groww-tf-strip">
+                    <button class="tf-btn" data-tf="1M">1M</button>
+                    <button class="tf-btn active" data-tf="1Y">1Y</button>
+                    <button class="tf-btn" data-tf="5Y">5Y</button>
+                    <button class="tf-btn" data-tf="MAX">MAX</button>
+                </div>
+            </div>
+
+            <!-- 12-Metric Key Multiples & Trading Grid -->
+            <div class="multiples-12-grid equity-reveal-card">
+                <div class="multiple-cell">
+                    <span class="m-label">Today's Open</span>
+                    <span class="m-val num-mono" id="metric-open">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">Day High</span>
+                    <span class="m-val num-mono" id="metric-day-high">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">Day Low</span>
+                    <span class="m-val num-mono" id="metric-day-low">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">Prev. Close</span>
+                    <span class="m-val num-mono" id="metric-prev-close">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">Market Capitalization</span>
+                    <span class="m-val num-mono" id="metric-mkt-cap">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">Enterprise Value (EV)</span>
+                    <span class="m-val num-mono" id="metric-ev">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">P/E Ratio (TTM)</span>
+                    <span class="m-val num-mono" id="metric-pe">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">P/S Ratio (TTM)</span>
+                    <span class="m-val num-mono" id="metric-ps">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">P/B Ratio (TTM)</span>
+                    <span class="m-val num-mono" id="metric-pb">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">EV/EBITDA (TTM)</span>
+                    <span class="m-val num-mono" id="metric-ev-ebitda">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">Dividend Yield</span>
+                    <span class="m-val num-mono" id="metric-div-yield">--</span>
+                </div>
+                <div class="multiple-cell">
+                    <span class="m-label">Beta Volatility</span>
+                    <span class="m-val num-mono" id="metric-beta">--</span>
+                </div>
+            </div>
+
+            <!-- Two-Column Grid: AI Investment Thesis Card & Analyst Consensus -->
+            <div class="overview-dual-grid">
+                <!-- AI Thesis Card -->
+                <div class="ai-thesis-card equity-reveal-card" id="ai-investment-thesis">
+                    <div class="card-section-header">
+                        <div class="header-title-wrap">
+                            <i class="fa-solid fa-brain" style="color: var(--neon-cyan-vibrant);"></i>
+                            <h3>AI Investment Thesis & Institutional Verdict</h3>
+                        </div>
+                        <button id="btn-refresh-thesis" class="mini-action-btn"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                    </div>
+                    <div id="ai-thesis-content" class="ai-thesis-body">
+                        <div class="thesis-skeleton">Synthesizing institutional thesis from financial statements, multiple bands, and DuPont metrics...</div>
+                    </div>
+                </div>
+
+                <!-- Analyst Recommendations Card -->
+                <div class="equity-analyst-card equity-reveal-card" id="equity-analyst-card">
+                    <div class="card-section-header">
+                        <div class="header-title-wrap">
+                            <i class="fa-solid fa-users-between-lines" style="color: var(--neon-blue-accent);"></i>
+                            <h3>Wall Street Analyst Consensus</h3>
+                        </div>
+                    </div>
+                    <div id="analyst-reco-content" class="analyst-reco-content">
+                        <p class="empty-notice">Loading analyst recommendations...</p>
+                    </div>
+                    <div id="analyst-trend-chart-wrap" class="analyst-trend-wrap" style="display:none;">
+                        <h4 class="analyst-trend-title"><i class="fa-solid fa-chart-bar"></i> Recommendation Trend (6 Months)</h4>
+                        <div class="analyst-trend-bars" id="analyst-trend-bars"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Earnings Beat Track Record -->
+            <div class="earnings-track-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-bullseye" style="color: var(--neon-green-positive);"></i>
+                        <h3>Quarterly Earnings Beat / Miss Track Record</h3>
+                    </div>
+                </div>
+                <div class="financial-table-wrapper">
+                    <table class="financial-data-table">
+                        <thead>
+                            <tr>
+                                <th>Fiscal Quarter</th>
+                                <th class="num-col">Actual EPS</th>
+                                <th class="num-col">Consensus Est.</th>
+                                <th class="num-col">Surprise %</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="earnings-table-body">
+                            <tr><td colspan="5" class="table-empty-state">Loading earnings surprise history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: 3-STATEMENT FINANCIALS & SEGMENTS -->
+        <div id="panel-financials" class="workstation-panel" role="tabpanel" aria-labelledby="btn-tab-financials">
+            <div class="financials-workbench-card equity-reveal-card">
+                <div class="workbench-header-strip">
+                    <div class="stmt-type-toggle" role="tablist">
+                        <button class="stmt-toggle-btn active" data-stmt="income_statement">Income Statement</button>
+                        <button class="stmt-toggle-btn" data-stmt="balance_sheet">Balance Sheet</button>
+                        <button class="stmt-toggle-btn" data-stmt="cash_flow">Cash Flow</button>
+                    </div>
+                    <div class="stmt-provenance-tag">
+                        <i class="fa-solid fa-shield-halved"></i> <span>SEC EDGAR Audited 10-K (Consolidated)</span>
+                    </div>
+                </div>
+
+                <div class="financial-table-wrapper" id="multi-year-statement-wrapper">
+                    <table class="financial-data-table statement-multi-year-table">
+                        <thead id="stmt-multi-year-thead">
+                            <tr>
+                                <th>Line Item (USD)</th>
+                                <th class="num-col">FY2024</th>
+                                <th class="num-col">FY2023</th>
+                                <th class="num-col">FY2022</th>
+                                <th class="num-col">FY2021</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stmt-multi-year-tbody">
+                            <tr><td colspan="5" class="table-empty-state">Loading audited statements from SEC EDGAR...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Revenue by Business Segment -->
+            <div class="segments-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-chart-pie" style="color: var(--neon-cyan-vibrant);"></i>
+                        <h3>Revenue by Business Segment (SEC 10-K)</h3>
+                    </div>
+                </div>
+                <div id="segments-display-target">
+                    <p class="empty-notice">Loading business segments...</p>
+                </div>
+            </div>
+
+            <!-- 5-Year Capital Allocation Bridge -->
+            <div class="capalloc-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-money-bill-transfer" style="color: #f59e0b);"></i>
+                        <h3>5-Year Capital Allocation & Cash Flow Bridge</h3>
+                    </div>
+                </div>
+                <div class="financial-table-wrapper">
+                    <table class="financial-data-table">
+                        <thead>
+                            <tr>
+                                <th>Fiscal Year</th>
+                                <th class="num-col">Operating Cash Flow</th>
+                                <th class="num-col">CapEx</th>
+                                <th class="num-col">Free Cash Flow</th>
+                                <th class="num-col">Share Repurchases</th>
+                                <th class="num-col">Dividends Paid</th>
+                                <th class="num-col">Acquisitions</th>
+                                <th class="num-col">Net Debt Flow</th>
+                            </tr>
+                        </thead>
+                        <tbody id="capalloc-table-body">
+                            <tr><td colspan="8" class="table-empty-state">Loading capital allocation series...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: VALUATION & COMPS MODEL -->
+        <div id="panel-valuation" class="workstation-panel" role="tabpanel" aria-labelledby="btn-tab-valuation">
+            <!-- Public Trading Comps Table -->
+            <div class="comps-table-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-network-wired" style="color: var(--neon-blue-accent);"></i>
+                        <h3>Public Trading Comparables & Sector Benchmarks</h3>
+                    </div>
+                    <span class="info-pill-badge">Free-Tier Finnhub Series</span>
+                </div>
+                <div class="financial-table-wrapper">
+                    <table class="financial-data-table comps-table">
+                        <thead>
+                            <tr>
+                                <th>Security</th>
+                                <th>Company</th>
+                                <th class="num-col">Rev 3Y CAGR</th>
+                                <th class="num-col">Gross Margin</th>
+                                <th class="num-col">Op Margin</th>
+                                <th class="num-col">ROIC</th>
+                                <th class="num-col">P/E (TTM)</th>
+                                <th class="num-col">EV/EBITDA</th>
+                                <th class="num-col">FCF Yield</th>
+                                <th class="num-col">Debt/Equity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comps-table-body">
+                            <tr><td colspan="10" class="table-empty-state">Loading public trading comps...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Historical Multiple Bands & Football Field Grid -->
+            <div class="valuation-dual-grid">
+                <!-- Football Field Summary -->
+                <div class="football-field-card equity-reveal-card">
+                    <div class="card-section-header">
+                        <div class="header-title-wrap">
+                            <i class="fa-solid fa-bars-staggered" style="color: var(--neon-green-positive);"></i>
+                            <h3>Valuation Summary (Football Field Range)</h3>
+                        </div>
+                    </div>
+                    <div id="football-field-bars-container" class="football-field-container">
+                        <div class="ff-loading">Generating valuation range bands...</div>
+                    </div>
+                </div>
+
+                <!-- 5Y Multiple Bands -->
+                <div class="multiple-bands-card equity-reveal-card">
+                    <div class="card-section-header">
+                        <div class="header-title-wrap">
+                            <i class="fa-solid fa-chart-area" style="color: var(--neon-cyan-vibrant);"></i>
+                            <h3>5-Year Historical Valuation Bands</h3>
+                        </div>
+                    </div>
+                    <div id="valuation-bands-content" class="valuation-bands-body">
+                        <div class="bands-loading">Loading historical multiple distributions...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive DCF & Reverse DCF Calculator -->
+            <div class="dcf-workbench-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-calculator" style="color: #ec4899;"></i>
+                        <h3>Interactive Discounted Cash Flow (DCF) & Reverse-DCF Model</h3>
+                    </div>
+                </div>
+                <div class="dcf-interactive-grid">
+                    <div class="dcf-inputs-col">
+                        <div class="dcf-input-group">
+                            <label for="dcf-base-fcf">Base Free Cash Flow ($M)</label>
+                            <input type="number" id="dcf-base-fcf" class="dcf-input num-mono" value="100000">
+                        </div>
+                        <div class="dcf-input-group">
+                            <label for="dcf-growth-rate">5-Year Growth Rate (%): <span id="val-dcf-growth" class="num-mono">10.0%</span></label>
+                            <input type="range" id="dcf-growth-rate" min="0" max="40" step="0.5" value="10.0" class="dcf-slider">
+                        </div>
+                        <div class="dcf-input-group">
+                            <label for="dcf-terminal-rate">Terminal Growth Rate (%): <span id="val-dcf-terminal" class="num-mono">2.5%</span></label>
+                            <input type="range" id="dcf-terminal-rate" min="1.0" max="4.0" step="0.1" value="2.5" class="dcf-slider">
+                        </div>
+                        <div class="dcf-input-group">
+                            <label for="dcf-wacc">Discount Rate / WACC (%): <span id="val-dcf-wacc" class="num-mono">9.0%</span></label>
+                            <input type="range" id="dcf-wacc" min="6.0" max="15.0" step="0.25" value="9.0" class="dcf-slider">
                         </div>
                     </div>
 
-                    <!-- Company Info Bar (Sleek Borderless Metadata Strip) -->
-                    <div class="company-info-bar equity-reveal-card" id="company-info-bar" style="display:none;">
-                        <div class="info-bar-item" id="info-country"><i class="fa-solid fa-globe" aria-hidden="true"></i> <span>--</span></div>
-                        <div class="info-bar-separator">•</div>
-                        <div class="info-bar-item" id="info-ipo"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i> IPO: <span>--</span></div>
-                        <div class="info-bar-separator">•</div>
-                        <div class="info-bar-item" id="info-shares"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Shares: <span>--</span></div>
-                        <div class="info-bar-separator">•</div>
-                        <div class="info-bar-item" id="info-website"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> <a href="#" target="_blank" rel="noopener noreferrer">Website</a></div>
-                    </div>
-
-                    <!-- Price Chart — Edge-to-Edge Dominant Hero Chart -->
-                    <div class="chart-container-card equity-reveal-card" id="equity-chart-card">
-                        <div class="chart-toolbar-floating">
-                            <div class="chart-mode-toggle" id="chart-mode-toggle">
-                                <button class="chart-mode-btn active" data-mode="line" title="Line Chart">
-                                    <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-                                </button>
-                                <button class="chart-mode-btn" data-mode="bar" title="Bar Chart">
-                                    <i class="fa-solid fa-chart-bar" aria-hidden="true"></i>
-                                </button>
-                                <button class="chart-mode-btn" data-mode="candlestick" title="Candlestick Chart">
-                                    <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
-                                </button>
-                            </div>
-                            <div class="chart-utility-group">
-                                <div class="indicator-dropdown">
-                                    <button class="indicator-btn" id="equity-indicator-btn"><i class="fa-solid fa-layer-group"></i> Indicators</button>
-                                    <div class="indicator-menu" id="equity-indicator-menu">
-                                        <label><input type="checkbox" value="sma"> SMA (20)</label>
-                                        <label><input type="checkbox" value="ema"> EMA (20)</label>
-                                        <label><input type="checkbox" value="bb"> Bollinger Bands</label>
-                                        <label><input type="checkbox" value="rsi"> RSI (14)</label>
-                                        <label><input type="checkbox" value="macd"> MACD (12,26,9)</label>
-                                    </div>
-                                </div>
-                                <button class="chart-fullscreen-btn" title="Fullscreen" data-chart-card="equity-chart-card" aria-label="Toggle fullscreen">
-                                    <i class="fa-solid fa-expand"></i>
-                                </button>
-                            </div>
+                    <div class="dcf-output-col">
+                        <div class="dcf-stat-card">
+                            <span class="dcf-stat-label">Implied Intrinsic Value Per Share</span>
+                            <span class="dcf-stat-value num-mono" id="dcf-fair-value">$0.00</span>
                         </div>
-
-                        <div class="chart-wrapper-box">
-                            <div id="equityHistoricalChart"></div>
+                        <div class="dcf-stat-card">
+                            <span class="dcf-stat-label">Margin of Safety vs Current Price</span>
+                            <span class="dcf-stat-value num-mono" id="dcf-margin-safety">0.0%</span>
                         </div>
-
-                        <!-- Timeframe Segmented Selector Strip Directly Underneath Chart (Like Groww) -->
-                        <div class="chart-timeframe-selectors groww-tf-strip">
-                            <button class="tf-btn" data-tf="1M">1M</button>
-                            <button class="tf-btn active" data-tf="1Y">1Y</button>
-                            <button class="tf-btn" data-tf="5Y">5Y</button>
-                            <button class="tf-btn" data-tf="MAX">MAX</button>
-                        </div>
-                    </div>
-
-                    <!-- Expanded Metric Cards: 8 cards in two rows -->
-                    <div class="metric-summary-grid equity-reveal-card">
-                        <div class="metric-card">
-                            <span class="metric-title">Today's Open</span>
-                            <span id="metric-open" class="metric-value">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">Day High</span>
-                            <span id="metric-day-high" class="metric-value">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">Day Low</span>
-                            <span id="metric-day-low" class="metric-value">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">Prev. Close</span>
-                            <span id="metric-prev-close" class="metric-value">--</span>
-                        </div>
-                    </div>
-                    <div class="metric-summary-grid equity-reveal-card" style="margin-top: 16px;">
-                        <div class="metric-card">
-                            <span class="metric-title">Market Capitalization</span>
-                            <span id="metric-mkt-cap" class="metric-value">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">Beta Volatility</span>
-                            <span id="metric-beta" class="metric-value">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">52-Week High</span>
-                            <span id="metric-52w-high" class="metric-value">--</span>
-                            <span id="metric-52w-high-date" class="metric-date-annotation"></span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-title">52-Week Low</span>
-                            <span id="metric-52w-low" class="metric-value">--</span>
-                            <span id="metric-52w-low-date" class="metric-date-annotation"></span>
-                        </div>
-                    </div>
-
-                    <!-- 52-Week Range Bar -->
-                    <div class="equity-range-bar-card equity-reveal-card">
-                        <div class="commodities-range-bar-wrap">
-                            <div class="commodities-range-bar-header">
-                                <span>52-Week Range</span>
-                                <span id="equity-range-label">—</span>
-                            </div>
-                            <div class="commodities-range-track">
-                                <div id="equity-range-marker" class="commodities-range-marker"></div>
-                            </div>
-                            <div class="commodities-range-labels">
-                                <span id="equity-range-low">—</span>
-                                <span id="equity-range-high">—</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Analyst Recommendations -->
-                    <div class="equity-analyst-card equity-reveal-card" id="equity-analyst-card">
-                        <div class="card-section-header">
-                            <i class="fa-solid fa-users-between-lines" aria-hidden="true"></i>
-                            <h3>Analyst Consensus</h3>
-                        </div>
-                        <div id="analyst-reco-content" class="analyst-reco-content">
-                            <p class="empty-notice">Loading analyst recommendations...</p>
-                        </div>
-                        <div id="analyst-trend-chart-wrap" class="analyst-trend-wrap" style="display:none;">
-                            <h4 class="analyst-trend-title"><i class="fa-solid fa-chart-bar" aria-hidden="true"></i> Recommendation Trend (6 Months)</h4>
-                            <div class="analyst-trend-bars" id="analyst-trend-bars"></div>
-                        </div>
-                    </div>
-
-                    <!-- Peer Comparison Card -->
-                    <div class="equity-peers-card equity-reveal-card">
-                        <div class="card-section-header">
-                            <i class="fa-solid fa-network-wired" aria-hidden="true"></i>
-                            <h3>Sector Peer Comparison</h3>
-                        </div>
-                        <p class="section-desc">Comparison of key metrics against sector competitors.</p>
-                        <div class="financial-table-wrapper" style="margin-top: 14px;">
-                            <table class="financial-data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Company</th>
-                                        <th class="num-col">Last Price</th>
-                                        <th class="num-col">24h Chg</th>
-                                        <th class="num-col">Market Cap</th>
-                                        <th class="num-col">P/E Ratio</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="equity-peers-tbody">
-                                    <tr><td colspan="5" class="table-empty-state">Loading sector peers comparison...</td></tr>
-                                </tbody>
-                             </table>
-                        </div>
-                    </div>
-
-                    <!-- KPI Summary Bar (Key Statistics) -->
-                    <div class="equity-kpi-container equity-reveal-card">
-                        <div class="kpi-bar-header">
-                            <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
-                            <span>Key Statistics</span>
-                        </div>
-                        <div id="equity-kpi-bar" class="portfolio-kpi-bar">
-                            <div class="portfolio-kpi-tile">
-                                <div class="kpi-accent" style="background: var(--neon-cyan-vibrant)"></div>
-                                <div class="kpi-body">
-                                    <span class="kpi-value" id="kpi-eps">--</span>
-                                    <span class="kpi-label">EPS (TTM)</span>
-                                </div>
-                            </div>
-                            <div class="portfolio-kpi-tile">
-                                <div class="kpi-accent" style="background: var(--neon-green-positive)"></div>
-                                <div class="kpi-body">
-                                    <span class="kpi-value" id="kpi-div-yield">--</span>
-                                    <span class="kpi-label">Dividend Yield</span>
-                                </div>
-                            </div>
-                            <div class="portfolio-kpi-tile">
-                                <div class="kpi-accent" style="background: #f59e0b"></div>
-                                <div class="kpi-body">
-                                    <span class="kpi-value" id="kpi-pe">--</span>
-                                    <span class="kpi-label">P/E Ratio</span>
-                                </div>
-                            </div>
-                            <div class="portfolio-kpi-tile">
-                                <div class="kpi-accent" style="background: var(--neon-blue-accent)"></div>
-                                <div class="kpi-body">
-                                    <span class="kpi-value" id="kpi-mkt-cap">--</span>
-                                    <span class="kpi-label">Market Capitalization</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Ratios Grid -->
-                    <div class="ratios-container-card equity-reveal-card">
-                        <h3>Key Valuation & Financial Ratios (TTM)</h3>
-                        <div id="ratios-grid-target" class="ratios-data-grid">
-                        </div>
-                    </div>
-
-                    <!-- Deep Fundamental Analytics (Accordions) -->
-                    <div class="equity-reveal-card" style="background: transparent; border: none; padding: 0;">
-                        <h3 style="margin-bottom: 16px; color: #f8fafc; font-size: 16px;"><i class="fa-solid fa-microscope" style="color: #3b82f6; margin-right: 8px;"></i> Institutional Deep Dive</h3>
-                        
-                        <!-- Valuation History -->
-                        <div class="pro-accordion" id="acc-valuation">
-                            <div class="accordion-header" onclick="toggleDeepDive('valuation')">
-                                <div class="accordion-title"><i class="fa-solid fa-scale-balanced"></i> Historical Valuation Multiples</div>
-                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
-                            </div>
-                            <div class="accordion-content">
-                                <div class="accordion-loader" id="loader-valuation">Click to load historical valuation...</div>
-                                <div id="content-valuation" style="display:none;">
-                                    <div class="chart-container-mini"><canvas id="valChart"></canvas></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Capital Allocation -->
-                        <div class="pro-accordion" id="acc-capalloc">
-                            <div class="accordion-header" onclick="toggleDeepDive('capalloc')">
-                                <div class="accordion-title"><i class="fa-solid fa-money-bill-wave"></i> Capital Allocation (SEC 10-K)</div>
-                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
-                            </div>
-                            <div class="accordion-content">
-                                <div class="accordion-loader" id="loader-capalloc">Click to load SEC capital allocation data...</div>
-                                <div id="content-capalloc" style="display:none;">
-                                    <div class="financial-data-grid" id="grid-capalloc"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Earnings Quality -->
-                        <div class="pro-accordion" id="acc-earnings-qual">
-                            <div class="accordion-header" onclick="toggleDeepDive('earnings-qual')">
-                                <div class="accordion-title"><i class="fa-solid fa-magnifying-glass-dollar"></i> Earnings Quality & Accruals</div>
-                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
-                            </div>
-                            <div class="accordion-content">
-                                <div class="accordion-loader" id="loader-earnings-qual">Click to load earnings quality metrics...</div>
-                                <div id="content-earnings-qual" style="display:none;">
-                                    <div class="financial-data-grid" id="grid-earnings-qual"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Risk Profile -->
-                        <div class="pro-accordion" id="acc-risk">
-                            <div class="accordion-header" onclick="toggleDeepDive('risk')">
-                                <div class="accordion-title"><i class="fa-solid fa-triangle-exclamation"></i> Risk & Drawdown Profile</div>
-                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
-                            </div>
-                            <div class="accordion-content">
-                                <div class="accordion-loader" id="loader-risk">Click to load risk metrics...</div>
-                                <div id="content-risk" style="display:none;">
-                                    <div class="financial-data-grid" id="grid-risk"></div>
-                                    <div class="chart-container-mini"><canvas id="drawdownChart"></canvas></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Segment Analysis -->
-                        <div class="pro-accordion" id="acc-segments">
-                            <div class="accordion-header" onclick="toggleDeepDive('segments')">
-                                <div class="accordion-title"><i class="fa-solid fa-chart-pie"></i> Revenue Segments</div>
-                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
-                            </div>
-                            <div class="accordion-content">
-                                <div class="accordion-loader" id="loader-segments">Click to load SEC segment data...</div>
-                                <div id="content-segments" style="display:none;">
-                                    <div class="financial-data-grid" id="grid-segments"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- DCF Intrinsic Valuation & Sensitivity Matrix -->
-                        <div class="pro-accordion" id="acc-dcf">
-                            <div class="accordion-header" onclick="toggleDeepDive('dcf')">
-                                <div class="accordion-title"><i class="fa-solid fa-calculator"></i> DCF Intrinsic Valuation & Sensitivity Matrix</div>
-                                <i class="fa-solid fa-chevron-down accordion-arrow"></i>
-                            </div>
-                            <div class="accordion-content">
-                                <div class="accordion-loader" id="loader-dcf">Click to load DCF model...</div>
-                                <div id="content-dcf" style="display:none;">
-                                    <div class="financial-data-grid" id="grid-dcf"></div>
-                                    <div class="dcf-sensitivity-container" style="margin-top: 18px;">
-                                        <h4 style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
-                                            <i class="fa-solid fa-table-cells"></i> Valuation Sensitivity Matrix (WACC vs Terminal Growth)
-                                        </h4>
-                                        <div class="financial-table-wrapper" id="dcf-sensitivity-table-wrapper"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tabbed Financial Data -->
-                    <div class="tabs-container-card equity-reveal-card">
-                        <div class="tab-selectors-strip">
-                            <button class="panel-tab-btn active" data-tab="tab-desc">Corporate Profile</button>
-                            <button class="panel-tab-btn" data-tab="tab-income">Income Statement</button>
-                            <button class="panel-tab-btn" data-tab="tab-balance">Balance Sheet</button>
-                            <button class="panel-tab-btn" data-tab="tab-cashflow">Cash Flow</button>
-                            <button class="panel-tab-btn" data-tab="tab-earnings">Earnings</button>
-                            <button class="panel-tab-btn" data-tab="tab-dividends">Dividends</button>
-                            <button class="panel-tab-btn" data-tab="tab-insider">Insider Activity</button>
-                        </div>
-                        <div class="tab-panels-viewport">
-                            <!-- Corporate Profile + AI Summary -->
-                            <div id="tab-desc" class="tab-panel active-panel">
-                                <p id="corporate-description-text" class="narrative-p">Perform a financial ticker query to construct internal narrative summaries.</p>
-                                <div class="ai-profile-section">
-                                    <div class="ai-profile-header">
-                                        <h4><i class="fa-solid fa-robot" aria-hidden="true"></i> AI Executive Summary</h4>
-                                        <button id="generate-ai-profile-btn" class="secondary-btn" style="padding: 6px 14px; font-size: 0.82rem;">
-                                            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Generate
-                                        </button>
-                                    </div>
-                                    <div id="ai-profile-output" class="ai-profile-output">
-                                        <span class="empty-notice">Click "Generate" to create an AI-powered executive summary for this company.</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Income Statement -->
-                            <div id="tab-income" class="tab-panel">
-                                <div class="financial-table-wrapper">
-                                    <table class="financial-data-table">
-                                        <thead>
-                                            <tr><th>Metric</th><th>Reported Value</th></tr>
-                                        </thead>
-                                        <tbody id="income-statement-table-body">
-                                            <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <!-- Balance Sheet -->
-                            <div id="tab-balance" class="tab-panel">
-                                <div class="financial-table-wrapper">
-                                    <table class="financial-data-table">
-                                        <thead>
-                                            <tr><th>Metric</th><th>Reported Value</th></tr>
-                                        </thead>
-                                        <tbody id="balance-sheet-table-body">
-                                            <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <!-- Cash Flow -->
-                            <div id="tab-cashflow" class="tab-panel">
-                                <div class="financial-table-wrapper">
-                                    <table class="financial-data-table">
-                                        <thead>
-                                            <tr><th>Metric</th><th>Reported Value</th></tr>
-                                        </thead>
-                                        <tbody id="cashflow-table-body">
-                                            <tr><td colspan="2" class="table-empty-state">No active data queries processed.</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <!-- Earnings -->
-                            <div id="tab-earnings" class="tab-panel">
-                                <div id="earnings-summary" class="dividends-summary-section"></div>
-                                <div class="financial-table-wrapper">
-                                    <table class="financial-data-table">
-                                        <thead>
-                                            <tr><th>Quarter</th><th>Actual EPS</th><th>Estimate</th><th>Surprise</th></tr>
-                                        </thead>
-                                        <tbody id="earnings-table-body">
-                                            <tr><td colspan="4" class="table-empty-state">No active data queries processed.</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <!-- Dividends -->
-                            <div id="tab-dividends" class="tab-panel">
-                                <div id="dividends-summary" class="dividends-summary-section"></div>
-                                <div class="financial-table-wrapper">
-                                    <table class="financial-data-table">
-                                        <thead>
-                                            <tr><th>Ex-Date</th><th>Payment Date</th><th>Amount</th></tr>
-                                        </thead>
-                                        <tbody id="dividends-table-body">
-                                            <tr><td colspan="3" class="table-empty-state">No active data queries processed.</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <!-- Insider Activity -->
-                            <div id="tab-insider" class="tab-panel">
-                                <div id="insider-summary" class="dividends-summary-section"></div>
-                                <div class="financial-table-wrapper">
-                                    <table class="financial-data-table">
-                                        <thead>
-                                            <tr><th>Name</th><th>Date</th><th>Type</th><th>Shares</th><th>Value</th></tr>
-                                        </thead>
-                                        <tbody id="insider-table-body">
-                                            <tr><td colspan="5" class="table-empty-state">No active data queries processed.</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                        <div class="dcf-stat-card reverse-dcf-stat">
+                            <span class="dcf-stat-label">Reverse DCF (Market-Implied FCF Growth)</span>
+                            <span class="dcf-stat-value num-mono" id="dcf-implied-growth">--%</span>
+                            <span class="dcf-stat-sub">The growth rate current market price prices in</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- Sensitivity Matrix -->
+                <div class="dcf-sensitivity-section" style="margin-top: 20px;">
+                    <h4 class="sensitivity-title"><i class="fa-solid fa-table-cells"></i> DCF Sensitivity Matrix (WACC vs Terminal Growth)</h4>
+                    <div class="financial-table-wrapper" id="dcf-sensitivity-table-wrapper"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: QUALITY & DUPONT DECOMPOSITION -->
+        <div id="panel-quality" class="workstation-panel" role="tabpanel" aria-labelledby="btn-tab-quality">
+            <!-- 3-Stage DuPont ROE Decomposition -->
+            <div class="dupont-workbench-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-award" style="color: var(--neon-cyan-vibrant);"></i>
+                        <h3>3-Stage DuPont ROE Decomposition</h3>
+                    </div>
+                    <span class="info-pill-badge">TTM vs Sector Peers & Multi-Year Trend</span>
+                </div>
+
+                <div class="dupont-formula-block" id="dupont-formula-display">
+                    <div class="formula-cell">
+                        <span class="formula-term">ROE (Return on Equity)</span>
+                        <span class="formula-val num-mono" id="dupont-roe">--%</span>
+                        <span class="formula-sub" id="dupont-peer-roe">Peer Med: --%</span>
+                    </div>
+                    <div class="formula-operator">=</div>
+                    <div class="formula-cell">
+                        <span class="formula-term">Net Profit Margin</span>
+                        <span class="formula-val num-mono" id="dupont-nm">--%</span>
+                        <span class="formula-sub" id="dupont-peer-nm">Peer Med: --%</span>
+                    </div>
+                    <div class="formula-operator">×</div>
+                    <div class="formula-cell">
+                        <span class="formula-term">Asset Turnover</span>
+                        <span class="formula-val num-mono" id="dupont-at">--x</span>
+                        <span class="formula-sub" id="dupont-peer-at">Peer Med: --x</span>
+                    </div>
+                    <div class="formula-operator">×</div>
+                    <div class="formula-cell">
+                        <span class="formula-term">Financial Leverage</span>
+                        <span class="formula-val num-mono" id="dupont-em">--x</span>
+                        <span class="formula-sub" id="dupont-peer-em">Peer Med: --x</span>
+                    </div>
+                </div>
+
+                <!-- Multi-year DuPont Trend Table -->
+                <div class="dupont-trend-section" style="margin-top: 18px;">
+                    <h4 class="subcard-title"><i class="fa-solid fa-timeline"></i> Historical DuPont Decomposition (SEC Audited 10-K)</h4>
+                    <div class="financial-table-wrapper">
+                        <table class="financial-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fiscal Period</th>
+                                    <th class="num-col">Net Profit Margin</th>
+                                    <th class="num-col">Asset Turnover</th>
+                                    <th class="num-col">Equity Multiplier</th>
+                                    <th class="num-col">Implied ROE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dupont-trend-tbody">
+                                <tr><td colspan="5" class="table-empty-state">Loading DuPont multi-year series...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Growth CAGRs & 5-Year Margin Stack -->
+            <div class="growth-margins-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-arrow-trend-up" style="color: var(--neon-green-positive);"></i>
+                        <h3>Growth CAGRs & 5-Year Margin Stack</h3>
+                    </div>
+                </div>
+                <div class="cagr-stats-row" id="growth-cagr-strip">
+                    <div class="cagr-tile">
+                        <span class="cagr-label">3Y Revenue CAGR</span>
+                        <span class="cagr-val num-mono" id="cagr-rev-3y">--%</span>
+                    </div>
+                    <div class="cagr-tile">
+                        <span class="cagr-label">5Y Revenue CAGR</span>
+                        <span class="cagr-val num-mono" id="cagr-rev-5y">--%</span>
+                    </div>
+                    <div class="cagr-tile">
+                        <span class="cagr-label">3Y EPS CAGR</span>
+                        <span class="cagr-val num-mono" id="cagr-eps-3y">--%</span>
+                    </div>
+                    <div class="cagr-tile">
+                        <span class="cagr-label">5Y EPS CAGR</span>
+                        <span class="cagr-val num-mono" id="cagr-eps-5y">--%</span>
+                    </div>
+                    <div class="cagr-tile">
+                        <span class="cagr-label">5Y FCF CAGR</span>
+                        <span class="cagr-val num-mono" id="cagr-fcf-5y">--%</span>
+                    </div>
+                </div>
+
+                <div class="financial-table-wrapper" style="margin-top: 16px;">
+                    <table class="financial-data-table">
+                        <thead>
+                            <tr>
+                                <th>Fiscal Year</th>
+                                <th class="num-col">Gross Margin</th>
+                                <th class="num-col">Operating Margin</th>
+                                <th class="num-col">Net Margin</th>
+                                <th class="num-col">FCF Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="margin-stack-tbody">
+                            <tr><td colspan="5" class="table-empty-state">Loading historical margin stack...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Forensic Scanner & Audit Checklist -->
+            <div class="forensic-scanner-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-user-secret" style="color: #ef4444;"></i>
+                        <h3>Forensic Accounting Scanner & Audit Checklist</h3>
+                    </div>
+                    <div id="forensic-risk-badge" class="forensic-overall-badge">Checking...</div>
+                </div>
+                <div class="financial-table-wrapper">
+                    <table class="financial-data-table forensic-table">
+                        <thead>
+                            <tr>
+                                <th>Forensic Check</th>
+                                <th>Status</th>
+                                <th class="num-col">Observed Metric</th>
+                                <th>Institutional Interpretation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="forensic-checklist-tbody">
+                            <tr><td colspan="4" class="table-empty-state">Running SEC XBRL forensic tests...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: QUANT RISK & CONVICTION -->
+        <div id="panel-risk" class="workstation-panel" role="tabpanel" aria-labelledby="btn-tab-risk">
+            <!-- Quant Risk Scorecard -->
+            <div class="risk-scorecard-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-shield-halved" style="color: var(--neon-cyan-vibrant);"></i>
+                        <h3>Institutional Quantitative Risk Scorecard</h3>
+                    </div>
+                    <span class="info-pill-badge">Benchmark: S&P 500 (SPY) • Risk-Free: 4.5%</span>
+                </div>
+                <div class="risk-tiles-grid" id="risk-scorecard-grid">
+                    <div class="risk-metric-tile">
+                        <span class="r-label">Daily VaR (95%)</span>
+                        <span class="r-val num-mono" id="risk-var-95">--%</span>
+                    </div>
+                    <div class="risk-metric-tile">
+                        <span class="r-label">Daily CVaR (95%)</span>
+                        <span class="r-val num-mono" id="risk-cvar-95">--%</span>
+                    </div>
+                    <div class="risk-metric-tile">
+                        <span class="r-label">Sharpe Ratio</span>
+                        <span class="r-val num-mono" id="risk-sharpe">--</span>
+                    </div>
+                    <div class="risk-metric-tile">
+                        <span class="r-label">Sortino Ratio</span>
+                        <span class="r-val num-mono" id="risk-sortino">--</span>
+                    </div>
+                    <div class="risk-metric-tile">
+                        <span class="r-label">Beta vs SPY</span>
+                        <span class="r-val num-mono" id="risk-beta">--</span>
+                    </div>
+                    <div class="risk-metric-tile">
+                        <span class="r-label">Maximum Drawdown</span>
+                        <span class="r-val num-mono" id="risk-max-drawdown">--%</span>
+                    </div>
+                    <div class="risk-metric-tile">
+                        <span class="r-label">Annualized Volatility</span>
+                        <span class="r-val num-mono" id="risk-ann-vol">--%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Underwater Drawdown Chart -->
+            <div class="drawdown-chart-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-water" style="color: #3b82f6;"></i>
+                        <h3>Historical Underwater Drawdown Curve</h3>
+                    </div>
+                </div>
+                <div class="chart-container-mini">
+                    <canvas id="drawdownChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Dual Grid: Insider Conviction & Dividend History -->
+            <div class="risk-dual-grid">
+                <!-- Insider Conviction Log -->
+                <div class="insider-log-card equity-reveal-card">
+                    <div class="card-section-header">
+                        <div class="header-title-wrap">
+                            <i class="fa-solid fa-user-tie" style="color: #f59e0b;"></i>
+                            <h3>Insider Conviction & Trading Activity</h3>
+                        </div>
+                    </div>
+                    <div class="financial-table-wrapper">
+                        <table class="financial-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Insider</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th class="num-col">Shares</th>
+                                </tr>
+                            </thead>
+                            <tbody id="insider-table-body">
+                                <tr><td colspan="4" class="table-empty-state">Loading insider transactions...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Dividend History -->
+                <div class="dividends-log-card equity-reveal-card">
+                    <div class="card-section-header">
+                        <div class="header-title-wrap">
+                            <i class="fa-solid fa-coins" style="color: var(--neon-green-positive);"></i>
+                            <h3>Dividend Track Record</h3>
+                        </div>
+                    </div>
+                    <div class="financial-table-wrapper">
+                        <table class="financial-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ex-Dividend Date</th>
+                                    <th>Payment Date</th>
+                                    <th class="num-col">Cash Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dividends-table-body">
+                                <tr><td colspan="3" class="table-empty-state">Loading dividend history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 6: SEC FILINGS & DIFF ENGINE -->
+        <div id="panel-sec" class="workstation-panel" role="tabpanel" aria-labelledby="btn-tab-sec">
+            <!-- 10-Q / 10-K Filing Diff Engine -->
+            <div class="filing-diff-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-code-compare" style="color: var(--neon-cyan-vibrant);"></i>
+                        <h3>SEC Filing Diff Engine (Latest vs Prior)</h3>
+                    </div>
+                    <div class="diff-control-strip">
+                        <div class="diff-type-toggle">
+                            <button class="diff-btn active" data-form="10-Q">10-Q (Quarterly)</button>
+                            <button class="diff-btn" data-form="10-K">10-K (Annual)</button>
+                        </div>
+                        <button id="btn-run-diff" class="primary-btn mini-btn"><i class="fa-solid fa-magnifying-glass"></i> Re-Diff</button>
+                    </div>
+                </div>
+
+                <!-- AI Verdict on Filing Diff -->
+                <div class="diff-ai-banner" id="diff-ai-summary-banner">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span id="diff-ai-text">Loading automated financial statement variance analysis...</span>
+                </div>
+
+                <div class="financial-table-wrapper" style="margin-top: 14px;">
+                    <table class="financial-data-table diff-table">
+                        <thead>
+                            <tr>
+                                <th>GAAP Financial Line Item</th>
+                                <th class="num-col" id="diff-col-current">Current Period</th>
+                                <th class="num-col" id="diff-col-previous">Prior Period</th>
+                                <th class="num-col">Variance ($)</th>
+                                <th class="num-col">Variance (%)</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody id="diff-table-body">
+                            <tr><td colspan="6" class="table-empty-state">Select filing type to compute variance...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent SEC Filings Feed -->
+            <div class="sec-feed-card equity-reveal-card">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-folder-open" style="color: var(--neon-blue-accent);"></i>
+                        <h3>Official SEC EDGAR Filings (10-K, 10-Q, 8-K)</h3>
+                    </div>
+                </div>
+                <div class="financial-table-wrapper">
+                    <table class="financial-data-table">
+                        <thead>
+                            <tr>
+                                <th>Form</th>
+                                <th>Filing Date</th>
+                                <th>Report Period</th>
+                                <th>Accession Number</th>
+                                <th>Official Link</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sec-filings-tbody">
+                            <tr><td colspan="5" class="table-empty-state">Loading SEC filings feed...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Comprehensive IB Report Reader -->
+            <div class="ib-report-card equity-reveal-card" id="ib-report-container">
+                <div class="card-section-header">
+                    <div class="header-title-wrap">
+                        <i class="fa-solid fa-file-invoice" style="color: var(--neon-cyan-vibrant);"></i>
+                        <h3>Institutional Equity Research Report Reader</h3>
+                    </div>
+                    <div class="report-actions-strip">
+                        <button id="btn-generate-full-report" class="primary-btn mini-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Institutional Report</button>
+                        <button id="btn-export-report-pdf" class="secondary-btn mini-btn"><i class="fa-solid fa-file-pdf"></i> Export to PDF</button>
+                    </div>
+                </div>
+                <div id="ib-report-reader-target" class="ib-report-reader-body">
+                    <div class="report-empty-state">
+                        <i class="fa-solid fa-file-lines empty-icon"></i>
+                        <h4>Institutional Equity Research Briefing</h4>
+                        <p>Click "Generate Institutional Report" above to synthesize SEC EDGAR XBRL filings, macroeconomic indicators, and quantitative multiples into an institutional equity research report.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
             </section>
         </main>
     </div>

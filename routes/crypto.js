@@ -160,8 +160,9 @@ router.get('/details', async (req, res) => {
         if (COINMARKETCAP_API_KEY) {
             const symbolValue = (queryValue || '').toString().trim().toUpperCase();
             const cmcData = await fetchCoinMarketCapDetailsBySymbol(symbolValue);
-            cryptoDetailsCache.set(cacheKey, cmcData);
-            return res.json(wrapWithProvenance(cmcData, {
+            const enriched = deriveTokenomics(cmcData);
+            cryptoDetailsCache.set(cacheKey, enriched);
+            return res.json(wrapWithProvenance(enriched, {
                 provider: 'CoinMarketCap',
                 freshness: FRESHNESS.LIVE,
                 dataQuality: DATA_QUALITY.REALTIME,

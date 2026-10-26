@@ -60,6 +60,35 @@ function computeG8StrengthRanking(dailyChanges) {
     return scores;
 }
 
+function computeForexVolAndZScore(series) {
+    if (!Array.isArray(series) || series.length < 3) {
+        return { volatility7dPct: null, zScore: null };
+    }
+    const n = series.length;
+    // Log returns
+    const logReturns = [];
+    for (let i = 1; i < n; i++) {
+        if (series[i] > 0 && series[i - 1] > 0) {
+            logReturns.push(Math.log(series[i] / series[i - 1]));
+        }
+    }
+    if (logReturns.length < 2) {
+        return { volatility7dPct: null, zScore: null };
+    }
+    const meanReturn = logReturns.reduce((a, b) => a + b, 0) / logReturns.length;
+    const varReturn = logReturns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / (logReturns.length - 1);
+    const volatility7dPct = Number((Math.sqrt(varReturn) * Math.sqrt(252) * 100).toFixed(2));
+
+    // Price Z-Score over the window
+    const meanPrice = series.reduce((a, b) => a + b, 0) / n;
+    const varPrice = series.reduce((a, b) => a + Math.pow(b - meanPrice, 2), 0) / (n - 1);
+    const stdPrice = Math.sqrt(varPrice);
+    const latestPrice = series[n - 1];
+    const zScore = stdPrice > 0 ? Number(((latestPrice - meanPrice) / stdPrice).toFixed(2)) : 0;
+
+    return { volatility7dPct, zScore };
+}
+
 function parseForexPair(pair) {
     const normalized = normalizeForexPair(pair);
     if (!normalized) return null;
@@ -106,18 +135,24 @@ router.get('/latest', async (req, res) => {
         for (const curr of Object.keys(rates)) {
             const currentVal = Number(rates[curr]);
             const prevVal = Number(prevRates[curr]);
+            
+            const series = dates
+                .map(d => Number(data.rates[d]?.[curr]))
+                .filter(v => Number.isFinite(v));
+            sparklineData[curr] = series;
+
+            const { volatility7dPct, zScore } = computeForexVolAndZScore(series);
+
             if (Number.isFinite(currentVal) && Number.isFinite(prevVal) && prevVal !== 0) {
                 const change = currentVal - prevVal;
                 dailyChanges[curr] = {
                     rate: currentVal,
                     change,
-                    changePercent: (change / prevVal) * 100
+                    changePercent: (change / prevVal) * 100,
+                    volatility7dPct,
+                    zScore
                 };
             }
-            
-            sparklineData[curr] = dates
-                .map(d => Number(data.rates[d]?.[curr]))
-                .filter(v => Number.isFinite(v));
         }
 
         // Derive G8 Cross Matrix and Relative Currency Strength
